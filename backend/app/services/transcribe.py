@@ -6,6 +6,7 @@ accuracy/speed tradeoff for a Render free-tier CPU instance; multilingual,
 covers Hindi/Gujarati/etc. out of the box.
 """
 
+import os
 import tempfile
 from functools import lru_cache
 
@@ -31,11 +32,17 @@ def transcribe_audio(file_bytes: bytes, language: str) -> str:
     user-selected language for better accuracy on short/ambiguous clips."""
     whisper_language = language if language in SUPPORTED_WHISPER_LANGUAGES else None
 
-    with tempfile.NamedTemporaryFile(suffix=".audio") as tmp:
-        tmp.write(file_bytes)
-        tmp.flush()
+    # NamedTemporaryFile keeps an exclusive lock while open on Windows, which
+    # blocks faster-whisper/av from opening the same path — write, close, then
+    # let it read, and clean up manually instead of relying on the context manager.
+    fd, path = tempfile.mkstemp(suffix=".audio")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(file_bytes)
 
-        segments, _info = _model().transcribe(tmp.name, language=whisper_language)
+        segments, _info = _model().transcribe(path, language=whisper_language)
         text = " ".join(segment.text.strip() for segment in segments)
+    finally:
+        os.remove(path)
 
     return text.strip()
