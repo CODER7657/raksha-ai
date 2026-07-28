@@ -5,7 +5,13 @@ import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import type { ScanResult } from '../lib/scanResult'
 import { CornerBrackets } from '../components/CornerBrackets'
 
-type InputMode = 'text' | 'voice'
+type InputMode = 'text' | 'voice' | 'upi'
+
+interface UpiCheckResult {
+  is_upi: boolean
+  is_suspicious: boolean
+  reasons: string[]
+}
 
 export function ScanInputPage() {
   const navigate = useNavigate()
@@ -18,6 +24,9 @@ export function ScanInputPage() {
   const [recording, setRecording] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  const [upiValue, setUpiValue] = useState('')
+  const [upiResult, setUpiResult] = useState<UpiCheckResult | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -65,7 +74,38 @@ export function ScanInputPage() {
     setAudioUrl(URL.createObjectURL(file))
   }
 
+  const switchMode = (next: InputMode) => {
+    setMode(next)
+    setError('')
+  }
+
+  const handleUpiCheck = async () => {
+    setError('')
+    setUpiResult(null)
+    if (!upiValue.trim()) {
+      setError('Enter a UPI ID or link first.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const result: UpiCheckResult = await apiFetch('/api/check-upi', {
+        method: 'POST',
+        body: JSON.stringify({ value: upiValue.trim() }),
+      })
+      setUpiResult(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Check failed — try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleSubmit = async () => {
+    if (mode === 'upi') {
+      await handleUpiCheck()
+      return
+    }
+
     setError('')
     setSubmitting(true)
     try {
@@ -110,7 +150,7 @@ export function ScanInputPage() {
         <div className="flex gap-2 mb-5">
           <button
             type="button"
-            onClick={() => setMode('text')}
+            onClick={() => switchMode('text')}
             className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
               mode === 'text' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
             }`}
@@ -119,31 +159,42 @@ export function ScanInputPage() {
           </button>
           <button
             type="button"
-            onClick={() => setMode('voice')}
+            onClick={() => switchMode('voice')}
             className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
               mode === 'voice' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
             }`}
           >
             Voice / Call
           </button>
+          <button
+            type="button"
+            onClick={() => switchMode('upi')}
+            className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
+              mode === 'upi' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
+            }`}
+          >
+            UPI / Link
+          </button>
         </div>
 
-        <label className="flex flex-col gap-1.5 mb-4">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Language</span>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as LanguageOption['code'])}
-            className="border border-ink bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            {LANGUAGES.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {mode !== 'upi' && (
+          <label className="flex flex-col gap-1.5 mb-4">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Language</span>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as LanguageOption['code'])}
+              className="border border-ink bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
-        {mode === 'text' ? (
+        {mode === 'text' && (
           <label className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
               Paste the SMS / WhatsApp / UPI message
@@ -158,7 +209,9 @@ export function ScanInputPage() {
             />
             <span className="self-end text-[10px] text-ink/40">{text.length}/4000</span>
           </label>
-        ) : (
+        )}
+
+        {mode === 'voice' && (
           <div className="flex flex-col gap-3">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Record or upload a call</span>
 
@@ -189,6 +242,61 @@ export function ScanInputPage() {
           </div>
         )}
 
+        {mode === 'upi' && (
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
+                UPI ID or link to check
+              </span>
+              <input
+                type="text"
+                value={upiValue}
+                onChange={(e) => {
+                  setUpiValue(e.target.value)
+                  setUpiResult(null)
+                }}
+                maxLength={256}
+                placeholder="e.g. paytm-refund.info or friend@oksbi"
+                className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </label>
+            <p className="text-[11px] text-ink/50 leading-relaxed">
+              Pure pattern-matching against known brand names and suspicious domain endings — no AI call, works
+              even if the detection service is down.
+            </p>
+
+            {upiResult && (
+              <div
+                className={`relative border p-4 ${
+                  upiResult.is_suspicious ? 'border-red-600 bg-red-50' : 'border-emerald-600 bg-emerald-50'
+                }`}
+              >
+                <p
+                  className={`text-xs font-bold uppercase tracking-[0.1em] mb-1.5 ${
+                    upiResult.is_suspicious ? 'text-red-700' : 'text-emerald-700'
+                  }`}
+                >
+                  {upiResult.is_suspicious ? '⚠ Looks suspicious' : '✅ Nothing suspicious found'}
+                  {upiResult.is_upi && <span className="ml-2 font-normal normal-case text-ink/50">· valid UPI ID format</span>}
+                </p>
+                {upiResult.reasons.length > 0 && (
+                  <ul className="list-disc list-inside text-sm text-ink/80 leading-relaxed">
+                    {upiResult.reasons.map((reason, i) => (
+                      <li key={i}>{reason}</li>
+                    ))}
+                  </ul>
+                )}
+                {!upiResult.is_suspicious && (
+                  <p className="text-sm text-ink/70 leading-relaxed">
+                    No typosquatting or suspicious domain pattern detected — still verify independently before
+                    sending money.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {error && <p className="mt-4 border border-red-600 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</p>}
 
         <button
@@ -197,7 +305,7 @@ export function ScanInputPage() {
           disabled={submitting}
           className="mt-6 w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
         >
-          {submitting ? 'Scanning…' : 'Scan for scams'}
+          {submitting ? (mode === 'upi' ? 'Checking…' : 'Scanning…') : mode === 'upi' ? 'Check UPI / link' : 'Scan for scams'}
         </button>
       </div>
     </div>
