@@ -1,20 +1,14 @@
 import { Link } from 'react-router-dom'
 import { TiltCard } from '../components/TiltCard'
 import { CornerBrackets } from '../components/CornerBrackets'
+import { ScreenStack } from '../components/ScreenStack'
+import { RobotWatcher } from '../components/RobotWatcher'
 
-function ShieldGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-full w-full text-ink" fill="none" aria-hidden="true">
-      <path
-        d="M12 2 4 5v6c0 5 3.4 8.7 8 9 4.6-.3 8-4 8-9V5l-8-3Z"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <path d="m8.5 12 2.5 2.5L15.5 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
+const STATS = [
+  { value: '12', label: 'Indian languages' },
+  { value: '0₹', label: 'to use, always' },
+  { value: '<5s', label: 'per scan' },
+]
 
 const FEATURES = [
   {
@@ -67,7 +61,7 @@ export function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-4 sm:px-8 py-16 sm:py-24 grid gap-12 md:grid-cols-2 md:items-center">
+        <section className="mx-auto max-w-6xl px-4 sm:px-8 py-20 sm:py-32 grid gap-14 md:grid-cols-2 md:items-center">
           <div>
             <div className="flex items-center gap-2 mb-5">
               <span className="h-2 w-2 bg-accent" aria-hidden="true" />
@@ -75,15 +69,18 @@ export function LandingPage() {
                 Maverick Effect AI Challenge
               </span>
             </div>
-            <h1 className="text-4xl sm:text-6xl font-extrabold uppercase tracking-tight leading-[0.95]">
+            <h1 className="text-5xl sm:text-7xl font-extrabold uppercase tracking-tight leading-[0.92]">
               Spot the scam
               <br />
               before it costs you
             </h1>
-            <p className="mt-5 text-sm sm:text-base text-ink/70 leading-relaxed max-w-md">
+            <p className="mt-6 text-base sm:text-lg text-ink/70 leading-relaxed max-w-lg">
               Paste a message, a UPI request, or a call recording. Raksha AI checks it against real
-              scam patterns and tells you — in your own language — exactly what to do next.
+              scam patterns — retrieved from a live database, not guessed — and tells you, in your
+              own language, exactly what to do next. Free, always, built for people who never asked
+              for this problem in the first place.
             </p>
+
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to="/login"
@@ -98,37 +95,28 @@ export function LandingPage() {
                 How it works
               </a>
             </div>
+
+            <div className="mt-10 flex gap-8 flex-wrap">
+              {STATS.map((s) => (
+                <div key={s.label}>
+                  <p className="text-2xl font-extrabold text-accent">{s.value}</p>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-ink/50">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* 3D tilt hero visual: layered shield with real depth via translateZ */}
-          <TiltCard className="mx-auto w-full max-w-sm aspect-square [transform-style:preserve-3d]">
-            <div className="relative h-full w-full [transform-style:preserve-3d]">
-              <div
-                className="absolute inset-0 border border-line bg-paper"
-                style={{ transform: 'translateZ(0px)' }}
-              />
-              <div
-                className="absolute inset-6 border border-ink/30"
-                style={{ transform: 'translateZ(30px)' }}
-                aria-hidden="true"
-              >
-                <CornerBrackets />
-              </div>
-              <div
-                className="absolute inset-16 flex items-center justify-center bg-paper"
-                style={{ transform: 'translateZ(70px)' }}
-              >
-                <div className="h-24 w-24 sm:h-32 sm:w-32 text-accent drop-shadow-[0_18px_24px_rgba(0,0,0,0.18)]">
-                  <ShieldGlyph />
-                </div>
-              </div>
-              <span
-                className="absolute -top-2 -right-2 h-3 w-3 bg-accent"
-                style={{ transform: 'translateZ(90px)' }}
-                aria-hidden="true"
-              />
+          {/* Hero visual: layered "app screens" (scanline + skeleton bars) with
+              a full 3D pointer-tilt, plus a robot badge whose eyes track the
+              cursor anywhere on the page. */}
+          <div className="relative mx-auto w-full max-w-sm">
+            <TiltCard className="aspect-[4/5] w-full [transform-style:preserve-3d]">
+              <ScreenStack />
+            </TiltCard>
+            <div className="absolute -bottom-6 -left-6 hidden sm:block">
+              <RobotWatcher />
             </div>
-          </TiltCard>
+          </div>
         </section>
 
         {/* Feature grid */}
