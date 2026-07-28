@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TiltCard } from '../components/TiltCard'
 import { CornerBrackets } from '../components/CornerBrackets'
@@ -70,33 +71,81 @@ const NAV_LINKS = [
   { href: '#stack', label: 'Free stack' },
 ]
 
+function HamburgerIcon() {
+  return (
+    <span className="flex flex-col gap-1.5" aria-hidden="true">
+      <span className="h-0.5 w-5 bg-ink" />
+      <span className="h-0.5 w-5 bg-ink" />
+      <span className="h-0.5 w-5 bg-ink" />
+    </span>
+  )
+}
+
 export function LandingPage() {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <div className="grid-bg min-h-screen font-mono text-ink">
-      <header className="flex items-center justify-between border-b border-ink px-4 py-4 sm:px-8 sm:py-5 bg-paper/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 bg-accent" aria-hidden="true" />
-          <span className="text-base font-extrabold uppercase tracking-tight">Raksha AI</span>
+      <header className="border-b border-ink bg-paper/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between px-4 py-4 sm:px-8 sm:py-5">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 bg-accent" aria-hidden="true" />
+            <span className="text-base font-extrabold uppercase tracking-tight">Raksha AI</span>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-6" aria-label="Page sections">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink/60 hover:text-accent transition-colors"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          <Link
+            to="/login"
+            className="hidden md:inline-block border border-ink px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
+          >
+            Log in
+          </Link>
+
+          <button
+            type="button"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((o) => !o)}
+            className="md:hidden p-2 -mr-2"
+          >
+            <HamburgerIcon />
+          </button>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6" aria-label="Page sections">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink/60 hover:text-accent transition-colors"
+        {menuOpen && (
+          <div className="md:hidden border-t border-ink bg-paper px-4 py-4 flex flex-col gap-4">
+            <nav className="flex flex-col gap-1" aria-label="Page sections">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="py-2 text-xs font-bold uppercase tracking-[0.1em] text-ink/70 hover:text-accent transition-colors"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <Link
+              to="/login"
+              onClick={() => setMenuOpen(false)}
+              className="border border-ink px-4 py-2 text-center text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
             >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-
-        <Link
-          to="/login"
-          className="border border-ink px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
-        >
-          Log in
-        </Link>
+              Log in
+            </Link>
+          </div>
+        )}
       </header>
 
       <main>
