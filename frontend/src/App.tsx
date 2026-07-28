@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthPage } from './pages/AuthPage'
 import { ScanInputPage } from './pages/ScanInputPage'
-import { ResultPreview } from './pages/ResultPreview'
+import { ResultPage } from './pages/ResultPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
 
@@ -17,7 +17,7 @@ function App() {
         }
       >
         <Route path="/" element={<ScanInputPage />} />
-        <Route path="/result" element={<ResultPreview />} />
+        <Route path="/result" element={<ResultPage />} />
       </Route>
     </Routes>
   )

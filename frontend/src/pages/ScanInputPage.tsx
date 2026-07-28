@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../lib/api'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
+import type { ScanResult } from '../lib/scanResult'
 import { CornerBrackets } from '../components/CornerBrackets'
 
 type InputMode = 'text' | 'voice'
@@ -68,7 +69,7 @@ export function ScanInputPage() {
     setError('')
     setSubmitting(true)
     try {
-      let result: unknown
+      let result: ScanResult
 
       if (mode === 'text') {
         if (!text.trim()) throw new Error('Paste a message first.')
@@ -86,7 +87,9 @@ export function ScanInputPage() {
         })
       }
 
-      navigate('/result', { state: { result } })
+      navigate('/result', {
+        state: { result, sourceText: mode === 'text' ? text : result.transcript, language },
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Scan failed — try again.')
     } finally {
