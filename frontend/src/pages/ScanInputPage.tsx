@@ -80,8 +80,7 @@ export function ScanInputPage() {
         if (!audioBlob) throw new Error('Record or upload audio first.')
         const formData = new FormData()
         formData.append('file', audioBlob, audioBlob instanceof File ? audioBlob.name : 'recording.webm')
-        formData.append('language', language)
-        result = await apiFetch('/api/scan/audio', {
+        result = await apiFetch(`/api/scan/audio?language=${encodeURIComponent(language)}`, {
           method: 'POST',
           body: formData,
         })
