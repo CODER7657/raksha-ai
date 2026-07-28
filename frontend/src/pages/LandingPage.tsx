@@ -46,75 +46,94 @@ const STEPS = [
 export function LandingPage() {
   return (
     <div className="grid-bg min-h-screen font-mono text-ink">
-      <header className="flex items-center justify-between border-b border-ink px-4 py-3 sm:px-8 bg-paper/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="flex items-center justify-between border-b border-ink px-4 py-4 sm:px-8 sm:py-5 bg-paper/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-sm font-extrabold uppercase tracking-tight">Raksha AI</span>
+          <span className="h-2.5 w-2.5 bg-accent" aria-hidden="true" />
+          <span className="text-base font-extrabold uppercase tracking-tight">Raksha AI</span>
         </div>
         <Link
           to="/login"
-          className="border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
+          className="border border-ink px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
         >
           Log in
         </Link>
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="mx-auto max-w-6xl px-4 sm:px-8 py-20 sm:py-32 grid gap-14 md:grid-cols-2 md:items-center">
-          <div>
-            <div className="flex items-center gap-2 mb-5">
-              <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-              <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
-                Maverick Effect AI Challenge
-              </span>
-            </div>
-            <h1 className="text-5xl sm:text-7xl font-extrabold uppercase tracking-tight leading-[0.92]">
+        {/* Hero — bordered grid-block layout: eyebrow row / headline row /
+            content row, each divided by full-width grid lines so blocks
+            align exactly to the shared .grid-bg, matching the reference
+            "blocky" composition instead of floating cards. */}
+        <section className="border-b border-ink">
+          <div className="flex items-center gap-2 border-b border-ink px-4 sm:px-8 py-2.5">
+            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+            <span className="text-[10px] tracking-[0.2em] uppercase text-ink/60">
+              Maverick Effect AI Challenge
+            </span>
+          </div>
+
+          <div className="relative border-b border-ink px-4 sm:px-8 py-6 sm:py-8">
+            <span className="absolute top-2 left-2 h-1.5 w-1.5 bg-accent" aria-hidden="true" />
+            <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-accent" aria-hidden="true" />
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold uppercase tracking-tight leading-[0.92]">
               Spot the scam
               <br />
               before it costs you
             </h1>
-            <p className="mt-6 text-base sm:text-lg text-ink/70 leading-relaxed max-w-lg">
-              Paste a message, a UPI request, or a call recording. Raksha AI checks it against real
-              scam patterns — retrieved from a live database, not guessed — and tells you, in your
-              own language, exactly what to do next. Free, always, built for people who never asked
-              for this problem in the first place.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to="/login"
-                className="bg-accent px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
-              >
-                Get started — free
-              </Link>
-              <a
-                href="#how-it-works"
-                className="border border-ink px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
-              >
-                How it works
-              </a>
-            </div>
-
-            <div className="mt-10 flex gap-8 flex-wrap">
-              {STATS.map((s) => (
-                <div key={s.label}>
-                  <p className="text-2xl font-extrabold text-accent">{s.value}</p>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-ink/50">{s.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Hero visual: layered "app screens" (scanline + skeleton bars) with
-              a full 3D pointer-tilt, plus a robot badge whose eyes track the
-              cursor anywhere on the page. */}
-          <div className="relative mx-auto w-full max-w-sm">
-            <TiltCard className="aspect-[4/5] w-full [transform-style:preserve-3d]">
-              <ScreenStack />
-            </TiltCard>
-            <div className="absolute -bottom-6 -left-6 hidden sm:block">
-              <RobotWatcher />
+          <div className="grid md:grid-cols-[1.1fr_1fr_auto] divide-y divide-ink md:divide-y-0 md:divide-x">
+            <div className="px-4 sm:px-8 py-6 flex flex-col justify-center gap-5">
+              <p className="text-sm sm:text-base text-ink/70 leading-relaxed">
+                Paste a message, a UPI request, or a call recording. Checked against real scam
+                patterns — retrieved from a live database, not guessed — with a plain-language
+                explanation in your own language.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/login"
+                  className="bg-accent px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
+                >
+                  Get started — free
+                </Link>
+                <a
+                  href="#how-it-works"
+                  className="border border-ink px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
+                >
+                  How it works
+                </a>
+              </div>
+              <div className="flex gap-6 flex-wrap">
+                {STATS.map((s) => (
+                  <div key={s.label}>
+                    <p className="text-lg font-extrabold text-accent">{s.value}</p>
+                    <p className="text-[9px] uppercase tracking-[0.15em] text-ink/50">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Primary hero visual: the robot, centered, enlarged, tilts with
+                the pointer while its eyes independently track the cursor
+                anywhere on the page. */}
+            <div className="flex items-center justify-center py-8 md:py-0">
+              <TiltCard className="[transform-style:preserve-3d]">
+                <div className="scale-125 sm:scale-150">
+                  <RobotWatcher />
+                </div>
+              </TiltCard>
+            </div>
+
+            {/* Small bordered accent cell, mirrors the compact image block
+                in the reference layout. */}
+            <div className="hidden md:block w-36 lg:w-44 p-3">
+              <div className="relative h-full">
+                <TiltCard className="h-full">
+                  <div className="h-full">
+                    <ScreenStack />
+                  </div>
+                </TiltCard>
+              </div>
             </div>
           </div>
         </section>
