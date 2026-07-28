@@ -87,7 +87,7 @@ export function ScanInputPage() {
         })
       }
 
-      navigate('/result', {
+      navigate('/app/result', {
         state: { result, sourceText: mode === 'text' ? text : result.transcript, language },
       })
     } catch (err) {

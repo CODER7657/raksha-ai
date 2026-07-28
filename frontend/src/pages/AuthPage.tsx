@@ -45,7 +45,7 @@ export function AuthPage() {
   const [info, setInfo] = useState('')
 
   useEffect(() => {
-    if (!loading && user) navigate('/', { replace: true })
+    if (!loading && user) navigate('/app', { replace: true })
   }, [loading, user, navigate])
 
   const switchMode = (m: Mode) => {

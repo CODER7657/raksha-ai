@@ -13,6 +13,7 @@
 
 html {
   font-family: var(--font-sans);
+  scroll-behavior: smooth;
 }
 
 .grid-bg {
@@ -20,7 +21,9 @@ html {
   background-image:
     linear-gradient(to right, var(--color-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
-  background-size: 64px 64px;
+  /* Shared grid size for the whole app — bump this one value, every
+     screen using .grid-bg picks it up. */
+  background-size: 88px 88px;
 }
 
 .corner-mark {

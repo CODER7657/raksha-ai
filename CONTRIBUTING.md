@@ -49,3 +49,22 @@ Then open a PR on GitHub into `master`. Fill out the PR template (it auto-loads)
 - [ ] Works in at least Hindi, Gujarati, and English (our 3 demo languages)
 - [ ] No console errors on the happy path
 - [ ] README has an up-to-date "How to run" section
+- [ ] For any hero/landing/above-the-fold change: the primary CTA is visible **without scrolling** at 667px height (iPhone SE — our shortest common target) and 720px (common laptop). See §8 for why this matters and how to check it in 10 seconds.
+
+## 8. Above-the-fold check (don't ship a hero that needs a scroll)
+We shipped a regression once where enlarging the hero pushed the CTA button below the fold —
+you had to scroll to even see the "Get started" button on first load. Root cause was stacking
+too much vertical padding/heading size without checking against a real viewport height.
+
+Before merging any change to the Landing page hero, paste this into the browser console
+(devtools, on the running page) — it tells you immediately if something's off-screen:
+```js
+(function() {
+  const btn = [...document.querySelectorAll('a')].find(a => a.textContent.includes('Get started'));
+  const rect = btn?.getBoundingClientRect();
+  console.log({ innerHeight: window.innerHeight, btnBottom: rect?.bottom, fits: rect ? rect.bottom <= window.innerHeight : 'button not found' });
+})()
+```
+`fits` must be `true`. Check it at both 667px and 720px window heights (browser devtools → toggle
+device toolbar, or just resize the window). If a change makes the hero taller, either tighten the
+padding/heading size or accept the scroll deliberately — don't let it happen by accident.
