@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     # Supabase
     supabase_url: str
     supabase_service_role_key: str  # backend-only, never sent to frontend
-    supabase_jwt_secret: str
+    # Only needed for legacy Supabase projects on shared-secret (HS256) JWT
+    # signing. Newer projects use JWKS (see app/core/jwks.py) and don't need this.
+    supabase_jwt_secret: str = ""
 
     # LLM providers (Groq primary, Gemini fallback — both free tier)
     groq_api_key: str = ""
