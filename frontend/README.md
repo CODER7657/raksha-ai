@@ -30,12 +30,14 @@ Auth/API scaffolding already exists — don't rebuild these, build on top of the
 
 All screens except Landing/Login are behind `ProtectedRoute` — logged-out users always land on Login.
 
-## API contract (backend team owns implementation, agree on shape early)
-- `POST /api/scan/text` → `{ text, language }` → `{ risk_score, verdict, flagged_phrases[], explanation, recommended_action, community_report_count }`
-- `POST /api/scan/audio` → multipart file → same response shape as above
-- `GET /api/history` → list of past scans for logged-in user
-- `POST /api/check-upi` → `{ upi_id_or_link }` → `{ is_suspicious, reason }` (client-side pattern check can also run standalone as offline fallback)
-- `GET /api/simulator/questions?language=` → list of quiz questions for Practice mode
+## API contract (implemented — build against these exact shapes)
+- `POST /api/scan/text` — JSON `{ text, language }` → `{ risk_score, verdict, flagged_phrases[], explanation, recommended_action, community_report_count, offline_flags_matched, transcript: null }`
+- `POST /api/scan/audio` — multipart form: `file` (audio blob, ≤10MB) + `language` query param → same shape as above, with `transcript` populated
+- `GET /api/history` → array of past scan rows for the logged-in user
+- `POST /api/check-upi` → `{ value }` → `{ is_upi, is_suspicious, reasons[] }`
+- `GET /api/simulator/questions?language=` → not yet implemented — stub with local mock data for now, ping Issue #3 when you're ready to build this screen and I'll prioritize it
+
+All routes require `Authorization: Bearer <token>` — use `apiFetch()`, it's handled for you.
 
 ## i18n setup
 Use `react-i18next` with one JSON file per language under `frontend/src/locales/<lang-code>/`
