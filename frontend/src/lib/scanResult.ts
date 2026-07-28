@@ -9,6 +9,7 @@ export const VERDICT_META: Record<Verdict, { label: string; badgeClass: string; 
 export interface ScanResult {
   risk_score: number
   verdict: Verdict
+  category?: string
   flagged_phrases: string[]
   explanation: string
   recommended_action: string
