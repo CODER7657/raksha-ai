@@ -115,7 +115,10 @@ async def scan_audio(
     language: LanguageCode = "en",
     user_id: str = Depends(get_current_user),
 ) -> ScanResult:
-    if file.content_type not in ALLOWED_AUDIO_CONTENT_TYPES:
+    # Browser-recorded audio (MediaRecorder) sends a content-type with codec
+    # params, e.g. "audio/webm;codecs=opus" — compare on the base MIME type only.
+    base_content_type = (file.content_type or "").split(";", 1)[0].strip()
+    if base_content_type not in ALLOWED_AUDIO_CONTENT_TYPES:
         raise HTTPException(status_code=415, detail=f"Unsupported audio type: {file.content_type}")
 
     audio_bytes = await file.read()
