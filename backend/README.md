@@ -25,7 +25,7 @@ app/
 │   ├── auth.py              # verifies Supabase JWT on every protected route
 │   └── supabase_client.py   # server-side Supabase client (service role key)
 ├── services/
-│   ├── embeddings.py        # local multilingual embeddings (sentence-transformers, free)
+│   ├── embeddings.py        # multilingual embeddings via Gemini's free embedding API
 │   ├── rag.py                # retrieval: pulls similar known scam patterns before classifying
 │   ├── llm.py                 # Groq (primary) + Gemini (fallback), grounded by RAG context
 │   ├── rule_engine.py        # offline keyword fallback if both LLMs are down
@@ -38,7 +38,7 @@ main.py                        # app entrypoint: CORS, rate limiter, routers, /h
 ```
 
 ## How RAG works here
-1. User's message gets embedded locally (`services/embeddings.py`, free, no API call).
+1. User's message gets embedded via Gemini's free embedding API (`services/embeddings.py`).
 2. We look up the top-k most similar entries in `scam_patterns` (pgvector, Supabase) via the
    `match_scam_patterns` SQL function.
 3. Those retrieved patterns are injected into the LLM prompt as grounding context

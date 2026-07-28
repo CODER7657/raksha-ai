@@ -20,7 +20,7 @@ class RetrievedPattern:
 def retrieve_similar_patterns(
     query_text: str, language: str, top_k: int = 5
 ) -> list[RetrievedPattern]:
-    query_embedding = embed(query_text)
+    query_embedding = embed(query_text, task_type="retrieval_query")
     supabase = get_supabase()
 
     response = supabase.rpc(

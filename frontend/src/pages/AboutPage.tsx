@@ -8,8 +8,8 @@ const PIPELINE_STEPS = [
   },
   {
     n: '02',
-    title: 'Local embedding',
-    body: 'Your message is embedded on the server using a free multilingual model — no external API call for this step.',
+    title: 'Multilingual embedding',
+    body: "Your message is turned into a vector via Gemini's free embedding API, so it can be compared against the scam pattern database.",
   },
   {
     n: '03',
