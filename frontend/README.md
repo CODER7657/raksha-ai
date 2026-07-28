@@ -34,8 +34,10 @@ All screens except Landing/Login are behind `ProtectedRoute` — logged-out user
 - `POST /api/scan/text` — JSON `{ text, language }` → `{ risk_score, verdict, flagged_phrases[], explanation, recommended_action, community_report_count, offline_flags_matched, transcript: null }`
 - `POST /api/scan/audio` — multipart form: `file` (audio blob, ≤10MB) + `language` query param → same shape as above, with `transcript` populated
 - `GET /api/history` → array of past scan rows for the logged-in user
-- `POST /api/check-upi` → `{ value }` → `{ is_upi, is_suspicious, reasons[] }`
+- `POST /api/check-upi` → `{ value }` → `{ is_upi, is_suspicious, reasons[] }` — wired into the Scan Input screen as a 3rd "UPI / Link" tab
 - `GET /api/simulator/questions?language=` → not yet implemented — stub with local mock data for now, ping Issue #3 when you're ready to build this screen and I'll prioritize it
+- `POST /api/chat` → `{ message, language, history: [{role: 'user'|'assistant', content}] }` → `{ reply: string }` — domain-scoped RAG chatbot (scam safety + Raksha AI only), stateless, client holds history (max 20 kept)
+- `GET /api/trends` → `[{ category, label, occurrences }]` — real cross-user aggregate of scam categories reported in the last 7 days, no message content or identity exposed
 
 All routes require `Authorization: Bearer <token>` — use `apiFetch()`, it's handled for you.
 

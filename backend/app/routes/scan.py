@@ -30,6 +30,7 @@ class ScanTextRequest(BaseModel):
 class ScanResult(BaseModel):
     risk_score: int
     verdict: str
+    category: str = "other"
     flagged_phrases: list[str]
     explanation: str
     recommended_action: str
@@ -65,6 +66,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
             result = {
                 "risk_score": 70,
                 "verdict": "suspicious",
+                "category": "other",
                 "flagged_phrases": offline_matches,
                 "explanation": "AI service unavailable — flagged by offline pattern rules as a precaution.",
                 "recommended_action": "Do not share OTP/personal details. Verify with the official app/helpline before acting.",
@@ -83,6 +85,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
             "language": language,
             "risk_score": result["risk_score"],
             "verdict": result["verdict"],
+            "category": result.get("category", "other"),
             "flagged_phrases": result["flagged_phrases"],
             "explanation": result["explanation"],
             "recommended_action": result["recommended_action"],
@@ -138,12 +141,18 @@ async def scan_audio(
 @router.get("/history")
 def get_history(user_id: str = Depends(get_current_user)) -> list[dict]:
     supabase = get_supabase()
-    response = (
-        supabase.table("scans")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("created_at", desc=True)
-        .limit(100)
-        .execute()
-    )
+    try:
+        response = (
+            supabase.table("scans")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+    except Exception:
+        # Uncaught here reaches the browser as a bare "Failed to fetch" instead
+        # of a readable error (missing CORS headers on an unhandled 500) --
+        # always convert DB errors into an explicit HTTPException.
+        raise HTTPException(status_code=503, detail="History temporarily unavailable")
     return response.data or []

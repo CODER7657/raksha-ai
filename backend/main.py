@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
 from app.rate_limit import limiter
-from app.routes import scan, upi
+from app.routes import chat, scan, trends, upi
 
 settings = get_settings()
 
@@ -25,6 +25,8 @@ app.add_middleware(
 
 app.include_router(scan.router)
 app.include_router(upi.router)
+app.include_router(chat.router)
+app.include_router(trends.router)
 
 
 @app.get("/health")
