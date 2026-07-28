@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 const NAV_LINKS = [
   { to: '/app', label: 'Scan' },
   { to: '/app/history', label: 'History' },
+  { to: '/app/about', label: 'About' },
 ]
 
 export function AppShell() {
