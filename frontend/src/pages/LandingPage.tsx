@@ -1,14 +1,20 @@
 import { Link } from 'react-router-dom'
 import { TiltCard } from '../components/TiltCard'
 import { CornerBrackets } from '../components/CornerBrackets'
-import { ScreenStack } from '../components/ScreenStack'
-import { RobotWatcher } from '../components/RobotWatcher'
 
-const STATS = [
-  { value: '12', label: 'Indian languages' },
-  { value: '0₹', label: 'to use, always' },
-  { value: '<5s', label: 'per scan' },
-]
+function ShieldGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-full w-full text-ink" fill="none" aria-hidden="true">
+      <path
+        d="M12 2 4 5v6c0 5 3.4 8.7 8 9 4.6-.3 8-4 8-9V5l-8-3Z"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      <path d="m8.5 12 2.5 2.5L15.5 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 const FEATURES = [
   {
@@ -43,6 +49,27 @@ const STEPS = [
   { n: '03', title: 'Know what to do', body: 'Get a plain-language explanation and one clear next step.' },
 ]
 
+const LANGUAGES = [
+  'English', 'हिन्दी', 'ગુજરાતી', 'मराठी', 'বাংলা', 'தமிழ்',
+  'తెలుగు', 'ಕನ್ನಡ', 'മലയാളം', 'ਪੰਜਾਬੀ', 'ଓଡ଼ିଆ', 'اردو',
+]
+
+const STACK = [
+  { name: 'Supabase', role: 'DB + Auth + vector store' },
+  { name: 'Groq', role: 'primary LLM' },
+  { name: 'Gemini', role: 'fallback LLM' },
+  { name: 'Vercel', role: 'frontend hosting' },
+  { name: 'Render', role: 'backend hosting' },
+  { name: 'GitHub Actions', role: 'CI/CD' },
+]
+
+const NAV_LINKS = [
+  { href: '#features', label: 'Features' },
+  { href: '#languages', label: 'Languages' },
+  { href: '#how-it-works', label: 'How it works' },
+  { href: '#stack', label: 'Free stack' },
+]
+
 export function LandingPage() {
   return (
     <div className="grid-bg min-h-screen font-mono text-ink">
@@ -51,6 +78,19 @@ export function LandingPage() {
           <span className="h-2.5 w-2.5 bg-accent" aria-hidden="true" />
           <span className="text-base font-extrabold uppercase tracking-tight">Raksha AI</span>
         </div>
+
+        <nav className="hidden md:flex items-center gap-6" aria-label="Page sections">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink/60 hover:text-accent transition-colors"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
         <Link
           to="/login"
           className="border border-ink px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
@@ -60,86 +100,73 @@ export function LandingPage() {
       </header>
 
       <main>
-        {/* Hero — bordered grid-block layout: eyebrow row / headline row /
-            content row, each divided by full-width grid lines so blocks
-            align exactly to the shared .grid-bg, matching the reference
-            "blocky" composition instead of floating cards. */}
-        <section className="border-b border-ink">
-          <div className="flex items-center gap-2 border-b border-ink px-4 sm:px-8 py-2.5">
-            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-            <span className="text-[10px] tracking-[0.2em] uppercase text-ink/60">
-              Maverick Effect AI Challenge
-            </span>
-          </div>
-
-          <div className="relative border-b border-ink px-4 sm:px-8 py-6 sm:py-8">
-            <span className="absolute top-2 left-2 h-1.5 w-1.5 bg-accent" aria-hidden="true" />
-            <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-accent" aria-hidden="true" />
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold uppercase tracking-tight leading-[0.92]">
+        {/* Hero */}
+        <section className="mx-auto max-w-6xl px-4 sm:px-8 py-20 sm:py-28 grid gap-12 md:grid-cols-2 md:items-center">
+          <div>
+            <div className="flex items-center gap-2 mb-5">
+              <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+              <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
+                Maverick Effect AI Challenge
+              </span>
+            </div>
+            <h1 className="text-4xl sm:text-6xl font-extrabold uppercase tracking-tight leading-[0.95]">
               Spot the scam
               <br />
               before it costs you
             </h1>
+            <p className="mt-5 text-sm sm:text-base text-ink/70 leading-relaxed max-w-md">
+              Paste a message, a UPI request, or a call recording. Raksha AI checks it against real
+              scam patterns and tells you — in your own language — exactly what to do next.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                to="/login"
+                className="bg-accent px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
+              >
+                Get started — free
+              </Link>
+              <a
+                href="#how-it-works"
+                className="border border-ink px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
+              >
+                How it works
+              </a>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-[1.1fr_1fr_auto] divide-y divide-ink md:divide-y-0 md:divide-x">
-            <div className="px-4 sm:px-8 py-6 flex flex-col justify-center gap-5">
-              <p className="text-sm sm:text-base text-ink/70 leading-relaxed">
-                Paste a message, a UPI request, or a call recording. Checked against real scam
-                patterns — retrieved from a live database, not guessed — with a plain-language
-                explanation in your own language.
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  to="/login"
-                  className="bg-accent px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
-                >
-                  Get started — free
-                </Link>
-                <a
-                  href="#how-it-works"
-                  className="border border-ink px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-ink hover:text-white transition-colors"
-                >
-                  How it works
-                </a>
+          {/* 3D tilt hero visual: layered shield with real depth via translateZ */}
+          <TiltCard className="mx-auto w-full max-w-sm aspect-square [transform-style:preserve-3d]">
+            <div className="relative h-full w-full [transform-style:preserve-3d]">
+              <div
+                className="absolute inset-0 border border-line bg-paper"
+                style={{ transform: 'translateZ(0px)' }}
+              />
+              <div
+                className="absolute inset-6 border border-ink/30"
+                style={{ transform: 'translateZ(30px)' }}
+                aria-hidden="true"
+              >
+                <CornerBrackets />
               </div>
-              <div className="flex gap-6 flex-wrap">
-                {STATS.map((s) => (
-                  <div key={s.label}>
-                    <p className="text-lg font-extrabold text-accent">{s.value}</p>
-                    <p className="text-[9px] uppercase tracking-[0.15em] text-ink/50">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Primary hero visual: the robot, centered, enlarged, tilts with
-                the pointer while its eyes independently track the cursor
-                anywhere on the page. */}
-            <div className="flex items-center justify-center py-8 md:py-0">
-              <TiltCard className="[transform-style:preserve-3d]">
-                <div className="scale-125 sm:scale-150">
-                  <RobotWatcher />
+              <div
+                className="absolute inset-16 flex items-center justify-center bg-paper"
+                style={{ transform: 'translateZ(70px)' }}
+              >
+                <div className="h-24 w-24 sm:h-32 sm:w-32 text-accent drop-shadow-[0_18px_24px_rgba(0,0,0,0.18)]">
+                  <ShieldGlyph />
                 </div>
-              </TiltCard>
-            </div>
-
-            {/* Small bordered accent cell, mirrors the compact image block
-                in the reference layout. */}
-            <div className="hidden md:block w-36 lg:w-44 p-3">
-              <div className="relative h-full">
-                <TiltCard className="h-full">
-                  <div className="h-full">
-                    <ScreenStack />
-                  </div>
-                </TiltCard>
               </div>
+              <span
+                className="absolute -top-2 -right-2 h-3 w-3 bg-accent"
+                style={{ transform: 'translateZ(90px)' }}
+                aria-hidden="true"
+              />
             </div>
-          </div>
+          </TiltCard>
         </section>
 
         {/* Feature grid */}
-        <section className="mx-auto max-w-6xl px-4 sm:px-8 pb-16 sm:pb-24">
+        <section id="features" className="mx-auto max-w-6xl px-4 sm:px-8 pb-20 sm:pb-28 scroll-mt-20">
           <div className="flex items-center gap-2 mb-8">
             <span className="h-2 w-2 bg-accent" aria-hidden="true" />
             <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">What makes it different</span>
@@ -158,8 +185,31 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/* Languages */}
+        <section id="languages" className="mx-auto max-w-6xl px-4 sm:px-8 pb-20 sm:pb-28 scroll-mt-20">
+          <div className="flex items-center gap-2 mb-8">
+            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+            <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Speaks your language</span>
+          </div>
+          <p className="text-sm sm:text-base text-ink/70 leading-relaxed max-w-2xl mb-8">
+            Scan results come back in the same language you scanned in — no translation gap between
+            what a scammer wrote and what you understand.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {LANGUAGES.map((lang) => (
+              <div
+                key={lang}
+                className="relative border border-ink bg-paper/60 px-4 py-3 text-center text-sm font-bold"
+              >
+                <CornerBrackets />
+                {lang}
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* How it works */}
-        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-8 pb-16 sm:pb-24 scroll-mt-20">
+        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-8 pb-20 sm:pb-28 scroll-mt-20">
           <div className="flex items-center gap-2 mb-8">
             <span className="h-2 w-2 bg-accent" aria-hidden="true" />
             <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">How it works</span>
@@ -179,6 +229,27 @@ export function LandingPage() {
           >
             Try it now
           </Link>
+        </section>
+
+        {/* Free stack */}
+        <section id="stack" className="mx-auto max-w-6xl px-4 sm:px-8 pb-20 sm:pb-28 scroll-mt-20">
+          <div className="flex items-center gap-2 mb-8">
+            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+            <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Built free, forever</span>
+          </div>
+          <p className="text-sm sm:text-base text-ink/70 leading-relaxed max-w-2xl mb-8">
+            Every layer runs on a free tier — no card, no hidden cost, nothing that breaks at scale
+            without a plan to pay for it.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {STACK.map((s) => (
+              <div key={s.name} className="relative border border-ink bg-paper/60 p-4">
+                <CornerBrackets />
+                <p className="text-sm font-bold">{s.name}</p>
+                <p className="mt-1 text-[11px] text-ink/60">{s.role}</p>
+              </div>
+            ))}
+          </div>
         </section>
       </main>
 

@@ -13,6 +13,7 @@
 
 html {
   font-family: var(--font-sans);
+  scroll-behavior: smooth;
 }
 
 .grid-bg {
@@ -21,43 +22,8 @@ html {
     linear-gradient(to right, var(--color-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
   /* Shared grid size for the whole app — bump this one value, every
-     screen using .grid-bg picks it up. Was 64px, now bigger/bolder. */
-  background-size: 96px 96px;
-}
-
-@keyframes scanline-sweep {
-  0% {
-    transform: translateY(-10%);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(1000%);
-    opacity: 0;
-  }
-}
-
-.scanline {
-  animation: scanline-sweep 2.8s ease-in-out infinite;
-}
-
-@keyframes bar-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-.bar-pulse {
-  animation: bar-pulse 2.2s ease-in-out infinite;
+     screen using .grid-bg picks it up. */
+  background-size: 88px 88px;
 }
 
 .corner-mark {
