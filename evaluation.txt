@@ -1,0 +1,18 @@
+EVALUATION CRITERIA
+Relevance
+How well does the solution address the specific problem statement provided?
+
+Innovation
+Originality and innovative approaches implemented in solving the challenge.
+
+Technical Accuracy
+Correctness and technical effectiveness of the AI/ML techniques utilized.
+
+Implementation
+Code quality, overall usability, and operational efficiency of the solution.
+
+Scalability
+Scalability of the model and its potential real-world societal impact.
+
+Presentation
+Clarity, structure, and effectiveness of the documentation and project pitch.

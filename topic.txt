@@ -1,0 +1,48 @@
+Problem statements designed for real India
+Each problem is built around a societal need where AI can create practical, ethical and scalable impact.
+
+Agriculture: Crop Disease Diagnostician
+Build an offline edge-AI or mobile solution to identify early-stage crop diseases from smartphone photos and recommend localized organic treatments.
+
+Rural impact
+Computer vision
+Healthcare: Low-cost Rural Triage
+Create an AI assistant for low-bandwidth clinics that processes basic vitals and symptom queries in regional languages to flag high-risk cases.
+
+Healthcare access
+Gujarati support
+Education: Adaptive Vernacular Learning
+Translate and personalize STEM learning into interactive micro-modules that adjust to student learning gaps in real time.
+
+STEM
+Personalized AI
+Sustainability: MSME Energy Optimizer
+Design an IoT-to-AI energy auditing framework that predicts wastage, prevents equipment failures and improves energy efficiency.
+
+MSME
+Energy AI
+Smart Cities: Traffic & Emission Reduction
+Develop predictive traffic optimization using CCTV feeds, dynamic signal timing and alternate routing to reduce congestion and emissions.
+
+Smart city
+Mobility
+Financial Safety for Rural India
+Help first-time digital banking users detect scam calls, fake UPI requests, phishing and loan scams in local languages.
+
+Cyber safety
+Financial literacy
+Water Intelligence Platform
+Predict water shortages, leakages and groundwater depletion using weather, consumption, reservoir and sensor data.
+
+Water stress
+Dashboards
+Waste Segregation & Circular Economy
+Create a computer vision system to identify waste, classify categories and recommend nearby collection or recycling points.
+
+Civic impact
+Computer vision
+Cybersecurity Threat Detection
+Build actionable threat detection for critical digital infrastructure with phishing classification, anomaly detection and guided response playbooks.
+
+Security AI
+Explainability
