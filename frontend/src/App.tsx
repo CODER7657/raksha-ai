@@ -5,6 +5,8 @@ import { ScanInputPage } from './pages/ScanInputPage'
 import { ResultPage } from './pages/ResultPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { AboutPage } from './pages/AboutPage'
+import { PracticePage } from './pages/PracticePage'
+import { ChatPage } from './pages/ChatPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
 
@@ -23,6 +25,8 @@ function App() {
       >
         <Route index element={<ScanInputPage />} />
         <Route path="result" element={<ResultPage />} />
+        <Route path="practice" element={<PracticePage />} />
+        <Route path="chat" element={<ChatPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>

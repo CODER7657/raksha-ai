@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # Rate limiting
     scan_rate_limit: str = "10/minute"
+    chat_rate_limit: str = "15/minute"
 
     @property
     def allowed_origins_list(self) -> list[str]:
