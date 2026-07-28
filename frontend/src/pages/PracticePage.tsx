@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { CornerBrackets } from '../components/CornerBrackets'
+import { SpeedRound } from '../components/SpeedRound'
 import { VERDICT_META } from '../lib/scanResult'
 import { SIMULATOR_QUESTIONS } from '../lib/simulatorData'
 
+type GameMode = 'flags' | 'speed'
 type ChipState = 'idle' | 'correct' | 'missed' | 'wrong'
 
 interface QuestionResult {
@@ -12,6 +14,7 @@ interface QuestionResult {
 }
 
 export function PracticePage() {
+  const [gameMode, setGameMode] = useState<GameMode>('flags')
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [revealed, setRevealed] = useState(false)
@@ -83,10 +86,47 @@ export function PracticePage() {
     setFinished(false)
   }
 
+  const modeToggle = (
+    <div className="flex gap-2 mb-6">
+      <button
+        type="button"
+        onClick={() => setGameMode('flags')}
+        className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
+          gameMode === 'flags' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
+        }`}
+      >
+        Spot the flags
+      </button>
+      <button
+        type="button"
+        onClick={() => setGameMode('speed')}
+        className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
+          gameMode === 'speed' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
+        }`}
+      >
+        Speed round
+      </button>
+    </div>
+  )
+
+  if (gameMode === 'speed') {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="flex items-center gap-2 mb-6">
+          <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Scam spotter</span>
+        </div>
+        {modeToggle}
+        <SpeedRound />
+      </div>
+    )
+  }
+
   if (finished) {
     const missedCategories = results.filter((r) => !r.correct)
     return (
       <div className="mx-auto max-w-2xl">
+        {modeToggle}
         <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8 text-center">
           <CornerBrackets />
           <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Quiz complete</span>
@@ -146,6 +186,8 @@ export function PracticePage() {
           </span>
         </div>
       </div>
+
+      {modeToggle}
 
       <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
         <CornerBrackets />
