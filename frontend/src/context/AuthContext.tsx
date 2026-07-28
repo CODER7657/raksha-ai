@@ -9,6 +9,7 @@ interface AuthContextValue {
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  resetPasswordForEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -45,6 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     signInWithGoogle: async () => {
       const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+      if (error) throw error;
+    },
+    resetPasswordForEmail: async (email) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       if (error) throw error;
     },
     signOut: async () => {
