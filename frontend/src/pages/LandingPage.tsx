@@ -3,20 +3,6 @@ import { Link } from 'react-router-dom'
 import { TiltCard } from '../components/TiltCard'
 import { CornerBrackets } from '../components/CornerBrackets'
 
-function ShieldGlyph() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-full w-full text-ink" fill="none" aria-hidden="true">
-      <path
-        d="M12 2 4 5v6c0 5 3.4 8.7 8 9 4.6-.3 8-4 8-9V5l-8-3Z"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-      <path d="m8.5 12 2.5 2.5L15.5 9" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 const FEATURES = [
   {
     title: 'RAG-grounded detection',
@@ -201,9 +187,12 @@ export function LandingPage() {
                 className="absolute inset-16 flex items-center justify-center bg-paper"
                 style={{ transform: 'translateZ(70px)' }}
               >
-                <div className="h-24 w-24 sm:h-32 sm:w-32 text-accent drop-shadow-[0_18px_24px_rgba(0,0,0,0.18)]">
-                  <ShieldGlyph />
-                </div>
+                <img
+                  src="/shield-hero.webp"
+                  alt="Raksha AI shield"
+                  className="h-full w-full object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.3)]"
+                  draggable={false}
+                />
               </div>
               <span
                 className="absolute -top-2 -right-2 h-3 w-3 bg-accent"
