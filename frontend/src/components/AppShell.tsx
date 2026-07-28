@@ -7,7 +7,7 @@ export function AppShell() {
   return (
     <div className="grid-bg min-h-screen font-mono">
       <header className="flex items-center justify-between border-b border-ink px-4 py-3 sm:px-8 bg-paper/80 backdrop-blur-sm">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/app" className="flex items-center gap-2">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
           <span className="text-sm font-extrabold uppercase tracking-tight text-ink">Raksha AI</span>
         </Link>

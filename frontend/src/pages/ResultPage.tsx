@@ -68,7 +68,7 @@ export function ResultPage() {
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-sm text-ink/60 mb-4">No scan result to show.</p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/app')}
           className="border border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
         >
           Back to scan
@@ -195,7 +195,7 @@ export function ResultPage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/app')}
             className="flex-1 border border-ink px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
           >
             Scan another
