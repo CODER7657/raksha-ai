@@ -8,6 +8,11 @@ import json
 
 from app.core.config import get_settings
 
+CATEGORIES = [
+    "kyc_scam", "otp_scam", "lottery_scam", "refund_scam",
+    "loan_scam", "fake_support_scam", "other", "none",
+]
+
 SYSTEM_PROMPT = """You are a financial-fraud detection assistant for first-time \
 digital banking users in India. You will be given a message (SMS/WhatsApp/call \
 transcript) and a list of known scam patterns retrieved from a reference database.
@@ -19,6 +24,9 @@ Respond with ONLY a JSON object, no markdown, no extra text, in this exact shape
 {
   "risk_score": <int 0-100>,
   "verdict": "safe" | "suspicious" | "high_risk",
+  "category": one of "kyc_scam" | "otp_scam" | "lottery_scam" | "refund_scam" | \
+"loan_scam" | "fake_support_scam" | "other" | "none" (use "none" only for genuinely \
+safe messages, "other" for a real scam that doesn't fit the listed categories),
   "flagged_phrases": [<exact substrings from the message that triggered concern>],
   "explanation": <one or two plain-language sentences, in the requested language, \
 explaining WHY, understandable by someone with no technical background>,
@@ -101,3 +109,8 @@ def _validate_result_shape(result: dict) -> None:
         raise ValueError(f"Invalid verdict: {result['verdict']}")
     if not (0 <= int(result["risk_score"]) <= 100):
         raise ValueError(f"risk_score out of range: {result['risk_score']}")
+
+    # category is newer / lower-stakes than the fields above — default
+    # rather than fail the whole scan if the model omits or garbles it.
+    if result.get("category") not in CATEGORIES:
+        result["category"] = "other" if result["verdict"] != "safe" else "none"
