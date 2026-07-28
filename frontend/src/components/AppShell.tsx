@@ -5,6 +5,7 @@ const NAV_LINKS = [
   { to: '/app', label: 'Scan' },
   { to: '/app/history', label: 'History' },
   { to: '/app/about', label: 'About' },
+  { to: '/app/practice', label: 'Practice' },
 ]
 
 export function AppShell() {

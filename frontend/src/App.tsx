@@ -5,6 +5,7 @@ import { ScanInputPage } from './pages/ScanInputPage'
 import { ResultPage } from './pages/ResultPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { AboutPage } from './pages/AboutPage'
+import { PracticePage } from './pages/PracticePage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
 
@@ -25,6 +26,7 @@ function App() {
         <Route path="result" element={<ResultPage />} />
         <Route path="history" element={<HistoryPage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="practice" element={<PracticePage />} />
       </Route>
     </Routes>
   )
