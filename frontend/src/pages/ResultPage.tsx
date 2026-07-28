@@ -1,50 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CornerBrackets } from '../components/CornerBrackets'
+import { HighlightedText } from '../components/HighlightedText'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
-import type { ScanResult, Verdict } from '../lib/scanResult'
+import { VERDICT_META, type ScanResult } from '../lib/scanResult'
 
 interface ResultLocationState {
   result?: ScanResult
   sourceText?: string | null
   language?: LanguageOption['code']
-}
-
-const VERDICT_META: Record<Verdict, { label: string; badgeClass: string; barClass: string }> = {
-  safe: { label: 'Safe', badgeClass: 'bg-emerald-600 text-white', barClass: 'bg-emerald-600' },
-  suspicious: { label: 'Suspicious', badgeClass: 'bg-amber-500 text-white', barClass: 'bg-amber-500' },
-  high_risk: { label: 'High Risk', badgeClass: 'bg-red-600 text-white', barClass: 'bg-red-600' },
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function HighlightedSource({ text, phrases }: { text: string; phrases: string[] }) {
-  const parts = useMemo(() => {
-    const cleanPhrases = phrases.filter((p) => p.trim().length > 0)
-    if (cleanPhrases.length === 0) return [{ text, flagged: false }]
-
-    const pattern = new RegExp(`(${cleanPhrases.map(escapeRegExp).join('|')})`, 'gi')
-    return text.split(pattern).map((chunk) => ({
-      text: chunk,
-      flagged: cleanPhrases.some((p) => p.toLowerCase() === chunk.toLowerCase()),
-    }))
-  }, [text, phrases])
-
-  return (
-    <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
-      {parts.map((part, i) =>
-        part.flagged ? (
-          <mark key={i} className="bg-accent/25 text-ink px-0.5 underline decoration-accent decoration-2">
-            {part.text}
-          </mark>
-        ) : (
-          <span key={i}>{part.text}</span>
-        ),
-      )}
-    </p>
-  )
 }
 
 function SpeakerIcon() {
@@ -152,7 +116,7 @@ export function ResultPage() {
               Flagged phrases in context
             </span>
             <div className="mt-1.5 border border-line p-3 bg-white">
-              <HighlightedSource text={sourceText} phrases={result.flagged_phrases} />
+              <HighlightedText text={sourceText} phrases={result.flagged_phrases} />
             </div>
           </div>
         )}
