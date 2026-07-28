@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { apiFetch } from '../lib/api'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { CornerBrackets } from '../components/CornerBrackets'
+import { cancelSpeech, speakWithBestVoice } from '../lib/speech'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -32,6 +33,7 @@ export function ChatPage() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
+  const [voiceNoteIndex, setVoiceNoteIndex] = useState<number | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -39,21 +41,22 @@ export function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
 
-  const speechLang = LANGUAGES.find((l) => l.code === language)?.speechLang ?? 'en-IN'
+  const languageOption = LANGUAGES.find((l) => l.code === language)
+  const speechLang = languageOption?.speechLang ?? 'en-IN'
 
-  const speak = (text: string, index: number) => {
+  const speak = async (text: string, index: number) => {
     if (speakingIndex === index) {
-      window.speechSynthesis.cancel()
+      cancelSpeech()
       setSpeakingIndex(null)
       return
     }
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = speechLang
-    utterance.onend = () => setSpeakingIndex(null)
-    utterance.onerror = () => setSpeakingIndex(null)
-    window.speechSynthesis.speak(utterance)
     setSpeakingIndex(index)
+    setVoiceNoteIndex(null)
+    const { exactMatch } = await speakWithBestVoice(text, speechLang, {
+      onEnd: () => setSpeakingIndex(null),
+      onError: () => setSpeakingIndex(null),
+    })
+    if (!exactMatch) setVoiceNoteIndex(index)
   }
 
   const send = async (text: string) => {
@@ -149,6 +152,12 @@ export function ChatPage() {
                     <SpeakerIcon />
                     {speakingIndex === i ? 'Stop' : 'Read aloud'}
                   </button>
+                )}
+                {voiceNoteIndex === i && (
+                  <p className="mt-1 text-[10px] text-ink/40 leading-relaxed">
+                    No installed {languageOption?.label ?? 'this language'} voice on this device — using the
+                    closest available voice.
+                  </p>
                 )}
               </div>
             </div>

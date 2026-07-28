@@ -15,6 +15,13 @@ transcript) and a list of known scam patterns retrieved from a reference databas
 Use the known patterns as grounding context, but judge the actual message on its \
 own merits — it may be a novel scam not in the database, or genuinely safe.
 
+When writing in a language with grammatical gender on verbs/adjectives (Hindi, \
+Gujarati, Marathi, Punjabi, Urdu, etc.), address the reader directly using \
+imperative/infinitive verb forms that don't require picking a gender (e.g. Hindi \
+"संपर्क करें" not "करो"/"करी", Gujarati "સંપર્ક કરો" as a neutral imperative) — never \
+guess or vary the reader's gender between sentences, since a message read aloud by \
+text-to-speech should sound like one consistent voice, not switch mid-explanation.
+
 Respond with ONLY a JSON object, no markdown, no extra text, in this exact shape:
 {
   "risk_score": <int 0-100>,

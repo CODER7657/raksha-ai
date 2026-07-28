@@ -4,6 +4,7 @@ import { CornerBrackets } from '../components/CornerBrackets'
 import { HighlightedText } from '../components/HighlightedText'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { VERDICT_META, type ScanResult } from '../lib/scanResult'
+import { cancelSpeech, speakWithBestVoice } from '../lib/speech'
 
 interface ResultLocationState {
   result?: ScanResult
@@ -26,6 +27,7 @@ export function ResultPage() {
   const navigate = useNavigate()
   const { result, sourceText, language } = (location.state as ResultLocationState | null) ?? {}
   const [speaking, setSpeaking] = useState(false)
+  const [voiceNote, setVoiceNote] = useState(false)
 
   if (!result) {
     return (
@@ -42,20 +44,23 @@ export function ResultPage() {
   }
 
   const meta = VERDICT_META[result.verdict]
-  const speechLang = LANGUAGES.find((l) => l.code === language)?.speechLang ?? 'en-IN'
+  const languageOption = LANGUAGES.find((l) => l.code === language)
+  const speechLang = languageOption?.speechLang ?? 'en-IN'
 
-  const speak = () => {
+  const speak = async () => {
     if (speaking) {
-      window.speechSynthesis.cancel()
+      cancelSpeech()
       setSpeaking(false)
       return
     }
-    const utterance = new SpeechSynthesisUtterance(`${result.explanation}. ${result.recommended_action}`)
-    utterance.lang = speechLang
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = () => setSpeaking(false)
-    window.speechSynthesis.speak(utterance)
     setSpeaking(true)
+    setVoiceNote(false)
+    const { exactMatch } = await speakWithBestVoice(
+      `${result.explanation}. ${result.recommended_action}`,
+      speechLang,
+      { onEnd: () => setSpeaking(false), onError: () => setSpeaking(false) },
+    )
+    if (!exactMatch) setVoiceNote(true)
   }
 
   const shareText = [
@@ -99,6 +104,13 @@ export function ResultPage() {
             {speaking ? 'Stop' : 'Read aloud'}
           </button>
         </div>
+
+        {voiceNote && (
+          <p className="-mt-3 mb-5 text-[10px] text-ink/40 leading-relaxed">
+            This device has no installed {languageOption?.label ?? 'this language'} voice — reading with the
+            closest available voice, pronunciation may be off.
+          </p>
+        )}
 
         <div className="mb-6">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1">
