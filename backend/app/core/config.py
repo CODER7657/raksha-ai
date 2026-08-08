@@ -28,12 +28,14 @@ class Settings(BaseSettings):
     # Sarvam AI — built for Indian languages, and the only one of the three
     # that speaks Odia. No card needed to sign up.
     sarvam_api_key: str = ""
-    sarvam_model: str = "bulbul:v2"
+    # v3 chosen by ear over v2 — noticeably clearer on Gujarati consonant
+    # clusters, and it handles code-mixed English terms better.
+    sarvam_model: str = "bulbul:v3"
     # Blank = let Sarvam pick its default voice for the model.
     sarvam_speaker: str = ""
     # 0.5-2.0 on v3, 0.3-3.0 on v2. Below 1.0 is slower than natural speech.
     sarvam_pace: float = 0.9
-    sarvam_sample_rate: int = 22050
+    sarvam_sample_rate: int = 24000
 
     # Google Cloud TTS. Preferred for this app: it has real native-speaker
     # neural voices for Gujarati/Hindi/Marathi/etc., where ElevenLabs' free
