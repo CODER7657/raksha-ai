@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { HighlightedText } from '../components/HighlightedText'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
@@ -25,6 +26,7 @@ function SpeakerIcon() {
 export function ResultPage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { result, sourceText, language } = (location.state as ResultLocationState | null) ?? {}
   const [speaking, setSpeaking] = useState(false)
   const [voiceNote, setVoiceNote] = useState(false)
@@ -32,18 +34,19 @@ export function ResultPage() {
   if (!result) {
     return (
       <div className="mx-auto max-w-2xl text-center">
-        <p className="text-sm text-ink/60 mb-4">No scan result to show.</p>
+        <p className="text-sm text-ink/60 mb-4">{t('result.noResult')}</p>
         <button
           onClick={() => navigate('/app')}
           className="border border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
         >
-          Back to scan
+          {t('result.backToScan')}
         </button>
       </div>
     )
   }
 
   const meta = VERDICT_META[result.verdict]
+  const verdictLabel = t(meta.labelKey)
   // The result was generated in the language the scan was run in, so read it
   // back in that language rather than whatever is selected now.
   const resultLanguage = language ?? 'en'
@@ -71,15 +74,15 @@ export function ResultPage() {
   }
 
   const shareText = [
-    `Raksha AI scam check — ${meta.label} (${result.risk_score}/100)`,
+    `${t('result.shareCheckLabel')} — ${verdictLabel} (${result.risk_score}/100)`,
     result.explanation,
-    `What to do: ${result.recommended_action}`,
+    `${t('result.shareWhatToDo')}: ${result.recommended_action}`,
   ].join('\n\n')
 
   const forwardToFamily = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Raksha AI scam alert', text: shareText })
+        await navigator.share({ title: t('result.shareAlertTitle'), text: shareText })
       } catch {
         // user cancelled the share sheet — not an error
       }
@@ -92,7 +95,7 @@ export function ResultPage() {
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center gap-2 mb-6">
         <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Scan result</span>
+        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('result.eyebrow')}</span>
       </div>
 
       <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
@@ -100,7 +103,7 @@ export function ResultPage() {
 
         <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
           <span className={`px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] ${meta.badgeClass}`}>
-            {meta.label}
+            {verdictLabel}
           </span>
           <button
             type="button"
@@ -108,20 +111,19 @@ export function ResultPage() {
             className="flex items-center gap-1.5 border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-ink hover:bg-ink hover:text-white transition-colors"
           >
             <SpeakerIcon />
-            {speaking ? 'Stop' : 'Read aloud'}
+            {speaking ? t('result.stop') : t('result.readAloud')}
           </button>
         </div>
 
         {voiceNote && (
           <p className="-mt-3 mb-5 text-[10px] text-ink/40 leading-relaxed">
-            This device has no installed {languageOption?.label ?? 'this language'} voice — reading with the
-            closest available voice, pronunciation may be off.
+            {t('result.noVoiceInstalled', { language: languageOption?.label ?? t('result.thisLanguage') })}
           </p>
         )}
 
         <div className="mb-6">
           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1">
-            <span>Risk score</span>
+            <span>{t('result.riskScore')}</span>
             <span>{result.risk_score}/100</span>
           </div>
           <div className="h-2 w-full border border-ink bg-white">
@@ -132,7 +134,7 @@ export function ResultPage() {
         {sourceText && (
           <div className="mb-6">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-              Flagged phrases in context
+              {t('result.flaggedPhrasesInContext')}
             </span>
             <div className="mt-1.5 border border-line p-3 bg-white">
               <HighlightedText text={sourceText} phrases={result.flagged_phrases} />
@@ -142,7 +144,9 @@ export function ResultPage() {
 
         {!sourceText && result.flagged_phrases.length > 0 && (
           <div className="mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Flagged phrases</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
+              {t('result.flaggedPhrases')}
+            </span>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {result.flagged_phrases.map((phrase, i) => (
                 <span key={i} className="bg-accent/25 border border-accent px-2 py-0.5 text-xs text-ink">
@@ -154,18 +158,17 @@ export function ResultPage() {
         )}
 
         <div className="mb-6">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Why</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('result.why')}</span>
           <p className="mt-1.5 text-sm text-ink leading-relaxed">{result.explanation}</p>
         </div>
 
         <div className="border-l-4 border-accent bg-orange-50 px-4 py-3 mb-6">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">What to do</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('result.whatToDo')}</span>
           <p className="mt-1 text-sm text-ink leading-relaxed">{result.recommended_action}</p>
         </div>
 
         <p className="text-[11px] text-ink/50 mb-6">
-          This exact message has been reported {result.community_report_count} time
-          {result.community_report_count === 1 ? '' : 's'} by the Raksha AI community.
+          {t('result.reported', { count: result.community_report_count })}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2">
@@ -174,14 +177,14 @@ export function ResultPage() {
             onClick={forwardToFamily}
             className="flex-1 bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
           >
-            Forward to family
+            {t('result.forwardToFamily')}
           </button>
           <button
             type="button"
             onClick={() => navigate('/app')}
             className="flex-1 border border-ink px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
           >
-            Scan another
+            {t('result.scanAnother')}
           </button>
         </div>
       </div>

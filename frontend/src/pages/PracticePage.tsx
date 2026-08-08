@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useLanguage } from '../context/LanguageContext'
@@ -21,14 +22,15 @@ type Stage = 'start' | 'loading' | 'playing' | 'finished'
 const DRAG_THRESHOLD = 110
 const BEST_KEY_PREFIX = 'raksha_practice_best_'
 
-function tierFor(pct: number): { title: string; blurb: string } {
-  if (pct >= 90) return { title: 'Scam Spotter Elite', blurb: "You catch red flags almost instantly — that's exactly the instinct that keeps people safe." }
-  if (pct >= 70) return { title: 'Sharp-Eyed Saver', blurb: 'Strong instincts. A little more practice and nothing will slip past you.' }
-  if (pct >= 50) return { title: 'Getting There', blurb: "You're building the habit — review the tips below and play again." }
-  return { title: 'Stay Alert', blurb: 'Scams are getting sneakier. A few more rounds will sharpen your eye fast.' }
+function tierKeysFor(pct: number): { titleKey: string; blurbKey: string } {
+  if (pct >= 90) return { titleKey: 'practice.tierEliteTitle', blurbKey: 'practice.tierEliteBlurb' }
+  if (pct >= 70) return { titleKey: 'practice.tierSharpTitle', blurbKey: 'practice.tierSharpBlurb' }
+  if (pct >= 50) return { titleKey: 'practice.tierGettingThereTitle', blurbKey: 'practice.tierGettingThereBlurb' }
+  return { titleKey: 'practice.tierStayAlertTitle', blurbKey: 'practice.tierStayAlertBlurb' }
 }
 
 export function PracticePage() {
+  const { t } = useTranslation()
   const [stage, setStage] = useState<Stage>('start')
   const { language } = useLanguage()
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
@@ -69,10 +71,10 @@ export function PracticePage() {
       setDragX(0)
       setStage('playing')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load practice round — try again.')
+      setError(err instanceof Error ? err.message : t('practice.loadError'))
       setStage('start')
     }
-  }, [language])
+  }, [language, t])
 
   const commitAnswer = (guessScam: boolean) => {
     if (answered || !current) return
@@ -146,25 +148,22 @@ export function PracticePage() {
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center gap-2 mb-6">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Practice · Scam or Safe?</span>
+          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('practice.eyebrow')}</span>
         </div>
 
         <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
           <CornerBrackets />
-          <h1 className="text-xl font-extrabold uppercase tracking-tight text-ink mb-2">Scam or Safe?</h1>
-          <p className="text-sm text-ink/70 leading-relaxed mb-6">
-            Real (defanged) messages, one at a time. Swipe right — or tap — if you think it's a scam, left if
-            it looks safe. Every answer reveals exactly why, so you leave sharper than you started.
-          </p>
+          <h1 className="text-xl font-extrabold uppercase tracking-tight text-ink mb-2">{t('practice.title')}</h1>
+          <p className="text-sm text-ink/70 leading-relaxed mb-6">{t('practice.intro')}</p>
 
           <label className="flex flex-col gap-1.5 mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Language</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('common.language')}</span>
             <LanguageSelect className="px-3 py-2 text-sm" />
           </label>
 
           {best !== null && (
             <p className="mb-4 text-[11px] text-ink/50">
-              Your best in this language: <span className="font-bold text-ink">{best}%</span>
+              {t('practice.bestScore', { score: best })}
             </p>
           )}
 
@@ -176,7 +175,7 @@ export function PracticePage() {
             disabled={stage === 'loading'}
             className="w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
           >
-            {stage === 'loading' ? 'Loading…' : 'Start practice'}
+            {stage === 'loading' ? t('practice.loading') : t('practice.startPractice')}
           </button>
         </div>
       </div>
@@ -185,24 +184,26 @@ export function PracticePage() {
 
   if (stage === 'finished') {
     const pct = Math.round((score / questions.length) * 100)
-    const tier = tierFor(pct)
+    const tier = tierKeysFor(pct)
     return (
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center gap-2 mb-6">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Round complete</span>
+          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('practice.roundComplete')}</span>
         </div>
 
         <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8 text-center">
           <CornerBrackets />
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-2">{tier.title}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-2">{t(tier.titleKey)}</p>
           <p className="text-4xl font-extrabold text-ink mb-1">
             {score}/{questions.length}
           </p>
-          <p className="text-sm text-ink/60 mb-1">{pct}% correct · best streak {bestStreak}</p>
-          <p className="text-sm text-ink/70 leading-relaxed mt-4 mb-6">{tier.blurb}</p>
+          <p className="text-sm text-ink/60 mb-1">{t('practice.percentCorrect', { pct, streak: bestStreak })}</p>
+          <p className="text-sm text-ink/70 leading-relaxed mt-4 mb-6">{t(tier.blurbKey)}</p>
 
-          {best !== null && <p className="text-[11px] text-ink/50 mb-6">Your best in this language: {best}%</p>}
+          {best !== null && (
+            <p className="text-[11px] text-ink/50 mb-6">{t('practice.bestScore', { score: best })}</p>
+          )}
 
           <div className="flex flex-col sm:flex-row gap-2">
             <button
@@ -210,14 +211,14 @@ export function PracticePage() {
               onClick={startRound}
               className="flex-1 bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
             >
-              Play again
+              {t('practice.playAgain')}
             </button>
             <button
               type="button"
               onClick={() => setStage('start')}
               className="flex-1 border border-ink px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
             >
-              Change language
+              {t('practice.changeLanguage')}
             </button>
           </div>
         </div>
@@ -236,11 +237,11 @@ export function PracticePage() {
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
           <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
-            Question {index + 1}/{questions.length}
+            {t('practice.questionCounter', { current: index + 1, total: questions.length })}
           </span>
         </div>
         <div className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-[0.1em]">
-          <span className="text-ink/70">Score {score}</span>
+          <span className="text-ink/70">{t('practice.score', { score })}</span>
           {streak >= 2 && <span className="text-accent">🔥 {streak}</span>}
         </div>
       </div>
@@ -268,7 +269,7 @@ export function PracticePage() {
             className="relative border border-ink bg-white p-6 sm:p-8 min-h-[220px] flex flex-col justify-center"
           >
             <CornerBrackets />
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/40 mb-3">Is this a scam?</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/40 mb-3">{t('practice.isThisAScam')}</p>
             <p className="text-base sm:text-lg text-ink leading-relaxed">{current.text}</p>
           </div>
         </TiltCard>
@@ -280,14 +281,14 @@ export function PracticePage() {
               onClick={() => commitAnswer(false)}
               className="flex-1 border-2 border-emerald-600 text-emerald-700 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-emerald-600 hover:text-white transition-colors"
             >
-              ✅ Safe
+              ✅ {t('practice.safe')}
             </button>
             <button
               type="button"
               onClick={() => commitAnswer(true)}
               className="flex-1 border-2 border-red-600 text-red-700 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-red-600 hover:text-white transition-colors"
             >
-              🚩 Scam
+              🚩 {t('practice.scamAnswer')}
             </button>
           </div>
         )}
@@ -300,9 +301,9 @@ export function PracticePage() {
                 lastCorrect ? 'text-emerald-700' : 'text-red-700'
               }`}
             >
-              {lastCorrect ? '✅ Correct!' : `❌ Not quite — you said ${lastGuessScam ? 'scam' : 'safe'}`}
+              {lastCorrect ? `✅ ${t('practice.correct')}` : `❌ ${lastGuessScam ? t('practice.notQuiteScam') : t('practice.notQuiteSafe')}`}
               <span className="ml-2 font-normal normal-case text-ink/50 tracking-normal">
-                · actually {current.is_scam ? 'a scam' : 'safe'} ({current.category_label})
+                · {current.is_scam ? t('practice.actuallyScam') : t('practice.actuallySafe')} ({current.category_label})
               </span>
             </p>
 
@@ -319,7 +320,7 @@ export function PracticePage() {
               onClick={nextQuestion}
               className="w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
             >
-              {index + 1 >= questions.length ? 'See results' : 'Next'}
+              {index + 1 >= questions.length ? t('practice.seeResults') : t('practice.next')}
             </button>
           </div>
         )}

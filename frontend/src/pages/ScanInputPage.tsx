@@ -62,7 +62,7 @@ export function ScanInputPage() {
       recorder.start()
       setRecording(true)
     } catch {
-      setError('Microphone access denied or unavailable.')
+      setError(t('scan.errorMicDenied'))
     }
   }
 
@@ -88,7 +88,7 @@ export function ScanInputPage() {
     setError('')
     setUpiResult(null)
     if (!upiValue.trim()) {
-      setError('Enter a UPI ID or link first.')
+      setError(t('scan.errorEnterUpi'))
       return
     }
     setSubmitting(true)
@@ -99,7 +99,7 @@ export function ScanInputPage() {
       })
       setUpiResult(result)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Check failed — try again.')
+      setError(err instanceof Error ? err.message : t('scan.errorCheckFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -117,13 +117,13 @@ export function ScanInputPage() {
       let result: ScanResult
 
       if (mode === 'text') {
-        if (!text.trim()) throw new Error('Paste a message first.')
+        if (!text.trim()) throw new Error(t('scan.errorPasteFirst'))
         result = await apiFetch('/api/scan/text', {
           method: 'POST',
           body: JSON.stringify({ text, language }),
         })
       } else {
-        if (!audioBlob) throw new Error('Record or upload audio first.')
+        if (!audioBlob) throw new Error(t('scan.errorRecordFirst'))
         const formData = new FormData()
         formData.append('file', audioBlob, audioBlob instanceof File ? audioBlob.name : 'recording.webm')
         result = await apiFetch(`/api/scan/audio?language=${encodeURIComponent(language)}`, {
@@ -136,7 +136,7 @@ export function ScanInputPage() {
         state: { result, sourceText: mode === 'text' ? text : result.transcript, language },
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Scan failed — try again.')
+      setError(err instanceof Error ? err.message : t('scan.errorScanFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -146,7 +146,7 @@ export function ScanInputPage() {
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center gap-2 mb-6">
         <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Scan a message or call</span>
+        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('scan.eyebrow')}</span>
       </div>
 
       <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
@@ -160,7 +160,7 @@ export function ScanInputPage() {
               mode === 'text' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
             }`}
           >
-            Text
+            {t('scan.tabs.text')}
           </button>
           <button
             type="button"
@@ -169,7 +169,7 @@ export function ScanInputPage() {
               mode === 'voice' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
             }`}
           >
-            Voice / Call
+            {t('scan.tabs.voice')}
           </button>
           <button
             type="button"
@@ -178,7 +178,7 @@ export function ScanInputPage() {
               mode === 'upi' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
             }`}
           >
-            UPI / Link
+            {t('scan.tabs.upi')}
           </button>
         </div>
 
@@ -194,14 +194,14 @@ export function ScanInputPage() {
         {mode === 'text' && (
           <label className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-              Paste the SMS / WhatsApp / UPI message
+              {t('scan.textLabel')}
             </span>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={8}
               maxLength={4000}
-              placeholder="e.g. Your KYC is expiring, click this link to update: bit.ly/xyz123"
+              placeholder={t('scan.textPlaceholder')}
               className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
             />
             <span className="self-end text-[10px] text-ink/40">{text.length}/4000</span>
@@ -210,7 +210,7 @@ export function ScanInputPage() {
 
         {mode === 'voice' && (
           <div className="flex flex-col gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Record or upload a call</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('scan.voiceLabel')}</span>
 
             <div className="flex gap-2">
               <button
@@ -220,10 +220,10 @@ export function ScanInputPage() {
                   recording ? 'bg-red-600 border-red-600 text-white' : 'text-ink hover:bg-ink hover:text-white'
                 }`}
               >
-                {recording ? 'Stop recording' : 'Record'}
+                {recording ? t('scan.stopRecording') : t('scan.record')}
               </button>
               <label className="flex-1 border border-ink py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink text-center hover:bg-ink hover:text-white transition-colors cursor-pointer">
-                Upload file
+                {t('scan.uploadFile')}
                 <input type="file" accept="audio/*" onChange={handleFileChange} className="hidden" />
               </label>
             </div>
@@ -232,7 +232,7 @@ export function ScanInputPage() {
               <div className="border border-line p-3 flex items-center gap-3">
                 <audio controls src={audioUrl} className="w-full h-8" />
                 <button type="button" onClick={resetAudio} className="text-[10px] uppercase text-ink/50 hover:text-accent shrink-0">
-                  Clear
+                  {t('scan.clear')}
                 </button>
               </div>
             )}
@@ -243,7 +243,7 @@ export function ScanInputPage() {
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-                UPI ID or link to check
+                {t('scan.upiLabel')}
               </span>
               <input
                 type="text"
@@ -253,14 +253,11 @@ export function ScanInputPage() {
                   setUpiResult(null)
                 }}
                 maxLength={256}
-                placeholder="e.g. paytm-refund.info or friend@oksbi"
+                placeholder={t('scan.upiPlaceholder')}
                 className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </label>
-            <p className="text-[11px] text-ink/50 leading-relaxed">
-              Pure pattern-matching against known brand names and suspicious domain endings — no AI call, works
-              even if the detection service is down.
-            </p>
+            <p className="text-[11px] text-ink/50 leading-relaxed">{t('scan.upiDescription')}</p>
 
             {upiResult && (
               <div
@@ -273,8 +270,10 @@ export function ScanInputPage() {
                     upiResult.is_suspicious ? 'text-red-700' : 'text-emerald-700'
                   }`}
                 >
-                  {upiResult.is_suspicious ? '⚠ Looks suspicious' : '✅ Nothing suspicious found'}
-                  {upiResult.is_upi && <span className="ml-2 font-normal normal-case text-ink/50">· valid UPI ID format</span>}
+                  {upiResult.is_suspicious ? `⚠ ${t('scan.upiSuspicious')}` : `✅ ${t('scan.upiSafe')}`}
+                  {upiResult.is_upi && (
+                    <span className="ml-2 font-normal normal-case text-ink/50">· {t('scan.upiValidFormat')}</span>
+                  )}
                 </p>
                 {upiResult.reasons.length > 0 && (
                   <ul className="list-disc list-inside text-sm text-ink/80 leading-relaxed">
@@ -284,10 +283,7 @@ export function ScanInputPage() {
                   </ul>
                 )}
                 {!upiResult.is_suspicious && (
-                  <p className="text-sm text-ink/70 leading-relaxed">
-                    No typosquatting or suspicious domain pattern detected — still verify independently before
-                    sending money.
-                  </p>
+                  <p className="text-sm text-ink/70 leading-relaxed">{t('scan.upiNoIssues')}</p>
                 )}
               </div>
             )}
@@ -302,7 +298,13 @@ export function ScanInputPage() {
           disabled={submitting}
           className="mt-6 w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
         >
-          {submitting ? (mode === 'upi' ? 'Checking…' : 'Scanning…') : mode === 'upi' ? 'Check UPI / link' : 'Scan for scams'}
+          {submitting
+            ? mode === 'upi'
+              ? t('scan.checking')
+              : t('scan.scanning')
+            : mode === 'upi'
+              ? t('scan.checkUpiLink')
+              : t('scan.scanForScams')}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { HighlightedText } from '../components/HighlightedText'
@@ -22,6 +23,7 @@ function languageLabel(code: string) {
 }
 
 export function HistoryPage() {
+  const { t } = useTranslation()
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null)
   const [error, setError] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -43,7 +45,7 @@ export function HistoryPage() {
   if (!entries) {
     return (
       <div className="mx-auto max-w-2xl">
-        <p className="text-sm text-ink/60">Loading history…</p>
+        <p className="text-sm text-ink/60">{t('history.loading')}</p>
       </div>
     )
   }
@@ -58,31 +60,30 @@ export function HistoryPage() {
       <div>
         <div className="flex items-center gap-2 mb-6">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">History dashboard</span>
+          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('history.eyebrow')}</span>
         </div>
 
         <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
           <CornerBrackets />
           <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-            Your community scam radar
+            {t('history.communityRadar')}
           </span>
           <p className="mt-2 text-2xl font-extrabold text-ink">{flaggedCount}</p>
-          <p className="mt-1 text-xs text-ink/60">
-            risky message{flaggedCount === 1 ? '' : 's'} you've helped flag with Raksha AI.
-            Community-wide totals across all users are coming soon.
-          </p>
+          <p className="mt-1 text-xs text-ink/60">{t('history.riskyMessage', { count: flaggedCount })}</p>
         </div>
       </div>
 
       {entries.length > 0 && (
         <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
           <CornerBrackets />
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Scam type trend</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
+            {t('history.scamTypeTrend')}
+          </span>
           <div className="mt-3 flex flex-col gap-2">
             {VERDICT_ORDER.map((v) => (
               <div key={v} className="flex items-center gap-3">
                 <span className="w-20 shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/70">
-                  {VERDICT_META[v].label}
+                  {t(VERDICT_META[v].labelKey)}
                 </span>
                 <div className="h-2 flex-1 border border-ink bg-white">
                   <div
@@ -98,12 +99,12 @@ export function HistoryPage() {
       )}
 
       <div>
-        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Past scans</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('history.pastScans')}</span>
 
         {entries.length === 0 ? (
           <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8 mt-2 text-center">
             <CornerBrackets />
-            <p className="text-sm text-ink/60">No scans yet — go check a message.</p>
+            <p className="text-sm text-ink/60">{t('history.noScansYet')}</p>
           </div>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
@@ -118,7 +119,7 @@ export function HistoryPage() {
                     className="w-full flex items-center gap-3 px-4 py-3 text-left"
                   >
                     <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] ${meta.badgeClass}`}>
-                      {meta.label}
+                      {t(meta.labelKey)}
                     </span>
                     <span className="flex-1 truncate text-sm text-ink">{entry.input_text}</span>
                     <span className="shrink-0 text-[10px] text-ink/50">{formatDate(entry.created_at)}</span>
