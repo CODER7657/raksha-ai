@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     sarvam_pace: float = 0.9
     sarvam_sample_rate: int = 24000
 
+    # Speech-to-text. "auto" uses Sarvam when its key is set, else the local
+    # faster-whisper model. Whisper's `base` model cannot transcribe Gujarati
+    # (it returns Devanagari), and the larger models OOM on Render's free tier.
+    stt_provider: str = "auto"
+    sarvam_stt_model: str = "saaras:v3"
+
     # Google Cloud TTS. Preferred for this app: it has real native-speaker
     # neural voices for Gujarati/Hindi/Marathi/etc., where ElevenLabs' free
     # plan only exposes English voices that read Indic scripts with English

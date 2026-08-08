@@ -10,7 +10,7 @@ from app.core.supabase_client import get_supabase
 from app.rate_limit import limiter
 from app.services import llm, rag
 from app.services.rule_engine import offline_flag
-from app.services.transcribe import transcribe_audio
+from app.services import stt
 
 router = APIRouter(prefix="/api", tags=["scan"])
 
@@ -127,7 +127,12 @@ async def scan_audio(
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
 
-    transcript = transcribe_audio(audio_bytes, language)
+    transcript = stt.transcribe(
+        audio_bytes,
+        language,
+        filename=file.filename or "audio.webm",
+        content_type=base_content_type,
+    )
     if not transcript:
         raise HTTPException(status_code=422, detail="Could not transcribe any speech from the audio")
 
