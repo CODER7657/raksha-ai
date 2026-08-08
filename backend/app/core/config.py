@@ -20,8 +20,19 @@ class Settings(BaseSettings):
     # CORS — comma-separated list of allowed frontend origins, no wildcard
     allowed_origins: str = "http://localhost:5173"
 
-    # ElevenLabs TTS (optional — when unset, the frontend silently uses the
-    # browser's built-in speechSynthesis voices instead)
+    # --- Text-to-speech (all optional — with none set, the frontend silently
+    # uses the browser's built-in speechSynthesis voices) ---
+    # "auto" picks Google if its key is set, else ElevenLabs, else disabled.
+    tts_provider: str = "auto"
+
+    # Google Cloud TTS. Preferred for this app: it has real native-speaker
+    # neural voices for Gujarati/Hindi/Marathi/etc., where ElevenLabs' free
+    # plan only exposes English voices that read Indic scripts with English
+    # pronunciation.
+    google_tts_api_key: str = ""
+
+    # ElevenLabs — better English voices, but no usable Indic voices on the
+    # free plan (the Voice Library is paid-only).
     elevenlabs_api_key: str = ""
     # Default "Lily" — a stock voice confirmed usable on the free plan. Some
     # voices are Voice Library-only and 402 for free accounts, so don't swap
@@ -35,7 +46,6 @@ class Settings(BaseSettings):
     # Rate limiting
     scan_rate_limit: str = "10/minute"
     chat_rate_limit: str = "15/minute"
-    # Deliberately tight: the free ElevenLabs plan is ~10k credits/month total.
     tts_rate_limit: str = "20/minute"
 
     @property

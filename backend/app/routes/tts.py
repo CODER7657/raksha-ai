@@ -1,4 +1,4 @@
-"""Text-to-speech route.
+"""Text-to-speech route. Provider selection lives in app/services/tts.py.
 
 Contract with the frontend: a 200 returns raw MP3 bytes. Any failure returns
 503 with a `reason` code — the frontend treats *every* 503 here as "use the
@@ -28,24 +28,17 @@ class TTSRequest(BaseModel):
 
 
 class TTSStatusResponse(BaseModel):
-    """Lets the frontend skip the network round-trip entirely when ElevenLabs
-    isn't configured, instead of failing over on every single read-aloud."""
+    """Lets the frontend skip the network round-trip entirely when no provider
+    is configured, instead of failing over on every single read-aloud."""
 
     available: bool
-    voice_id: str | None = None
-    model_id: str | None = None
+    provider: str
 
 
 @router.get("/tts/status", response_model=TTSStatusResponse)
 def tts_status(user_id: str = Depends(get_current_user)) -> TTSStatusResponse:
-    settings = get_settings()
-    if not tts.is_configured():
-        return TTSStatusResponse(available=False)
-    return TTSStatusResponse(
-        available=True,
-        voice_id=settings.elevenlabs_voice_id,
-        model_id=settings.elevenlabs_model_id,
-    )
+    provider = tts.active_provider()
+    return TTSStatusResponse(available=provider != "none", provider=provider)
 
 
 @router.post(
