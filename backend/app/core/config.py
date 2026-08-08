@@ -37,6 +37,18 @@ class Settings(BaseSettings):
     sarvam_pace: float = 0.9
     sarvam_sample_rate: int = 24000
 
+    # Languages deliberately served by the browser's own voice instead of the
+    # paid provider, comma-separated. English is the default because every
+    # platform ships a decent English voice, whereas Indic voice packs are
+    # frequently missing — so paid credits are worth spending only where the
+    # device would otherwise fail. Set to "" to send every language to the
+    # provider.
+    tts_browser_languages: str = "en"
+
+    @property
+    def tts_browser_languages_list(self) -> list[str]:
+        return [c.strip() for c in self.tts_browser_languages.split(",") if c.strip()]
+
     # Speech-to-text. "auto" uses Sarvam when its key is set, else the local
     # faster-whisper model. Whisper's `base` model cannot transcribe Gujarati
     # (it returns Devanagari), and the larger models OOM on Render's free tier.

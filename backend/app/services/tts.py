@@ -89,6 +89,16 @@ def is_configured() -> bool:
     return active_provider() != "none"
 
 
+def prefers_browser_voice(language: str) -> bool:
+    """True when this language should use the device voice, not paid credits.
+
+    Not a fallback — a deliberate allocation. Browser voices handle English
+    well everywhere, so spending a finite credit pool on it buys almost
+    nothing, while Gujarati and Hindi are exactly where devices fall short.
+    """
+    return language in get_settings().tts_browser_languages_list
+
+
 # --------------------------------------------------------------------------
 # Cache
 # --------------------------------------------------------------------------
@@ -392,6 +402,9 @@ def synthesize(text: str, language: str) -> tuple[bytes, str, bool]:
     Raises TTSUnavailable on every failure path so the caller can fall back to
     the browser voice rather than showing the user an error.
     """
+    if prefers_browser_voice(language):
+        raise TTSUnavailable("browser_preferred", f"{language} is configured to use the device voice")
+
     provider = active_provider()
     handler = _PROVIDERS.get(provider)
     if handler is None:

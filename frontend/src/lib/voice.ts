@@ -38,8 +38,15 @@ interface SpeakOptions {
 }
 
 let currentAudio: HTMLAudioElement | null = null
+
+interface VoiceStatus {
+  available: boolean
+  /** Languages the server wants us to speak locally — see below. */
+  browserLanguages: string[]
+}
+
 /** Cached so we don't re-ask the backend on every single read-aloud. */
-let premiumAvailable: boolean | null = null
+let statusPromise: Promise<VoiceStatus> | null = null
 
 /** Stops whichever engine is currently talking. */
 export function cancelVoice() {
@@ -52,22 +59,24 @@ export function cancelVoice() {
   cancelSpeech()
 }
 
-async function isPremiumAvailable(): Promise<boolean> {
-  if (premiumAvailable !== null) return premiumAvailable
+function fetchStatus(): Promise<VoiceStatus> {
+  if (statusPromise) return statusPromise
 
-  try {
-    const response = await apiFetchRaw('/api/tts/status')
-    if (!response.ok) {
-      premiumAvailable = false
-      return false
+  statusPromise = (async () => {
+    try {
+      const response = await apiFetchRaw('/api/tts/status')
+      if (!response.ok) return { available: false, browserLanguages: [] }
+      const body = await response.json()
+      return {
+        available: !!body.available,
+        browserLanguages: Array.isArray(body.browser_languages) ? body.browser_languages : [],
+      }
+    } catch {
+      return { available: false, browserLanguages: [] }
     }
-    const body = await response.json()
-    premiumAvailable = !!body.available
-  } catch {
-    premiumAvailable = false
-  }
+  })()
 
-  return premiumAvailable
+  return statusPromise
 }
 
 async function speakWithElevenLabs(text: string, language: string, options: SpeakOptions): Promise<boolean> {
@@ -116,7 +125,16 @@ async function speakWithElevenLabs(text: string, language: string, options: Spea
 export async function speak(text: string, options: SpeakOptions): Promise<SpeakResult> {
   cancelVoice()
 
-  if (await isPremiumAvailable()) {
+  const status = await fetchStatus()
+
+  // Some languages are deliberately spoken locally. English is the default
+  // case: every platform ships a good English voice, so spending a finite
+  // credit pool on it buys nothing, while Gujarati and Hindi are exactly where
+  // devices fall short. Checking here rather than server-side skips a pointless
+  // network round-trip before every English read-aloud.
+  const useBrowserByPolicy = status.browserLanguages.includes(options.language)
+
+  if (status.available && !useBrowserByPolicy) {
     try {
       const played = await speakWithElevenLabs(text, options.language, options)
       if (played) return { source: 'elevenlabs', exactMatch: true }

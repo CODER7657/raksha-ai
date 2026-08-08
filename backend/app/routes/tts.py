@@ -33,12 +33,19 @@ class TTSStatusResponse(BaseModel):
 
     available: bool
     provider: str
+    #: Languages the client should speak with its own voice without asking the
+    #: server at all — saves both a pointless round-trip and paid credits.
+    browser_languages: list[str]
 
 
 @router.get("/tts/status", response_model=TTSStatusResponse)
 def tts_status(user_id: str = Depends(get_current_user)) -> TTSStatusResponse:
     provider = tts.active_provider()
-    return TTSStatusResponse(available=provider != "none", provider=provider)
+    return TTSStatusResponse(
+        available=provider != "none",
+        provider=provider,
+        browser_languages=get_settings().tts_browser_languages_list,
+    )
 
 
 @router.post(
