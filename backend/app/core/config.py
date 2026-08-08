@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     sarvam_model: str = "bulbul:v2"
     # Blank = let Sarvam pick its default voice for the model.
     sarvam_speaker: str = ""
+    # 0.5-2.0 on v3, 0.3-3.0 on v2. Below 1.0 is slower than natural speech.
+    sarvam_pace: float = 0.9
+    sarvam_sample_rate: int = 22050
 
     # Google Cloud TTS. Preferred for this app: it has real native-speaker
     # neural voices for Gujarati/Hindi/Marathi/etc., where ElevenLabs' free

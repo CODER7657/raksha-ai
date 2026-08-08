@@ -157,9 +157,17 @@ def _synthesize_sarvam(text: str, language: str) -> tuple[bytes, str]:
         # Sarvam returns WAV unless told otherwise; MP3 keeps responses small
         # over a slow mobile connection.
         "output_audio_codec": "mp3",
-        # Slightly slower than default: these are safety instructions, often
-        # heard by someone who is panicking.
-        "pace": 0.95,
+        # Slower than default: these are safety instructions, often heard by
+        # someone who is panicking, and Indic scripts need room to breathe.
+        "pace": settings.sarvam_pace,
+        # Higher sample rate audibly sharpens Gujarati consonant clusters.
+        "speech_sample_rate": settings.sarvam_sample_rate,
+        # The reason mixed-language replies sound right. Assistant answers are
+        # naturally code-mixed — "તમારો OTP કોઈને ન આપો" — and without this the
+        # engine tries to read "OTP" and "UPI" with Gujarati letter values.
+        # With it, English terms keep English pronunciation while the Gujarati
+        # around them stays Gujarati.
+        "enable_preprocessing": True,
     }
     if settings.sarvam_speaker:
         payload["speaker"] = settings.sarvam_speaker
@@ -399,7 +407,10 @@ def synthesize(text: str, language: str) -> tuple[bytes, str, bool]:
     # Voice is part of the cache key so changing voice/provider config doesn't
     # keep serving audio in the old voice.
     voice_hint = {
-        "sarvam": f"{settings.sarvam_model}:{settings.sarvam_speaker}",
+        "sarvam": (
+            f"{settings.sarvam_model}:{settings.sarvam_speaker}"
+            f":{settings.sarvam_pace}:{settings.sarvam_sample_rate}"
+        ),
         "google": settings.google_tts_voice or "auto",
         "elevenlabs": settings.elevenlabs_voice_id,
     }.get(provider, "")
