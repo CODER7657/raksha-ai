@@ -27,6 +27,7 @@
     "readAloud": "Read aloud",
     "stop": "Stop",
     "preparingVoice": "Preparing voice…",
+    "languageSwitched": "Switched to {{language}}",
     "error": "Assistant is unavailable — try again.",
     "noVoiceNote": "No {{language}} voice is installed on this device, so the closest available voice is being used.",
     "deviceVoiceNote": "Using this device's built-in voice for {{language}}."

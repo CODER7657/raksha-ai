@@ -3,12 +3,20 @@ import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { LanguageSelect } from '../components/LanguageSelect'
-import { useLanguage } from '../context/LanguageContext'
+import { useLanguage, type LanguageCode } from '../context/LanguageContext'
+import { LANGUAGES } from '../lib/languages'
 import { cancelVoice, speak } from '../lib/voice'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  /** The language this specific turn was written in.
+   *
+   * Tracked per message, not read from the current selector, because a
+   * conversation can legitimately contain several languages once the user
+   * switches mid-chat. Reading a Gujarati message aloud must use a Gujarati
+   * voice even if the selector has since moved to English. */
+  language: LanguageCode
 }
 
 const EXAMPLE_KEYS = ['upiPin', 'scammed', 'fakeKyc'] as const
@@ -50,7 +58,7 @@ export function ChatPage() {
     setVoiceNoteIndex(null)
   }, [language])
 
-  const readAloud = async (text: string, index: number) => {
+  const readAloud = async (message: Message, index: number) => {
     if (speakingIndex === index || preparingIndex === index) {
       cancelVoice()
       setSpeakingIndex(null)
@@ -63,9 +71,13 @@ export function ChatPage() {
     setPreparingIndex(index)
     setVoiceNoteIndex(null)
 
-    const { source, exactMatch } = await speak(text, {
-      language,
-      speechLang,
+    // Deliberately this message's own language, not the current selector.
+    const messageSpeechLang =
+      LANGUAGES.find((l) => l.code === message.language)?.speechLang ?? speechLang
+
+    const { source, exactMatch } = await speak(message.content, {
+      language: message.language,
+      speechLang: messageSpeechLang,
       onEnd: () => setSpeakingIndex(null),
       onError: () => setSpeakingIndex(null),
     })
@@ -83,17 +95,32 @@ export function ChatPage() {
 
     setError('')
     setInput('')
-    const nextMessages: Message[] = [...messages, { role: 'user', content: trimmed }]
+    // Pin the language for this exchange up front: if the user changes the
+    // selector while the request is in flight, the reply still belongs to the
+    // language it was actually asked in.
+    const requestLanguage = language
+    const nextMessages: Message[] = [
+      ...messages,
+      { role: 'user', content: trimmed, language: requestLanguage },
+    ]
     setMessages(nextMessages)
     setSending(true)
 
     try {
-      const history = nextMessages.slice(0, -1).slice(-MAX_HISTORY_SENT)
+      // Strip the local-only `language` field — the API's ChatTurn schema is
+      // just {role, content}.
+      const history = nextMessages
+        .slice(0, -1)
+        .slice(-MAX_HISTORY_SENT)
+        .map(({ role, content }) => ({ role, content }))
       const result = await apiFetch('/api/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: trimmed, language, history }),
+        body: JSON.stringify({ message: trimmed, language: requestLanguage, history }),
       })
-      setMessages((prev) => [...prev, { role: 'assistant', content: result.reply }])
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: result.reply, language: requestLanguage },
+      ])
     } catch (err) {
       setError(err instanceof Error ? err.message : t('chat.error'))
       setMessages((prev) => prev.slice(0, -1))
@@ -149,36 +176,55 @@ export function ChatPage() {
             </div>
           )}
 
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                  m.role === 'user' ? 'bg-ink text-white' : 'border border-ink bg-white text-ink'
-                }`}
-              >
-                {m.content}
-                {m.role === 'assistant' && (
-                  <button
-                    type="button"
-                    onClick={() => readAloud(m.content, i)}
-                    className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40 hover:text-accent transition-colors"
+          {messages.map((m, i) => {
+            // Mark the point where the conversation changed language, so a
+            // mixed-language thread reads as deliberate rather than broken.
+            const switched = i > 0 && messages[i - 1].language !== m.language
+            const switchedTo = LANGUAGES.find((l) => l.code === m.language)?.label ?? m.language
+
+            return (
+              <div key={i}>
+                {switched && (
+                  <div className="flex items-center gap-2 my-3" aria-hidden="true">
+                    <span className="h-px flex-1 bg-line" />
+                    <span className="text-[9px] uppercase tracking-[0.15em] text-ink/35">
+                      {t('chat.languageSwitched', { language: switchedTo })}
+                    </span>
+                    <span className="h-px flex-1 bg-line" />
+                  </div>
+                )}
+                <div className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    lang={m.language}
+                    className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      m.role === 'user' ? 'bg-ink text-white' : 'border border-ink bg-white text-ink'
+                    }`}
                   >
-                    <SpeakerIcon />
-                    {preparingIndex === i
-                      ? t('chat.preparingVoice')
-                      : speakingIndex === i
-                        ? t('chat.stop')
-                        : t('chat.readAloud')}
-                  </button>
-                )}
-                {voiceNoteIndex === i && (
-                  <p className="mt-1 text-[10px] text-ink/40 leading-relaxed">
-                    {t('chat.noVoiceNote', { language: option.label })}
-                  </p>
-                )}
+                    {m.content}
+                    {m.role === 'assistant' && (
+                      <button
+                        type="button"
+                        onClick={() => readAloud(m, i)}
+                        className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40 hover:text-accent transition-colors"
+                      >
+                        <SpeakerIcon />
+                        {preparingIndex === i
+                          ? t('chat.preparingVoice')
+                          : speakingIndex === i
+                            ? t('chat.stop')
+                            : t('chat.readAloud')}
+                      </button>
+                    )}
+                    {voiceNoteIndex === i && (
+                      <p className="mt-1 text-[10px] text-ink/40 leading-relaxed">
+                        {t('chat.noVoiceNote', { language: switchedTo })}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {sending && (
             <div className="flex justify-start">
