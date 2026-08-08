@@ -104,9 +104,23 @@ def _cache_put(key: str, audio: bytes) -> None:
 # Google Cloud Text-to-Speech
 # --------------------------------------------------------------------------
 
-#: Newer voice families sound markedly better; prefer them when a language has
-#: several. Ordered best-first.
-_GOOGLE_VOICE_TIERS = ("Chirp3-HD", "Neural2", "Studio", "Wavenet", "Standard")
+#: Preferred voice families, best-first. Quality AND price both matter here.
+#:
+#: Neural2 and Wavenet sound natural and share a ~1M characters/month free
+#: tier (~$16/1M after). Standard is the cheapest (~4M free, ~$4/1M) and is the
+#: safety net for languages that have nothing better — several Indic languages
+#: only ship Standard voices.
+_GOOGLE_VOICE_TIERS = ("Neural2", "Wavenet", "Standard")
+
+#: Never auto-select these, whatever their quality.
+#:
+#: Studio is roughly $160 per 1M characters with only ~100K free — about ten
+#: times the price of Wavenet for a tenth of the free quota. Chirp3-HD is
+#: likewise priced well above Wavenet. Picking either automatically would turn
+#: a language gaining a new voice into a surprise bill on someone else's card,
+#: with no code change to point at. Opt in deliberately via GOOGLE_TTS_VOICE if
+#: you actually want one.
+_GOOGLE_VOICE_DENYLIST = ("studio", "chirp")
 
 #: language code -> resolved Google voice name. Populated on first use.
 _google_voice_cache: dict[str, str | None] = {}
@@ -126,7 +140,13 @@ def _pick_google_voice(bcp47: str, api_key: str) -> str | None:
     as Google adds and retires them, and a stale hardcoded name would fail in
     production long after anyone remembers why. A language with no voices at all
     (Odia, at time of writing) simply resolves to None and falls back.
+
+    An explicit GOOGLE_TTS_VOICE overrides all of this.
     """
+    settings = get_settings()
+    if settings.google_tts_voice:
+        return settings.google_tts_voice
+
     if bcp47 in _google_voice_cache:
         return _google_voice_cache[bcp47]
 
@@ -149,11 +169,16 @@ def _pick_google_voice(bcp47: str, api_key: str) -> str | None:
         raise TTSUnavailable(f"http_{response.status_code}", response.text[:200])
 
     voices = response.json().get("voices", [])
-    if not voices:
+    affordable = [
+        v
+        for v in voices
+        if not any(bad in v.get("name", "").lower() for bad in _GOOGLE_VOICE_DENYLIST)
+    ]
+    if not affordable:
         _google_voice_cache[bcp47] = None
         return None
 
-    best = sorted(voices, key=lambda v: _google_voice_rank(v.get("name", "")))[0]
+    best = sorted(affordable, key=lambda v: _google_voice_rank(v.get("name", "")))[0]
     name = best.get("name")
     _google_voice_cache[bcp47] = name
     return name

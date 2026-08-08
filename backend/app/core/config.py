@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # plan only exposes English voices that read Indic scripts with English
     # pronunciation.
     google_tts_api_key: str = ""
+    # Optional explicit voice name (e.g. "gu-IN-Wavenet-A"). Left blank, the
+    # best affordable voice for the language is discovered at runtime.
+    google_tts_voice: str = ""
 
     # ElevenLabs — better English voices, but no usable Indic voices on the
     # free plan (the Voice Library is paid-only).
