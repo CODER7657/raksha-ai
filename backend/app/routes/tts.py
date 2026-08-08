@@ -55,7 +55,7 @@ def synthesize_speech(
     user_id: str = Depends(get_current_user),
 ):
     try:
-        audio, from_cache = tts.synthesize(payload.text, payload.language)
+        audio, mime, from_cache = tts.synthesize(payload.text, payload.language)
     except tts.TTSUnavailable as exc:
         return JSONResponse(
             status_code=503,
@@ -68,7 +68,7 @@ def synthesize_speech(
 
     return Response(
         content=audio,
-        media_type="audio/mpeg",
+        media_type=mime,
         headers={
             "X-TTS-Cache": "hit" if from_cache else "miss",
             # Same text always yields the same audio, so let the browser reuse

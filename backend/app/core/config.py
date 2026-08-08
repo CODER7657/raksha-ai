@@ -22,8 +22,15 @@ class Settings(BaseSettings):
 
     # --- Text-to-speech (all optional — with none set, the frontend silently
     # uses the browser's built-in speechSynthesis voices) ---
-    # "auto" picks Google if its key is set, else ElevenLabs, else disabled.
+    # "auto" prefers Sarvam, then Google, then ElevenLabs, else disabled.
     tts_provider: str = "auto"
+
+    # Sarvam AI — built for Indian languages, and the only one of the three
+    # that speaks Odia. No card needed to sign up.
+    sarvam_api_key: str = ""
+    sarvam_model: str = "bulbul:v2"
+    # Blank = let Sarvam pick its default voice for the model.
+    sarvam_speaker: str = ""
 
     # Google Cloud TTS. Preferred for this app: it has real native-speaker
     # neural voices for Gujarati/Hindi/Marathi/etc., where ElevenLabs' free
