@@ -32,7 +32,7 @@ function tierKeysFor(pct: number): { titleKey: string; blurbKey: string } {
 export function PracticePage() {
   const { t } = useTranslation()
   const [stage, setStage] = useState<Stage>('start')
-  const { language } = useLanguage()
+  const { language, option, isTranslated } = useLanguage()
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
   const [index, setIndex] = useState(0)
   const [score, setScore] = useState(0)
@@ -155,6 +155,12 @@ export function PracticePage() {
           <CornerBrackets />
           <h1 className="text-xl font-extrabold uppercase tracking-tight text-ink mb-2">{t('practice.title')}</h1>
           <p className="text-sm text-ink/70 leading-relaxed mb-6">{t('practice.intro')}</p>
+
+          {!isTranslated && (
+            <p className="mb-6 border border-line bg-white/60 px-3 py-2 text-[10px] leading-relaxed text-ink/50">
+              {t('practice.untranslatedNote', { language: option.label })}
+            </p>
+          )}
 
           <label className="flex flex-col gap-1.5 mb-6">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('common.language')}</span>

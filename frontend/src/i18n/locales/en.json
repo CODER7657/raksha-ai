@@ -132,6 +132,7 @@
     "eyebrow": "Practice · Scam or Safe?",
     "title": "Scam or Safe?",
     "intro": "Real (defanged) messages, one at a time. Swipe right — or tap — if you think it's a scam, left if it looks safe. Every answer reveals exactly why, so you leave sharper than you started.",
+    "untranslatedNote": "Practice questions aren't written in {{language}} yet, so this round uses English examples — the app itself still runs in {{language}} everywhere else.",
     "bestScore": "Your best in this language: {{score}}%",
     "startPractice": "Start practice",
     "loading": "Loading…",

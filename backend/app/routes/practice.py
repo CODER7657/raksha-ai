@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from app.core.auth import get_current_user
-from app.services.practice_content import CATEGORY_LABELS, get_round
+from app.services.practice_content import category_label, get_round
 
 router = APIRouter(prefix="/api", tags=["practice"])
 
@@ -50,7 +50,7 @@ def get_practice_round(
                 text=item.text,
                 is_scam=item.is_scam,
                 category=item.category,
-                category_label=CATEGORY_LABELS.get(item.category, item.category),
+                category_label=category_label(item.category, language),
                 red_flags=item.red_flags,
                 tip=item.tip,
             )
