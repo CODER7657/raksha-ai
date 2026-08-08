@@ -18,3 +18,5 @@ backend/.env
 .vscode/
 .idea/
 *.log
+
+.env*
