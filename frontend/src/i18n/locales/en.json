@@ -1,0 +1,34 @@
+{
+  "nav": {
+    "scan": "Scan",
+    "practice": "Practice",
+    "chat": "Chat",
+    "history": "History",
+    "about": "About",
+    "signOut": "Sign out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "common": {
+    "language": "Language",
+    "selectLanguage": "Choose language",
+    "untranslatedNote": "The interface isn't translated into {{language}} yet, so it stays in English — but answers and read-aloud still use {{language}}."
+  },
+  "chat": {
+    "eyebrow": "Ask Raksha AI",
+    "emptyState": "Ask anything about scams, UPI safety, or what to do if something already went wrong. Answers are grounded against Raksha AI's known scam pattern database.",
+    "examples": {
+      "upiPin": "Is it safe to share my UPI PIN over a call?",
+      "scammed": "I think I just got scammed — what do I do right now?",
+      "fakeKyc": "How do fake KYC messages usually try to trick people?"
+    },
+    "inputPlaceholder": "Ask about a scam, UPI safety, what to do next…",
+    "send": "Send",
+    "readAloud": "Read aloud",
+    "stop": "Stop",
+    "preparingVoice": "Preparing voice…",
+    "error": "Assistant is unavailable — try again.",
+    "noVoiceNote": "No {{language}} voice is installed on this device, so the closest available voice is being used.",
+    "deviceVoiceNote": "Using this device's built-in voice for {{language}}."
+  }
+}

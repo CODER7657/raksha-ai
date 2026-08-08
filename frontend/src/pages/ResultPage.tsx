@@ -4,7 +4,7 @@ import { CornerBrackets } from '../components/CornerBrackets'
 import { HighlightedText } from '../components/HighlightedText'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { VERDICT_META, type ScanResult } from '../lib/scanResult'
-import { cancelSpeech, speakWithBestVoice } from '../lib/speech'
+import { cancelVoice, speak as speakText } from '../lib/voice'
 
 interface ResultLocationState {
   result?: ScanResult
@@ -44,23 +44,30 @@ export function ResultPage() {
   }
 
   const meta = VERDICT_META[result.verdict]
-  const languageOption = LANGUAGES.find((l) => l.code === language)
+  // The result was generated in the language the scan was run in, so read it
+  // back in that language rather than whatever is selected now.
+  const resultLanguage = language ?? 'en'
+  const languageOption = LANGUAGES.find((l) => l.code === resultLanguage)
   const speechLang = languageOption?.speechLang ?? 'en-IN'
 
   const speak = async () => {
     if (speaking) {
-      cancelSpeech()
+      cancelVoice()
       setSpeaking(false)
       return
     }
     setSpeaking(true)
     setVoiceNote(false)
-    const { exactMatch } = await speakWithBestVoice(
+    const { source, exactMatch } = await speakText(
       `${result.explanation}. ${result.recommended_action}`,
-      speechLang,
-      { onEnd: () => setSpeaking(false), onError: () => setSpeaking(false) },
+      {
+        language: resultLanguage,
+        speechLang,
+        onEnd: () => setSpeaking(false),
+        onError: () => setSpeaking(false),
+      },
     )
-    if (!exactMatch) setVoiceNote(true)
+    if (source === 'browser' && !exactMatch) setVoiceNote(true)
   }
 
   const shareText = [

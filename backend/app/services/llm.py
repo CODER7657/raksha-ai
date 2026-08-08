@@ -6,6 +6,7 @@ during the live demo.
 
 import json
 
+from app.core import languages
 from app.core.config import get_settings
 
 SYSTEM_PROMPT = """You are a financial-fraud detection assistant for first-time \
@@ -35,10 +36,16 @@ explaining WHY, understandable by someone with no technical background>,
 
 
 def _build_user_prompt(message: str, language: str, context_block: str) -> str:
+    lang = languages.get_language(language)
     return (
-        f"Language for explanation/recommended_action: {language}\n\n"
+        f"{languages.output_language_rule(language)}\n"
+        f'This applies to the "explanation" and "recommended_action" fields — the JSON '
+        f'keys and the "verdict" value stay in English, and "flagged_phrases" must be '
+        f"copied verbatim from the message in its original language.\n\n"
         f"{context_block}\n\n"
-        f'Message to analyze:\n"""{message}"""'
+        f'Message to analyze:\n"""{message}"""\n\n'
+        f"[Write explanation and recommended_action in {lang.english_name} "
+        f"({lang.native_name}), in the {lang.script} script.]"
     )
 
 

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../context/AuthContext'
+import { LanguageSelect } from './LanguageSelect'
 
 const NAV_LINKS = [
-  { to: '/app', label: 'Scan' },
-  { to: '/app/practice', label: 'Practice' },
-  { to: '/app/chat', label: 'Chat' },
-  { to: '/app/history', label: 'History' },
-  { to: '/app/about', label: 'About' },
+  { to: '/app', labelKey: 'nav.scan' },
+  { to: '/app/practice', labelKey: 'nav.practice' },
+  { to: '/app/chat', labelKey: 'nav.chat' },
+  { to: '/app/history', labelKey: 'nav.history' },
+  { to: '/app/about', labelKey: 'nav.about' },
 ]
 
 function HamburgerIcon() {
@@ -23,6 +25,7 @@ function HamburgerIcon() {
 export function AppShell() {
   const { user, signOut } = useAuth()
   const location = useLocation()
+  const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -47,24 +50,25 @@ export function AppShell() {
                   location.pathname === link.to ? 'text-accent' : 'text-ink/60 hover:text-ink'
                 }`}
               >
-                {link.label}
+                {t(link.labelKey)}
               </Link>
             ))}
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
+            <LanguageSelect />
             <span className="text-[11px] text-ink/50 truncate max-w-[180px]">{user?.email}</span>
             <button
               onClick={() => signOut()}
               className="border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
             >
-              Sign out
+              {t('nav.signOut')}
             </button>
           </div>
 
           <button
             type="button"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={menuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
             className="md:hidden p-2 -mr-2"
@@ -84,17 +88,20 @@ export function AppShell() {
                     location.pathname === link.to ? 'text-accent' : 'text-ink/70 hover:text-ink'
                   }`}
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               ))}
             </nav>
+            <div className="border-t border-line pt-4">
+              <LanguageSelect className="w-full" />
+            </div>
             <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
               <span className="text-[11px] text-ink/50 truncate">{user?.email}</span>
               <button
                 onClick={() => signOut()}
                 className="shrink-0 border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
               >
-                Sign out
+                {t('nav.signOut')}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { apiFetch } from '../lib/api'
-import { LANGUAGES, type LanguageOption } from '../lib/languages'
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useLanguage } from '../context/LanguageContext'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { TiltCard } from '../components/TiltCard'
 import { HighlightedText } from '../components/HighlightedText'
@@ -29,7 +30,7 @@ function tierFor(pct: number): { title: string; blurb: string } {
 
 export function PracticePage() {
   const [stage, setStage] = useState<Stage>('start')
-  const [language, setLanguage] = useState<LanguageOption['code']>('en')
+  const { language } = useLanguage()
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
   const [index, setIndex] = useState(0)
   const [score, setScore] = useState(0)
@@ -158,17 +159,7 @@ export function PracticePage() {
 
           <label className="flex flex-col gap-1.5 mb-6">
             <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Language</span>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as LanguageOption['code'])}
-              className="border border-ink bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
+            <LanguageSelect className="px-3 py-2 text-sm" />
           </label>
 
           {best !== null && (
