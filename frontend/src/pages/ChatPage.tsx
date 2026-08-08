@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
-import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { CornerBrackets } from '../components/CornerBrackets'
-import { cancelSpeech, speakWithBestVoice } from '../lib/speech'
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useLanguage, type LanguageCode } from '../context/LanguageContext'
+import { LANGUAGES } from '../lib/languages'
+import { cancelVoice, speak } from '../lib/voice'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  /** The language this specific turn was written in.
+   *
+   * Tracked per message, not read from the current selector, because a
+   * conversation can legitimately contain several languages once the user
+   * switches mid-chat. Reading a Gujarati message aloud must use a Gujarati
+   * voice even if the selector has since moved to English. */
+  language: LanguageCode
 }
 
-const EXAMPLE_PROMPTS = [
-  'Is it safe to share my UPI PIN over a call?',
-  'I think I just got scammed — what do I do right now?',
-  'How do fake KYC messages usually try to trick people?',
-]
+const EXAMPLE_KEYS = ['upiPin', 'scammed', 'fakeKyc'] as const
 
 const MAX_HISTORY_SENT = 8
 
@@ -27,12 +33,14 @@ function SpeakerIcon() {
 }
 
 export function ChatPage() {
-  const [language, setLanguage] = useState<LanguageOption['code']>('en')
+  const { t } = useTranslation()
+  const { language, option, speechLang, isTranslated } = useLanguage()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
+  const [preparingIndex, setPreparingIndex] = useState<number | null>(null)
   const [voiceNoteIndex, setVoiceNoteIndex] = useState<number | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -41,22 +49,44 @@ export function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
 
-  const languageOption = LANGUAGES.find((l) => l.code === language)
-  const speechLang = languageOption?.speechLang ?? 'en-IN'
+  // Switching language mid-read would otherwise leave the old audio playing in
+  // the previous language over the newly-rendered screen.
+  useEffect(() => {
+    cancelVoice()
+    setSpeakingIndex(null)
+    setPreparingIndex(null)
+    setVoiceNoteIndex(null)
+  }, [language])
 
-  const speak = async (text: string, index: number) => {
-    if (speakingIndex === index) {
-      cancelSpeech()
+  const readAloud = async (message: Message, index: number) => {
+    if (speakingIndex === index || preparingIndex === index) {
+      cancelVoice()
       setSpeakingIndex(null)
+      setPreparingIndex(null)
       return
     }
-    setSpeakingIndex(index)
+
+    // ElevenLabs is a network round-trip, so show a distinct "preparing" state
+    // rather than leaving the button looking unresponsive for a second.
+    setPreparingIndex(index)
     setVoiceNoteIndex(null)
-    const { exactMatch } = await speakWithBestVoice(text, speechLang, {
+
+    // Deliberately this message's own language, not the current selector.
+    const messageSpeechLang =
+      LANGUAGES.find((l) => l.code === message.language)?.speechLang ?? speechLang
+
+    const { source, exactMatch } = await speak(message.content, {
+      language: message.language,
+      speechLang: messageSpeechLang,
       onEnd: () => setSpeakingIndex(null),
       onError: () => setSpeakingIndex(null),
     })
-    if (!exactMatch) setVoiceNoteIndex(index)
+
+    setPreparingIndex(null)
+    setSpeakingIndex(index)
+    // Only worth explaining when we landed on a device voice that doesn't
+    // actually speak this language.
+    if (source === 'browser' && !exactMatch) setVoiceNoteIndex(index)
   }
 
   const send = async (text: string) => {
@@ -65,19 +95,34 @@ export function ChatPage() {
 
     setError('')
     setInput('')
-    const nextMessages: Message[] = [...messages, { role: 'user', content: trimmed }]
+    // Pin the language for this exchange up front: if the user changes the
+    // selector while the request is in flight, the reply still belongs to the
+    // language it was actually asked in.
+    const requestLanguage = language
+    const nextMessages: Message[] = [
+      ...messages,
+      { role: 'user', content: trimmed, language: requestLanguage },
+    ]
     setMessages(nextMessages)
     setSending(true)
 
     try {
-      const history = nextMessages.slice(0, -1).slice(-MAX_HISTORY_SENT)
+      // Strip the local-only `language` field — the API's ChatTurn schema is
+      // just {role, content}.
+      const history = nextMessages
+        .slice(0, -1)
+        .slice(-MAX_HISTORY_SENT)
+        .map(({ role, content }) => ({ role, content }))
       const result = await apiFetch('/api/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: trimmed, language, history }),
+        body: JSON.stringify({ message: trimmed, language: requestLanguage, history }),
       })
-      setMessages((prev) => [...prev, { role: 'assistant', content: result.reply }])
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: result.reply, language: requestLanguage },
+      ])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Assistant is unavailable — try again.')
+      setError(err instanceof Error ? err.message : t('chat.error'))
       setMessages((prev) => prev.slice(0, -1))
       setInput(trimmed)
     } finally {
@@ -95,20 +140,16 @@ export function ChatPage() {
       <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Ask Raksha AI</span>
+          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('chat.eyebrow')}</span>
         </div>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as LanguageOption['code'])}
-          className="border border-ink bg-white px-2 py-1 text-[11px] text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-        >
-          {LANGUAGES.map((l) => (
-            <option key={l.code} value={l.code}>
-              {l.label}
-            </option>
-          ))}
-        </select>
+        <LanguageSelect />
       </div>
+
+      {!isTranslated && (
+        <p className="mb-3 border border-line bg-white/60 px-3 py-2 text-[10px] leading-relaxed text-ink/50">
+          {t('common.untranslatedNote', { language: option.label })}
+        </p>
+      )}
 
       <div className="relative flex-1 min-h-0 border border-ink bg-paper/60 backdrop-blur-sm flex flex-col">
         <CornerBrackets />
@@ -116,52 +157,74 @@ export function ChatPage() {
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 flex flex-col gap-3">
           {messages.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 py-8">
-              <p className="text-sm text-ink/60 max-w-xs">
-                Ask anything about scams, UPI safety, or what to do if something already went wrong. Answers are
-                grounded against Raksha AI's known scam pattern database.
-              </p>
+              <p className="text-sm text-ink/60 max-w-xs">{t('chat.emptyState')}</p>
               <div className="flex flex-col gap-2 w-full max-w-sm">
-                {EXAMPLE_PROMPTS.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => send(p)}
-                    className="border border-line bg-white px-3 py-2 text-left text-xs text-ink/80 hover:border-accent hover:text-ink transition-colors"
-                  >
-                    {p}
-                  </button>
-                ))}
+                {EXAMPLE_KEYS.map((key) => {
+                  const prompt = t(`chat.examples.${key}`)
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => send(prompt)}
+                      className="border border-line bg-white px-3 py-2 text-left text-xs text-ink/80 hover:border-accent hover:text-ink transition-colors"
+                    >
+                      {prompt}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
 
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                  m.role === 'user' ? 'bg-ink text-white' : 'border border-ink bg-white text-ink'
-                }`}
-              >
-                {m.content}
-                {m.role === 'assistant' && (
-                  <button
-                    type="button"
-                    onClick={() => speak(m.content, i)}
-                    className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40 hover:text-accent transition-colors"
+          {messages.map((m, i) => {
+            // Mark the point where the conversation changed language, so a
+            // mixed-language thread reads as deliberate rather than broken.
+            const switched = i > 0 && messages[i - 1].language !== m.language
+            const switchedTo = LANGUAGES.find((l) => l.code === m.language)?.label ?? m.language
+
+            return (
+              <div key={i}>
+                {switched && (
+                  <div className="flex items-center gap-2 my-3" aria-hidden="true">
+                    <span className="h-px flex-1 bg-line" />
+                    <span className="text-[9px] uppercase tracking-[0.15em] text-ink/35">
+                      {t('chat.languageSwitched', { language: switchedTo })}
+                    </span>
+                    <span className="h-px flex-1 bg-line" />
+                  </div>
+                )}
+                <div className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    lang={m.language}
+                    className={`max-w-[85%] px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      m.role === 'user' ? 'bg-ink text-white' : 'border border-ink bg-white text-ink'
+                    }`}
                   >
-                    <SpeakerIcon />
-                    {speakingIndex === i ? 'Stop' : 'Read aloud'}
-                  </button>
-                )}
-                {voiceNoteIndex === i && (
-                  <p className="mt-1 text-[10px] text-ink/40 leading-relaxed">
-                    No installed {languageOption?.label ?? 'this language'} voice on this device — using the
-                    closest available voice.
-                  </p>
-                )}
+                    {m.content}
+                    {m.role === 'assistant' && (
+                      <button
+                        type="button"
+                        onClick={() => readAloud(m, i)}
+                        className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40 hover:text-accent transition-colors"
+                      >
+                        <SpeakerIcon />
+                        {preparingIndex === i
+                          ? t('chat.preparingVoice')
+                          : speakingIndex === i
+                            ? t('chat.stop')
+                            : t('chat.readAloud')}
+                      </button>
+                    )}
+                    {voiceNoteIndex === i && (
+                      <p className="mt-1 text-[10px] text-ink/40 leading-relaxed">
+                        {t('chat.noVoiceNote', { language: switchedTo })}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {sending && (
             <div className="flex justify-start">
@@ -186,7 +249,7 @@ export function ChatPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             maxLength={1000}
-            placeholder="Ask about a scam, UPI safety, what to do next…"
+            placeholder={t('chat.inputPlaceholder')}
             className="flex-1 border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
           />
           <button
@@ -194,7 +257,7 @@ export function ChatPage() {
             disabled={sending || !input.trim()}
             className="bg-accent px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
           >
-            Send
+            {t('chat.send')}
           </button>
         </form>
       </div>

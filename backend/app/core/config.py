@@ -20,9 +20,66 @@ class Settings(BaseSettings):
     # CORS — comma-separated list of allowed frontend origins, no wildcard
     allowed_origins: str = "http://localhost:5173"
 
+    # --- Text-to-speech (all optional — with none set, the frontend silently
+    # uses the browser's built-in speechSynthesis voices) ---
+    # "auto" prefers Sarvam, then Google, then ElevenLabs, else disabled.
+    tts_provider: str = "auto"
+
+    # Sarvam AI — built for Indian languages, and the only one of the three
+    # that speaks Odia. No card needed to sign up.
+    sarvam_api_key: str = ""
+    # v3 chosen by ear over v2 — noticeably clearer on Gujarati consonant
+    # clusters, and it handles code-mixed English terms better.
+    sarvam_model: str = "bulbul:v3"
+    # Blank = let Sarvam pick its default voice for the model.
+    sarvam_speaker: str = ""
+    # 0.5-2.0 on v3, 0.3-3.0 on v2. Below 1.0 is slower than natural speech.
+    sarvam_pace: float = 0.9
+    sarvam_sample_rate: int = 24000
+
+    # Languages deliberately served by the browser's own voice instead of the
+    # paid provider, comma-separated. English is the default because every
+    # platform ships a decent English voice, whereas Indic voice packs are
+    # frequently missing — so paid credits are worth spending only where the
+    # device would otherwise fail. Set to "" to send every language to the
+    # provider.
+    tts_browser_languages: str = "en"
+
+    @property
+    def tts_browser_languages_list(self) -> list[str]:
+        return [c.strip() for c in self.tts_browser_languages.split(",") if c.strip()]
+
+    # Speech-to-text. "auto" uses Sarvam when its key is set, else the local
+    # faster-whisper model. Whisper's `base` model cannot transcribe Gujarati
+    # (it returns Devanagari), and the larger models OOM on Render's free tier.
+    stt_provider: str = "auto"
+    sarvam_stt_model: str = "saaras:v3"
+
+    # Google Cloud TTS. Preferred for this app: it has real native-speaker
+    # neural voices for Gujarati/Hindi/Marathi/etc., where ElevenLabs' free
+    # plan only exposes English voices that read Indic scripts with English
+    # pronunciation.
+    google_tts_api_key: str = ""
+    # Optional explicit voice name (e.g. "gu-IN-Wavenet-A"). Left blank, the
+    # best affordable voice for the language is discovered at runtime.
+    google_tts_voice: str = ""
+
+    # ElevenLabs — better English voices, but no usable Indic voices on the
+    # free plan (the Voice Library is paid-only).
+    elevenlabs_api_key: str = ""
+    # Default "Lily" — a stock voice confirmed usable on the free plan. Some
+    # voices are Voice Library-only and 402 for free accounts, so don't swap
+    # this for an arbitrary ID without testing it first.
+    elevenlabs_voice_id: str = "pFZP5JQG7iQjIQuC4Bku"
+    # eleven_v3 is the only model that officially covers Gujarati/Odia. Switch
+    # to eleven_flash_v2_5 to halve credit cost (0.5/char) if you only need the
+    # languages it supports.
+    elevenlabs_model_id: str = "eleven_v3"
+
     # Rate limiting
     scan_rate_limit: str = "10/minute"
     chat_rate_limit: str = "15/minute"
+    tts_rate_limit: str = "20/minute"
 
     @property
     def allowed_origins_list(self) -> list[str]:

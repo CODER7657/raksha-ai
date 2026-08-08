@@ -3,6 +3,7 @@ pattern as app/services/llm.py, but returns free-form text for a back-and-forth
 conversation instead of a forced-JSON single classification.
 """
 
+from app.core import languages
 from app.core.config import get_settings
 
 SYSTEM_PROMPT = """You are the Raksha AI Assistant — a friendly, patient safety \
@@ -11,8 +12,9 @@ understand scams, digital banking safety, UPI safety, and what to do if they've 
 already been scammed.
 
 Rules:
-- Always reply in the language the user is asking in (or the language named in \
-"Reply in:" below), in plain, simple words — assume no technical background.
+- Write in plain, simple words — assume no technical background. Your output \
+language is fixed by the "OUTPUT LANGUAGE" instruction below; follow it exactly, \
+regardless of what language the user typed in.
 - Ground your answer in the "Known scam patterns" context below when it's relevant \
 to the question, but you are not limited to it — answer novel questions sensibly too.
 - Be concrete: give one or two practical next steps, not vague warnings.
@@ -35,11 +37,14 @@ which should sound like one consistent voice, not switch gender mid-reply.
 
 
 def _build_messages(message: str, language: str, context_block: str, history: list[dict]) -> list[dict]:
-    system = f"{SYSTEM_PROMPT}\n\nReply in: {language}\n\n{context_block}"
+    system = f"{SYSTEM_PROMPT}\n\n{languages.output_language_rule(language)}\n\n{context_block}"
     messages = [{"role": "system", "content": system}]
     for turn in history:
         messages.append({"role": turn["role"], "content": turn["content"]})
-    messages.append({"role": "user", "content": message})
+    # The reminder rides on the final user turn rather than a second system
+    # message: it lands at the very end of the context for both providers, and
+    # _call_gemini would otherwise coerce a trailing system role into "user".
+    messages.append({"role": "user", "content": f"{message}\n\n{languages.reply_reminder(language)}"})
     return messages
 
 

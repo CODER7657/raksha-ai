@@ -1,9 +1,11 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
-import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import type { ScanResult } from '../lib/scanResult'
 import { CornerBrackets } from '../components/CornerBrackets'
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useLanguage } from '../context/LanguageContext'
 
 type InputMode = 'text' | 'voice' | 'upi'
 
@@ -15,10 +17,13 @@ interface UpiCheckResult {
 
 export function ScanInputPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  // Shared across the whole app now — picking Gujarati here keeps it on the
+  // chat screen too, and survives a reload.
+  const { language } = useLanguage()
 
   const [mode, setMode] = useState<InputMode>('text')
   const [text, setText] = useState('')
-  const [language, setLanguage] = useState<LanguageOption['code']>('en')
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [recording, setRecording] = useState(false)
@@ -179,18 +184,10 @@ export function ScanInputPage() {
 
         {mode !== 'upi' && (
           <label className="flex flex-col gap-1.5 mb-4">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Language</span>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as LanguageOption['code'])}
-              className="border border-ink bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
+              {t('common.language')}
+            </span>
+            <LanguageSelect className="px-3 py-2 text-sm" />
           </label>
         )}
 
