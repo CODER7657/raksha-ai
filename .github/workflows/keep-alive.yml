@@ -1,0 +1,37 @@
+name: Keep backend awake
+
+# Render's free tier spins a service down after ~15 minutes of inactivity, and
+# the cold start that follows takes ~40-50s (the whisper model has to load).
+# That is fine for a background job and terrible for a live demo — the first
+# scan a new visitor runs would sit on a spinner long enough to look broken.
+#
+# Pinging /health every 5 minutes keeps the instance warm. GitHub's scheduled
+# runs are best-effort and frequently land several minutes late, which is why
+# this is */5 and not */10 — a delayed 10-minute schedule can silently drift
+# past Render's 15-minute idle timeout.
+#
+# This workflow touches nothing in the app. It only makes an outbound GET.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  # Lets you warm the backend on demand right before a demo, from the
+  # Actions tab, without waiting for the next scheduled run.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          # --max-time bounds a cold start rather than hanging the runner.
+          # A failed ping is not worth failing the workflow over: Render may
+          # genuinely be mid-deploy, and a red X every few minutes would train
+          # everyone to ignore this repo's Actions tab.
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 \
+            https://raksha-ai-c5yu.onrender.com/health || echo 000)
+          echo "health -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Backend health check returned $code (not failing the run)"
+          fi
