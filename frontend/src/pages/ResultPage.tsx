@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { HighlightedText } from '../components/HighlightedText'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { VERDICT_META, type ScanResult } from '../lib/scanResult'
-import { cancelVoice, speak as speakText } from '../lib/voice'
+import { cancelVoice, prefetchVoice, speak as speakText } from '../lib/voice'
 
 interface ResultLocationState {
   result?: ScanResult
@@ -29,7 +29,25 @@ export function ResultPage() {
   const { t } = useTranslation()
   const { result, sourceText, language } = (location.state as ResultLocationState | null) ?? {}
   const [speaking, setSpeaking] = useState(false)
+  // The Indic providers take several seconds to return audio. Without a visible
+  // "preparing" state the button looks broken, which is exactly what makes
+  // people tap it repeatedly.
+  const [preparing, setPreparing] = useState(false)
   const [voiceNote, setVoiceNote] = useState(false)
+
+  // The result was generated in the language the scan was run in, so read it
+  // back in that language rather than whatever is selected now.
+  const resultLanguage = language ?? 'en'
+  const speechText = result ? `${result.explanation}. ${result.recommended_action}` : ''
+
+  // Start synthesising the moment the verdict appears, not when the button is
+  // tapped. Reading the result takes a few seconds; borrowing that time turns a
+  // ~8s wait into an instant play. Declared above the early return below because
+  // hooks cannot run conditionally.
+  useEffect(() => {
+    if (!speechText) return
+    void prefetchVoice(speechText, resultLanguage)
+  }, [speechText, resultLanguage])
 
   if (!result) {
     return (
@@ -47,22 +65,21 @@ export function ResultPage() {
 
   const meta = VERDICT_META[result.verdict]
   const verdictLabel = t(meta.labelKey)
-  // The result was generated in the language the scan was run in, so read it
-  // back in that language rather than whatever is selected now.
-  const resultLanguage = language ?? 'en'
   const languageOption = LANGUAGES.find((l) => l.code === resultLanguage)
   const speechLang = languageOption?.speechLang ?? 'en-IN'
 
   const speak = async () => {
-    if (speaking) {
+    if (speaking || preparing) {
       cancelVoice()
       setSpeaking(false)
+      setPreparing(false)
       return
     }
-    setSpeaking(true)
+    setPreparing(true)
     setVoiceNote(false)
-    const { source, exactMatch } = await speakText(
-      `${result.explanation}. ${result.recommended_action}`,
+    // Must be the identical string the prefetch used, or the cache misses.
+    const { source, exactMatch, stale } = await speakText(
+      speechText,
       {
         language: resultLanguage,
         speechLang,
@@ -70,6 +87,12 @@ export function ResultPage() {
         onError: () => setSpeaking(false),
       },
     )
+
+    // A newer tap superseded this one; it owns the button state now.
+    if (stale) return
+
+    setPreparing(false)
+    setSpeaking(true)
     if (source === 'browser' && !exactMatch) setVoiceNote(true)
   }
 
@@ -111,7 +134,7 @@ export function ResultPage() {
             className="flex items-center gap-1.5 border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-ink hover:bg-ink hover:text-white transition-colors"
           >
             <SpeakerIcon />
-            {speaking ? t('result.stop') : t('result.readAloud')}
+            {preparing ? t('result.preparing') : speaking ? t('result.stop') : t('result.readAloud')}
           </button>
         </div>
 

@@ -75,12 +75,17 @@ export function ChatPage() {
     const messageSpeechLang =
       LANGUAGES.find((l) => l.code === message.language)?.speechLang ?? speechLang
 
-    const { source, exactMatch } = await speak(message.content, {
+    const { source, exactMatch, stale } = await speak(message.content, {
       language: message.language,
       speechLang: messageSpeechLang,
       onEnd: () => setSpeakingIndex(null),
       onError: () => setSpeakingIndex(null),
     })
+
+    // A newer tap took over while this one was fetching. That call now owns the
+    // button state, so touching it here would leave the UI showing "speaking"
+    // for a message that never plays.
+    if (stale) return
 
     setPreparingIndex(null)
     setSpeakingIndex(index)

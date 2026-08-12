@@ -88,7 +88,8 @@
     "backToScan": "Back to scan",
     "shareAlertTitle": "Raksha AI scam alert",
     "shareCheckLabel": "Raksha AI scam check",
-    "shareWhatToDo": "What to do"
+    "shareWhatToDo": "What to do",
+    "preparing": "Preparing voice..."
   },
   "history": {
     "eyebrow": "History dashboard",
