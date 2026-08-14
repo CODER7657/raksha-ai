@@ -141,7 +141,7 @@ export function LandingPage() {
             <div className="flex items-center gap-2 mb-5">
               <span className="h-2 w-2 bg-accent" aria-hidden="true" />
               <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
-                Maverick Effect AI Challenge
+                Financial Safety for Rural India
               </span>
             </div>
             <h1 className="text-4xl sm:text-6xl font-extrabold uppercase tracking-tight leading-[0.95]">
@@ -292,7 +292,7 @@ export function LandingPage() {
       </main>
 
       <footer className="border-t border-ink px-4 py-6 sm:px-8 text-[11px] text-ink/50">
-        Built for The Maverick Effect AI Challenge — free to use, always.
+        Free for every citizen, always.
       </footer>
     </div>
   )

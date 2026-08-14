@@ -1,22 +1,23 @@
 name: Keep backend awake
 
-# Render's free tier spins a service down after ~15 minutes of inactivity, and
-# the cold start that follows takes ~40-50s (the whisper model has to load).
-# That is fine for a background job and terrible for a live demo — the first
-# scan a new visitor runs would sit on a spinner long enough to look broken.
+# Render's free tier sleeps after ~15 minutes idle, and the cold start costs
+# ~40-50s. A ping keeps it warm.
 #
-# Pinging /health every 5 minutes keeps the instance warm. GitHub's scheduled
-# runs are best-effort and frequently land several minutes late, which is why
-# this is */5 and not */10 — a delayed 10-minute schedule can silently drift
-# past Render's 15-minute idle timeout.
+# WHY THIS IS NOT ON A 5-MINUTE SCHEDULE ANY MORE:
+# This repository is private, so GitHub Actions is capped at 2,000 free minutes
+# a month. Every scheduled run bills a full minute even though the ping takes
+# ~2 seconds, so a */5 schedule costs ~8,640 minutes/month - four times the
+# entire quota, and it would silently stop partway through the month.
 #
-# This workflow touches nothing in the app. It only makes an outbound GET.
+# A schedule that fits the quota (every ~30 min) is useless here, because Render
+# sleeps at 15. So scheduling is off, and warming is delegated to an external
+# uptime pinger - see docs in README. UptimeRobot's free tier does 5-minute
+# checks indefinitely at no cost and no Actions minutes.
+#
+# workflow_dispatch is kept so anyone can warm the backend on demand from the
+# Actions tab before a demo.
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
-  # Lets you warm the backend on demand right before a demo, from the
-  # Actions tab, without waiting for the next scheduled run.
   workflow_dispatch:
 
 jobs:
@@ -25,13 +26,9 @@ jobs:
     steps:
       - name: Ping /health
         run: |
-          # --max-time bounds a cold start rather than hanging the runner.
-          # A failed ping is not worth failing the workflow over: Render may
-          # genuinely be mid-deploy, and a red X every few minutes would train
-          # everyone to ignore this repo's Actions tab.
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 \
             https://raksha-ai-c5yu.onrender.com/health || echo 000)
           echo "health -> $code"
           if [ "$code" != "200" ]; then
-            echo "::warning::Backend health check returned $code (not failing the run)"
+            echo "::warning::Backend health check returned $code"
           fi

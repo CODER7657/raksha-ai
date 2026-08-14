@@ -1,70 +1,106 @@
 # Contributing to Raksha AI
 
-Two of us, moving fast. This doc is the whole process — follow it and we never block each other or overwrite each other's work.
+Four of us, one private repo. This doc is the whole process.
 
-## 1. Branch naming
-- `frontend/<short-desc>` — e.g. `frontend/scan-input-screen`
-- `backend/<short-desc>` — e.g. `backend/scam-classifier-endpoint`
-- `fix/<short-desc>` — bug fixes on either side
-- Never commit directly to `master`. `master` is always the deployable branch.
+## 1. Team and ownership
 
-## 2. Daily flow
+| Person | GitHub | Owns | Why |
+|---|---|---|---|
+| **Pavan Patel** | `@CODER7657` | Tech lead, architecture, detection core (RAG, prompts, rules), security, migrations | Accuracy and auth are the two places a mistake is not recoverable |
+| **Hem Patel** | `@Hem60` | Frontend — web app, UI, design system, accessibility | Owns everything a user actually sees |
+| **Ayush Bawaskar** | `@Ayush3422` | Voice and language — STT/TTS, i18n, language directives | Built the Sarvam/Whisper ladder and the language layer |
+| **Harsh Pansuriya** | `@harshpansuriya71-sudo` | Content and QA — scam pattern curation, practice bank, test coverage | Wrong content teaches people the wrong thing; this is a safety role, not a chore |
+
+Ownership is enforced by `.github/CODEOWNERS` — GitHub auto-requests the right
+reviewer. It means *accountable for reviewing*, not *only one allowed to edit*.
+
+## 2. Branching — we do NOT fork
+
+The repo is **private**. Forking a private repo does not work for collaborators,
+so everyone works on branches **inside this repo**.
+
 ```bash
 git checkout master
 git pull origin master
-git checkout -b frontend/your-feature-name   # or backend/...
+git checkout -b feat/android-sms-listener
 # ...work...
-git add <specific files>       # never `git add .` blindly — check `git status` first
-git commit -m "Add scan input screen with language selector"
-git push -u origin frontend/your-feature-name
+git add <specific files>          # never `git add .` blindly
+git commit -m "Add SMS listener that auto-scans incoming messages"
+git push -u origin feat/android-sms-listener
 ```
-Then open a PR on GitHub into `master`. Fill out the PR template (it auto-loads).
 
-## 3. PR & merge rules
-- Every PR needs **1 review from the other person** before merge — even though we're a 2-person team. Catches bugs and keeps both of us aware of the whole codebase.
-- CI (GitHub Actions) must be green before merge — it lints and builds automatically on every PR.
-- Use **Squash and merge** (keeps `master` history clean and readable for judges).
-- Delete the branch after merging (GitHub button does this automatically).
-- If your PR only touches `frontend/**` or only `backend/**`, CI only runs the relevant workflow — fast feedback.
+Then open a PR into `master`.
 
-## 4. Keeping in sync
-- Pull `master` before starting new work every session: `git pull origin master`
-- If your branch falls behind: `git checkout your-branch && git pull origin master --rebase`
-- If you hit a merge conflict, do NOT force-push over the other person's work. Resolve conflicts locally, test, then push normally.
+**Branch naming**
+- `feat/<short-desc>` — new capability
+- `fix/<short-desc>` — bug fix
+- `chore/<short-desc>` — deps, config, cleanup
+- `docs/<short-desc>` — documentation only
 
-## 5. Environment variables & secrets
-- **Never commit `.env` files or API keys.** Both `frontend/.env` and `backend/.env` are already git-ignored.
-- Each of us keeps our own local `.env` (copy from `.env.example`).
-- Shared secrets (LLM API keys, Supabase keys) go in **Vercel/Render dashboard env vars** for deployed environments — message them in chat, never paste into a commit, issue, or public PR comment.
+## 3. PR rules
 
-## 6. What NOT to do
-- Don't `git push --force` to `master`, ever.
-- Don't merge your own PR without a review unless it's a genuine emergency 1 hour before deadline — then message the other person first.
-- Don't install random new dependencies without a quick heads-up (keeps bundle size / build time sane for a hackathon deploy).
-- Don't hardcode API keys anywhere in source — always `process.env` / `os.environ`.
-- Don't rewrite the API contract in `frontend/README.md` without updating `backend/README.md` in the same PR (or pinging the other person) — that contract is the thing keeping us unblocked from each other.
+- **Every PR needs one review** from another member, even for small changes.
+- CI must be green before merge.
+- **Squash and merge.** Keeps `master` readable.
+- Delete the branch after merging.
+- Never push directly to `master`.
+- Never `--force` push to a shared branch.
 
-## 7. Definition of done (for demo readiness)
-- [ ] Deployed URL works end-to-end (not just localhost)
-- [ ] Works in at least Hindi, Gujarati, and English (our 3 demo languages)
+## 4. Changes that need extra care
+
+Some paths carry more risk than others. For these, say in the PR description
+*how you verified it*, not just what you changed:
+
+| Area | Why it is risky | What to state in the PR |
+|---|---|---|
+| `services/rag.py`, `llm.py`, prompts | Silently degrades detection accuracy | Which messages you tested, in which languages |
+| `core/auth.py`, `core/config.py` | A mistake is a data breach | How you confirmed auth still rejects bad tokens |
+| `supabase/migrations/` | Irreversible against production data | The rollback plan |
+| `practice_content.py`, seed patterns | Teaches users the wrong instinct | Who reviewed the language |
+
+## 5. Secrets
+
+- **Never commit `.env`.** Both `frontend/.env*` and `backend/.env` are gitignored.
+- Copy from `.env.example` and fill in your own.
+- Shared keys live in the Render/Vercel dashboards, never in code, issues or PR comments.
+- If you ever commit a key by accident: rotate it first, then clean history. Rotating
+  is the fix; deleting the commit is not.
+
+## 6. Running locally
+
+```bash
+# Backend
+cd backend && python -m venv .venv && source .venv/Scripts/activate
+pip install -r requirements.txt
+uvicorn main:app --reload            # http://localhost:8000
+
+# Frontend
+cd frontend && npm install && npm run dev    # http://localhost:5173
+```
+
+Point `frontend/.env.local` at `http://localhost:8000` for local work, or at the
+deployed backend to test against production data.
+
+## 7. Keeping the deployed backend awake
+
+Render's free tier sleeps after ~15 minutes idle and takes ~40-50s to wake.
+Because this repo is private, GitHub Actions cannot do the pinging — a
+5-minute schedule would cost ~8,640 minutes/month against a 2,000-minute quota.
+
+Use an **external uptime pinger** instead (UptimeRobot free tier, 5-minute
+interval, no cost) hitting:
+
+```
+https://raksha-ai-c5yu.onrender.com/health
+```
+
+There is also a manual `workflow_dispatch` in `.github/workflows/keep-alive.yml`
+to warm it on demand before a demo.
+
+## 8. Definition of done
+
+- [ ] Works against the deployed backend, not just localhost
+- [ ] Tested in English **and** at least one Indic language
 - [ ] No console errors on the happy path
-- [ ] README has an up-to-date "How to run" section
-- [ ] For any hero/landing/above-the-fold change: the primary CTA is visible **without scrolling** at 667px height (iPhone SE — our shortest common target) and 720px (common laptop). See §8 for why this matters and how to check it in 10 seconds.
-
-## 8. Above-the-fold check (don't ship a hero that needs a scroll)
-We shipped a regression once where enlarging the hero pushed the CTA button below the fold —
-you had to scroll to even see the "Get started" button on first load. Root cause was stacking
-too much vertical padding/heading size without checking against a real viewport height.
-
-Before merging any change to the Landing page hero, paste this into the browser console
-(devtools, on the running page) — it tells you immediately if something's off-screen:
-```js
-(function() {
-  const btn = [...document.querySelectorAll('a')].find(a => a.textContent.includes('Get started'));
-  const rect = btn?.getBoundingClientRect();
-  console.log({ innerHeight: window.innerHeight, btnBottom: rect?.bottom, fits: rect ? rect.bottom <= window.innerHeight : 'button not found' });
-})()
-```
-`fits` must be `true`. Check it at both 667px and 720px window heights (browser devtools → toggle
-device toolbar, or just resize the window). If a change makes the hero taller, either tighten the
-padding/heading size or accept the scroll deliberately — don't let it happen by accident.
+- [ ] Degrades gracefully when the network or a provider fails
+- [ ] Docs updated if you changed the API contract

@@ -1,7 +1,7 @@
 # Raksha AI 🛡️
 ### Financial Safety Assistant for Rural & First-Time Digital Banking Users
 
-Built for **The Maverick Effect AI Challenge** (GTU × Dewang Mehta Foundation Trust × Harish Mehta / NASSCOM spirit).
+Real-time, multilingual fraud interception for the people most targeted and least protected.
 
 ## Problem
 First-time digital banking users in India are prime targets for scam calls, fake UPI payment requests,

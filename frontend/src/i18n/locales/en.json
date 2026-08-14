@@ -106,7 +106,7 @@
     "eyebrowHowItWorks": "How a scan works",
     "eyebrowSecurity": "Security & privacy",
     "eyebrowStack": "Built on a free stack",
-    "intro": "Raksha AI helps first-time digital banking users in India check a suspicious SMS, WhatsApp message, UPI request, or call snippet — in their own language — before it costs them money. Built for the Maverick Effect AI Challenge.",
+    "intro": "Raksha AI helps first-time digital banking users in India check a suspicious SMS, WhatsApp message, UPI request, or call snippet — in their own language — before it costs them money.",
     "pipeline1Title": "Offline rule-check",
     "pipeline1Body": "An instant, zero-network keyword/pattern check catches obvious scams first — matters most for low-bandwidth users.",
     "pipeline2Title": "Multilingual embedding",

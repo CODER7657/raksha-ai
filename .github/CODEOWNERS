@@ -1,0 +1,43 @@
+# Ownership by area. GitHub auto-requests a review from the owner when a PR
+# touches their files, so nobody has to remember who to ask.
+#
+# Being an owner does not mean you are the only one who may edit a file - it
+# means you are accountable for reviewing changes to it.
+
+# Fallback: the tech lead reviews anything not claimed below.
+*                               @CODER7657
+
+# --- Frontend: web app, UI, i18n -------------------------------------------
+/frontend/                      @Hem60
+/frontend/src/i18n/             @Hem60 @Ayush3422
+
+# --- Voice, speech and language ---------------------------------------------
+# Ayush built the Sarvam/Whisper ladder and the language-directive layer.
+/backend/app/services/tts.py    @Ayush3422
+/backend/app/services/stt.py    @Ayush3422
+/backend/app/services/transcribe.py @Ayush3422
+/backend/app/core/languages.py  @Ayush3422
+/frontend/src/lib/voice.ts      @Ayush3422
+/frontend/src/lib/speech.ts     @Ayush3422
+
+# --- Detection core: RAG, prompts, rules ------------------------------------
+# The accuracy-critical path. Changes here need the lead's eyes.
+/backend/app/services/rag.py            @CODER7657
+/backend/app/services/llm.py            @CODER7657
+/backend/app/services/embeddings.py     @CODER7657
+/backend/app/services/rule_engine.py    @CODER7657
+/backend/app/services/upi_check.py      @CODER7657
+
+# --- Content: scam patterns and practice bank -------------------------------
+# Data, not code - but wrong data here teaches people the wrong thing.
+/backend/app/services/practice_content.py   @harshpansuriya71-sudo @CODER7657
+/backend/scripts/seed_scam_patterns.py      @harshpansuriya71-sudo @CODER7657
+
+# --- Security-sensitive: auth, config, database -----------------------------
+# Two reviewers by policy. A mistake here is a data breach, not a bug.
+/backend/app/core/auth.py       @CODER7657
+/backend/app/core/config.py     @CODER7657
+/supabase/migrations/           @CODER7657
+
+# --- CI, deploys and repo config --------------------------------------------
+/.github/                       @CODER7657
