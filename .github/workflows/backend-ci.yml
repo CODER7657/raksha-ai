@@ -29,11 +29,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install ruff pytest
+          # requirements-dev.txt includes requirements.txt and pins the test
+          # tooling, so CI runs the pytest version the repo asks for rather than
+          # whatever is newest that morning.
+          pip install -r requirements-dev.txt
+          pip install ruff
 
+      # Both steps below used to end in `|| true` and `|| echo "No tests yet"`.
+      # That made the check unfailable: #18 shipped 47 tests that could not even
+      # be collected on a clean runner, and this job still reported green. See
+      # #22. Two rules are ignored in backend/ruff.toml, each with its reason.
       - name: Lint
-        run: ruff check . || true
+        run: ruff check .
 
       - name: Run tests
-        run: pytest -q || echo "No tests yet"
+        run: pytest -q
