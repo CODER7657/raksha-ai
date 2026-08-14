@@ -1,0 +1,14 @@
+{
+  "_comment": "Shared Claude Code config for this repo. Committed on purpose so every contributor gets the same skill set active automatically. Personal overrides belong in .claude/settings.local.json, which is git-ignored. Each person must run the one-time plugin install on their own machine first - see START-HERE.md.",
+  "enabledPlugins": {
+    "engineering-skills@claude-code-skills": true,
+    "engineering-advanced-skills@claude-code-skills": true,
+    "a11y-audit@claude-code-skills": true,
+    "security-guidance@claude-code-skills": true,
+    "demo-video@claude-code-skills": true,
+    "agenthub@claude-code-skills": true,
+    "zero-hallucination-coder@claude-code-skills": true,
+    "write-a-skill@claude-code-skills": true,
+    "superpowers@superpowers-marketplace": true
+  }
+}

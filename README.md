@@ -3,6 +3,10 @@
 
 Real-time, multilingual fraud interception for the people most targeted and least protected.
 
+> **New contributor?** Read **[START-HERE.md](START-HERE.md)** first — setup, your
+> first task, and the quality bar. Then [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+> before writing any code: the design changed direction after the jury round.
+
 ## Problem
 First-time digital banking users in India are prime targets for scam calls, fake UPI payment requests,
 phishing messages, and fraudulent loan offers — often in their local language, where most fraud-detection
