@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     gemini_api_key: str = ""
 
+    # Server-held pepper for the audit log's message digest. Unset, the digest
+    # is a bare SHA-256, which is reversible for a low-entropy message — a bare
+    # phone number is ~10^10 guesses, a 6-digit OTP is 10^6. See
+    # ARCHITECTURE.md §07. Set this in Render before the audit log holds
+    # anything worth attacking; rotating it makes existing digests
+    # uncorrelatable with new ones, which is the intended cost.
+    audit_hash_pepper: str = ""
+
     # CORS — comma-separated list of allowed frontend origins, no wildcard
     allowed_origins: str = "http://localhost:5173"
 

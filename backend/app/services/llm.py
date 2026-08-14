@@ -5,9 +5,19 @@ during the live demo.
 """
 
 import json
+from dataclasses import dataclass
 
 from app.core import languages
 from app.core.config import get_settings
+
+GROQ_MODEL = "llama-3.3-70b-versatile"
+GEMINI_MODEL = "gemini-1.5-flash"
+
+# Bump whenever SYSTEM_PROMPT or _build_user_prompt changes in a way that could
+# move a verdict. Without it, a decision made six months ago cannot be
+# reproduced or defended, because the prompt will have moved underneath it —
+# see ARCHITECTURE.md §03.
+PROMPT_VERSION = "scan-v1"
 
 SYSTEM_PROMPT = """You are a financial-fraud detection assistant for first-time \
 digital banking users in India. You will be given a message (SMS/WhatsApp/call \
@@ -55,7 +65,7 @@ def _call_groq(system_prompt: str, user_prompt: str) -> str:
     settings = get_settings()
     client = Groq(api_key=settings.groq_api_key)
     completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -72,7 +82,7 @@ def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     settings = get_settings()
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel(
-        "gemini-1.5-flash",
+        GEMINI_MODEL,
         system_instruction=system_prompt,
         generation_config={"response_mime_type": "application/json"},
     )
@@ -80,16 +90,30 @@ def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     return response.text
 
 
-def classify_message(message: str, language: str, context_block: str) -> dict:
+@dataclass(frozen=True)
+class Classification:
+    """A verdict plus the identity of whatever produced it. The stamp travels
+    with the verdict into the audit record, so which provider answered — the
+    primary or the fallback — is recoverable later."""
+
+    result: dict
+    provider: str
+    model: str
+    prompt_version: str = PROMPT_VERSION
+
+
+def classify_message(message: str, language: str, context_block: str) -> Classification:
     user_prompt = _build_user_prompt(message, language, context_block)
 
     raw: str | None = None
+    provider, model = "groq", GROQ_MODEL
     try:
         raw = _call_groq(SYSTEM_PROMPT, user_prompt)
     except Exception:
         raw = None
 
     if raw is None:
+        provider, model = "gemini", GEMINI_MODEL
         try:
             raw = _call_gemini(SYSTEM_PROMPT, user_prompt)
         except Exception as exc:
@@ -97,7 +121,7 @@ def classify_message(message: str, language: str, context_block: str) -> dict:
 
     result = json.loads(raw)
     _validate_result_shape(result)
-    return result
+    return Classification(result=result, provider=provider, model=model)
 
 
 def _validate_result_shape(result: dict) -> None:

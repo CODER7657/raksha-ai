@@ -163,6 +163,26 @@ traffic growth does not translate one-to-one into spend.
   across instances.
 - **There is no labelled accuracy benchmark.** Precision and recall are
   unquantified. This blocks every accuracy claim we might want to make.
+- **The audit log can have gaps.** An audit write that fails does not fail the
+  scan — a user mid-scam gets their warning even when the compliance record
+  cannot be written. The verdict is still returned and stored; only the chain
+  entry is missing, and the response says so by omitting `trace.audit`. The
+  chain stays verifiable across a gap, because each link hashes its own
+  predecessor rather than a row count.
+- **Audit appends serialise on one advisory lock.** That is what stops two
+  concurrent scans forking the chain, and it puts a ceiling on append
+  throughput. Not a constraint at pilot scale; it becomes one before the
+  institution dashboard does.
+- **Audit records outlive the account that produced them.** `verdict_audit`
+  references scans and users by value, not by foreign key — an append-only
+  table cannot participate in referential actions, because every referential
+  action is a mutation, and an `on delete` rule would either fail the deletion
+  or delete the evidence. So closing an account leaves audit rows carrying a
+  `user_id` that no longer resolves. The payload holds a digest and never the
+  message, so what remains is pseudonymous, but this is not yet an answer to a
+  DPDP erasure request. A real one means a documented process — a compensating
+  erasure record, or crypto-shredding the pepper per user — and neither exists
+  yet. **Decide this before a pilot handles real users' data.**
 - On-device model size versus low-end Android RAM is unvalidated.
 - Prompt-injection hardening is partial, not solved.
 
@@ -216,7 +236,7 @@ pilot**, not assumptions to design around now.
 | Credential hygiene | OTP, PIN, card numbers never requested or stored, by design | Shipped |
 | Licensing | MIT / Apache-2.0 only — no copyleft exposure | Shipped |
 | Phone-number identity | **HMAC with server-side pepper** | Required for mobile |
-| Audit trail | Append-only, hash-chained verdict records | Planned |
+| Audit trail | Append-only, hash-chained verdict records | Shipped — enforced by trigger, not policy |
 | Prompt injection | Delimited input, forced JSON, server-side schema validation | Partial |
 | Data residency | India-region storage; DPDP Act 2023 alignment | Planned |
 | Model governance | Version pinning, drift monitoring, staged rollout | Later |
