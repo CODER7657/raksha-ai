@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Parented to a platform theme rather than Theme.Material3.* so the module
+      does not need the com.google.android.material dependency. Compose draws
+      the real UI; this only styles the window before Compose takes over.
+    -->
+    <style name="Theme.RakshaAI" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

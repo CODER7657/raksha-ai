@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Phase 1 is the shell: no permissions at all, deliberately.
+
+      RECEIVE_SMS arrives in Phase 2 alongside the on-device rule engine, and
+      not before. It is a Play Console restricted permission, so requesting it
+      early - in a build that cannot yet act on a message - would mean asking
+      the user for the most sensitive permission in the app while delivering
+      nothing in return. See docs/SMS-AUTOSCAN-PLAN.md.
+    -->
+
+    <application
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RakshaAI">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

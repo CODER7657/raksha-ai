@@ -32,6 +32,36 @@ If you internalise one sentence before writing code, make it this one:
 
 ## 2. One-time machine setup
 
+### Node 22.12.0 or newer
+
+Check before anything else:
+
+```bash
+node --version
+```
+
+If it prints anything below **22.12.0**, stop and upgrade — the frontend will not
+start. Vite 8, rolldown, oxlint and `@vitejs/plugin-react` all require
+`^20.19.0 || >=22.12.0`, and `@supabase/supabase-js` requires `>=22.0.0`, so
+22.12.0 is the real floor. On an older Node, `npm install` only warns
+(`EBADENGINE`) and appears to succeed, then `npm run dev` dies with
+`SyntaxError: ... does not provide an export named 'styleText'`. That is the
+version mismatch, not a broken dependency.
+
+With [nvm-windows](https://github.com/coreybutler/nvm-windows) or
+[nvm](https://github.com/nvm-sh/nvm):
+
+```bash
+nvm install 22.12.0
+nvm use 22.12.0
+```
+
+If you switch Node *after* having installed the frontend deps, delete
+`frontend/node_modules` and install again. rolldown ships native binaries built
+per Node ABI, so a stale `node_modules` keeps failing even on a correct version.
+
+### Shared skill set
+
 Run these **once per machine**, not per session. They install the shared skill set
 this repo expects.
 
