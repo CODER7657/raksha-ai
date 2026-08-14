@@ -1,11 +1,11 @@
 # Agent Layer: Build Plan
 
-How the seven agents in [`AGENTS.md`](AGENTS.md) actually get built, in what order, by
+How the seven agents in [`AGENT-LAYER.md`](AGENT-LAYER.md) actually get built, in what order, by
 whom, and what has to be true before each one ships.
 
-`AGENTS.md` says *where agents may and may not go*. It is deliberately silent on
+`AGENT-LAYER.md` says *where agents may and may not go*. It is deliberately silent on
 loops, on how agents exchange anything, on what a run costs, and on when a loop
-stops. This document fills that gap. Where the two disagree, `AGENTS.md` §00 and
+stops. This document fills that gap. Where the two disagree, `AGENT-LAYER.md` §00 and
 §10 win — those are boundaries, and this is a schedule.
 
 **Last reviewed:** August 2026
@@ -48,7 +48,7 @@ Until this exists, treat everything below as unstartable.
 
 ---
 
-## 01 · Principles this plan adds to `AGENTS.md`
+## 01 · Principles this plan adds to `AGENT-LAYER.md`
 
 Four rules, each from a failure mode that is well documented rather than
 hypothetical.
@@ -150,7 +150,7 @@ This is an offensive-content generator, so it is fenced:
 - runs only against **our own** detector, never a third party's
 - output goes to the corpus and the review queue, **never** into the pattern
   database automatically — a generated "scam" approved as a pattern is the
-  poisoning path `AGENTS.md` §03 warns about
+  poisoning path `AGENT-LAYER.md` §03 warns about
 - generated text is stored as test data, clearly labelled, never mixed with real
   user reports
 - no real user messages as seeds unless already public or synthetic
@@ -166,7 +166,7 @@ This is an offensive-content generator, so it is fenced:
 
 ## 03 · Phase 2 — A2 Phishing Investigator (the dangerous one)
 
-`AGENTS.md` §02 already specifies the sandbox correctly: ephemeral container,
+`AGENT-LAYER.md` §02 already specifies the sandbox correctly: ephemeral container,
 egress allow-list, no credentials, separate project, hard timeout. Keep all of
 it. **Upgrade the prompt-injection defence**, because the approach described
 there — delimiters, a fixed output schema, a system prompt telling the model that
@@ -192,12 +192,12 @@ is our own infrastructure being driven by an attacker's web page.
 
 Concretely, for us: the quarantined model may report *"this page requests a card
 number and mimics HDFC branding"*. It may **not** cause a block. A block requires
-the deterministic checks from `AGENTS.md` §02 — domain age, registered-domain
+the deterministic checks from `AGENT-LAYER.md` §02 — domain age, registered-domain
 comparison, known-bad lists — which the model cannot influence.
 
 ### Blocking policy
 
-Unchanged from `AGENTS.md` §02: tiered, never on one signal, auto-block only on
+Unchanged from `AGENT-LAYER.md` §02: tiered, never on one signal, auto-block only on
 static red flags **and** agent verdict **and** (known-bad **or** credential form).
 Every block appealable and reversible with its evidence bundle.
 
@@ -276,12 +276,12 @@ buyer will ask and "we thought about it" is not an answer.
 covering planning, tool use, identity, supply chain, code execution, memory,
 inter-agent communication, cascading failures, human–agent trust and rogue
 agents. Produce a one-page mapping: for each category, what we do, or why it does
-not apply. Several are already answered by `AGENTS.md` §10 and §09; the gaps are
+not apply. Several are already answered by `AGENT-LAYER.md` §10 and §09; the gaps are
 identity (agents currently have none) and memory (agents currently have none —
 which is a defensible answer, and should be a stated one).
 
 **DPDP** — agent runs are processing. Log inputs, tool calls, cost and outcome per
-`AGENTS.md` §09, but the same rule as everywhere else applies: **no raw user
+`AGENT-LAYER.md` §09, but the same rule as everywhere else applies: **no raw user
 message content in agent logs**. Reuse the digest approach from `trace.py`.
 
 The audit chain from #18 already exists and is proven tamper-evident. Agent
@@ -335,7 +335,7 @@ rules depend on sentence boundaries (`_GAP` stops at `.!?`), which ASR output
 frequently lacks. A transcript-specific evasion set and a transcript-specific
 rule review belong to whoever owns the voice ladder.
 
-**D. A7 Content Localiser** (`AGENTS.md` §08) once A6 is running: drafts
+**D. A7 Content Localiser** (`AGENT-LAYER.md` §08) once A6 is running: drafts
 translations of approved patterns and safety copy, always for native-speaker
 review. Ayush owns both the agent and the review workflow, since he is the person
 who can say whether a draft is safe to show.
@@ -362,7 +362,7 @@ machine-generated and human-approved, and some is hand-written. A reviewer — a
 eventually an auditor — must be able to tell which, and when, and by whom. The
 audit chain from #18 already records this shape; the UI does not show it yet.
 
-**D. Operator console.** `AGENTS.md` §09 requires a per-agent kill switch, budget
+**D. Operator console.** `AGENT-LAYER.md` §09 requires a per-agent kill switch, budget
 caps, and a run log with cost and outcome. Something has to render that, or those
 controls exist only in the document. Minimum: agent status, spend against cap,
 last run, one button to stop.
@@ -395,13 +395,13 @@ discipline — evidence one keypress away, never in the primary user's way.
 the offline safety net, in nine of twelve languages, and it should start
 immediately regardless of what happens to the rest of this plan.
 
-A3, A4, A5 and A7 are unchanged from `AGENTS.md` §11 and stay after this.
+A3, A4, A5 and A7 are unchanged from `AGENT-LAYER.md` §11 and stay after this.
 
 ---
 
 ## 10 · Not building
 
-- **Agents anywhere in the detection hot path.** `AGENTS.md` §10, unchanged.
+- **Agents anywhere in the detection hot path.** `AGENT-LAYER.md` §10, unchanged.
 - **Free-form agent-to-agent conversation.** §01.
 - **A2A internally.** §05.
 - **Agent memory**, until there is a use case that survives the DPDP question.
