@@ -3,22 +3,37 @@
 #
 # Being an owner does not mean you are the only one who may edit a file - it
 # means you are accountable for reviewing changes to it.
+#
+# Most areas below name TWO owners, and that is not decoration. GitHub does
+# not count an author's approval of their own pull request, so an area with a
+# single owner cannot be reviewed by anyone once that owner is the one writing
+# the change - the requirement becomes unsatisfiable and the PR is blocked
+# forever. PR #19 sat in exactly that state: approved, mergeable, and BLOCKED.
+# The second name is whoever reviews when the first name is the author.
+#
+# Three sections stay deliberately lead-only: detection core, content, and the
+# security-sensitive paths. Widening those to make merges convenient would give
+# away the reason they are listed separately at all. The cost is real and
+# accepted - a lead-authored change to those paths needs an admin merge, which
+# is the correct amount of friction for the accuracy-critical and
+# breach-sensitive surfaces. Revisit when a second reviewer exists who can
+# genuinely review a migration or a prompt change.
 
 # Fallback: the tech lead reviews anything not claimed below.
 *                               @CODER7657
 
 # --- Frontend: web app, UI, i18n -------------------------------------------
-/frontend/                      @Hem60
+/frontend/                      @Hem60 @CODER7657
 /frontend/src/i18n/             @Hem60 @Ayush3422
 
 # --- Voice, speech and language ---------------------------------------------
 # Ayush built the Sarvam/Whisper ladder and the language-directive layer.
-/backend/app/services/tts.py    @Ayush3422
-/backend/app/services/stt.py    @Ayush3422
-/backend/app/services/transcribe.py @Ayush3422
-/backend/app/core/languages.py  @Ayush3422
-/frontend/src/lib/voice.ts      @Ayush3422
-/frontend/src/lib/speech.ts     @Ayush3422
+/backend/app/services/tts.py    @Ayush3422 @CODER7657
+/backend/app/services/stt.py    @Ayush3422 @CODER7657
+/backend/app/services/transcribe.py @Ayush3422 @CODER7657
+/backend/app/core/languages.py  @Ayush3422 @CODER7657
+/frontend/src/lib/voice.ts      @Ayush3422 @CODER7657
+/frontend/src/lib/speech.ts     @Ayush3422 @CODER7657
 
 # --- Detection core: RAG, prompts, rules ------------------------------------
 # The accuracy-critical path. Changes here need the lead's eyes.
@@ -43,3 +58,10 @@
 
 # --- CI, deploys and repo config --------------------------------------------
 /.github/                       @CODER7657
+
+# --- Documentation ----------------------------------------------------------
+# Anyone on the team can review prose. Without a rule here docs PRs fall to the
+# `*` fallback, which blocks the lead's own documentation changes for the same
+# single-owner reason described at the top of this file.
+/docs/                          @CODER7657 @Hem60 @Ayush3422
+*.md                            @CODER7657 @Hem60 @Ayush3422
