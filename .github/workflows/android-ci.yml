@@ -1,0 +1,81 @@
+name: Android CI
+
+# The android/ module shipped in #20 with no CI at all - both existing workflows
+# filter on backend/** and frontend/**, so 878 lines went in without anything
+# compiling them. That is tolerable for a shell that does not run in production.
+# It stops being tolerable when the on-device rule engine lands there, because
+# that is the detection path running on someone's phone with no network.
+#
+# COST. This repository is private, so Actions is capped at 2,000 free minutes a
+# month (see keep-alive.yml for the same arithmetic). An Android build is the
+# most expensive job here - roughly 3-5 minutes cold, ~2 warm with the cache -
+# against ~30s for the other two. Two things keep that affordable: the path
+# filter below, so it only runs when android/ actually changes, and the
+# concurrency group, so pushing three times to a PR bills one build rather than
+# three.
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-ci.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'android/**'
+
+# A newer push to the same branch makes the running build irrelevant. Without
+# this, an active PR bills every intermediate commit.
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The wrapper JAR is a binary that executes on every developer machine and
+      # every run of this workflow, and `.gitattributes` marks *.jar binary - so
+      # a swapped JAR shows up in review as nothing at all. This checks it
+      # against Gradle's published checksums.
+      #
+      # The JAR committed in #20 was verified by hand (SHA-256 7a9ce74c..., the
+      # published Gradle 9.7.0 wrapper checksum). This step is what stops that
+      # from being a one-time favour nobody repeats at the next version bump.
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Handles the Gradle distribution and dependency cache. Writes the cache
+      # only from master, so a PR cannot poison what other branches read.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # No `|| true` anywhere in this file. The backend job had `pytest -q ||
+      # echo "No tests yet"`, which reported green while 47 tests failed to
+      # collect at all (see #22). A check that cannot fail is worse than no
+      # check, because people believe it.
+      #
+      # compileSdk is 37, which the runner may not have preinstalled. The image
+      # ships cmdline-tools with licences pre-accepted, so AGP fetches the
+      # missing platform itself; that download is the bulk of a cold run.
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: raksha-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
