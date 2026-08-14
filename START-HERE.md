@@ -131,9 +131,13 @@ Then open a PR into `master`.
 **Enforced by branch protection — not suggestions:**
 - One approving review required
 - CODEOWNERS review required for the area you touched
-- CI must be green
 - Review conversations must be resolved
 - No force pushes to `master`
+
+CI is **not** a required check, deliberately: both workflows are path-filtered, so
+a docs-only PR never reports one and would sit unmergeable forever. CI still runs
+and is visible on the PR — **do not approve a PR with red CI.** That gate is you,
+not a setting.
 
 Branch names: `feat/…`, `fix/…`, `chore/…`, `docs/…`
 
