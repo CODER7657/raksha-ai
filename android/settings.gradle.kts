@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "RakshaAI"
 include(":app")
+include(":core:rules")

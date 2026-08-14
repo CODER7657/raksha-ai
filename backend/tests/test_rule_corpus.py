@@ -1,13 +1,22 @@
 """The shared corpus, enforced against the Python engine.
 
-`testdata/rule_corpus.jsonl` is the specification; this file is one of its two
-consumers (the Kotlin port in #28 is the other). See `testdata/README.md`.
+`testdata/rule_corpus.jsonl` is the specification; this module and the Kotlin
+`RuleCorpusTest` are two implementations of it. When a rule changes, the corpus
+changes first and both engines follow — that is the whole point, because two
+regex implementations of the same rules in two languages drift silently, and
+the failure mode is a phone and a server disagreeing about the same message.
+
+If you are here because this file failed: do not edit the corpus to make it
+pass. Either the engine regressed, or the corpus is deliberately changing and
+the Kotlin suite needs the same change in the same commit.
 
 The design decision worth knowing: `known_gap` rows are checked **strictly**, in
 both directions. A documented defect that quietly starts working fails the build
 and asks whoever fixed it to update the corpus. That is deliberate — closing a
 gap should be a visible edit to the specification, not a silent change in
 behaviour discovered later when the numbers move.
+
+See `testdata/README.md`, `docs/RULE-PARITY.md`, and issues #28 and #33.
 """
 
 import json
@@ -105,6 +114,28 @@ def test_known_gap_still_fails(case):
         f"{case['id']} is marked known_gap but now produces the expected rules. "
         f"If you fixed it, change status to 'enforced' in testdata/rule_corpus.jsonl "
         f"— and if it was a false positive, this is the row that proves it is gone."
+    )
+
+
+def test_every_rule_id_is_exercised_by_at_least_one_case():
+    """Stops a rule being ported, or dropped, with nothing noticing.
+
+    Folded in from the #28 branch: the well-formedness check above catches a
+    corpus that names a rule which does not exist, but not an engine that grows
+    a rule the corpus never exercises."""
+    covered = {rule_id for case in CASES for rule_id in case["expected_rule_ids"]}
+    assert not KNOWN_RULE_IDS - covered, (
+        f"rule ids with no corpus case: {sorted(KNOWN_RULE_IDS - covered)}"
+    )
+
+
+def test_known_rule_ids_match_the_engine():
+    """KNOWN_RULE_IDS is written out by hand above; this is what keeps it true."""
+    engine_ids = {rule.rule_id for rules in RULES.values() for rule in rules}
+    assert engine_ids == KNOWN_RULE_IDS, (
+        f"KNOWN_RULE_IDS has drifted from RULES: "
+        f"engine-only={sorted(engine_ids - KNOWN_RULE_IDS)}, "
+        f"corpus-only={sorted(KNOWN_RULE_IDS - engine_ids)}"
     )
 
 

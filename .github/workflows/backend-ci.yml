@@ -5,11 +5,18 @@ on:
     branches: [master]
     paths:
       - 'backend/**'
+      # The rule corpus is the specification the Python engine is tested
+      # against, and it lives outside backend/. Without this line, editing only
+      # the corpus runs no Python check at all - the half of the parity contract
+      # that this job owns would silently not run on exactly the change most
+      # likely to break it.
+      - 'testdata/**'
       - '.github/workflows/backend-ci.yml'
   push:
     branches: [master]
     paths:
       - 'backend/**'
+      - 'testdata/**'
 
 jobs:
   build:
