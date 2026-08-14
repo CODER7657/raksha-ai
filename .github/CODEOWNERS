@@ -11,6 +11,10 @@
 /frontend/                      @Hem60
 /frontend/src/i18n/             @Hem60 @Ayush3422
 
+# --- Android client ----------------------------------------------------------
+# The on-device interception surface. Ayush owns the client end to end.
+/android/                       @Ayush3422
+
 # --- Voice, speech and language ---------------------------------------------
 # Ayush built the Sarvam/Whisper ladder and the language-directive layer.
 /backend/app/services/tts.py    @Ayush3422

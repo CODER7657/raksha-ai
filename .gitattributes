@@ -1,0 +1,21 @@
+# Line-ending policy.
+#
+# The Gradle wrapper is the reason this file exists: `gradlew` is a shell
+# script, and if Git checks it out with CRLF on Windows and someone commits it
+# back that way, it breaks for everyone on macOS and Linux with an opaque
+# "bad interpreter" error. Pin it to LF regardless of platform.
+
+* text=auto
+
+gradlew         text eol=lf
+*.sh            text eol=lf
+gradlew.bat     text eol=crlf
+*.bat           text eol=crlf
+
+*.jar           binary
+*.apk           binary
+*.aab           binary
+*.keystore      binary
+*.jks           binary
+*.png           binary
+*.webp          binary

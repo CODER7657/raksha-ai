@@ -13,6 +13,20 @@ backend/venv/
 backend/.env
 *.pyc
 
+# Android
+# Repo-local SDK. Not the usual layout - it lives here so the whole toolchain
+# is reproducible from the repo. ~1GB, never committed.
+android/.sdk/
+android/build/
+android/**/build/
+android/.gradle/
+android/local.properties
+android/captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
 # Editors / OS
 .DS_Store
 .vscode/
