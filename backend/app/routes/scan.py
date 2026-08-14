@@ -1,16 +1,19 @@
-import hashlib
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
+import logging
+
 from app.core.auth import get_current_user
 from app.core.config import get_settings
 from app.core.supabase_client import get_supabase
 from app.rate_limit import limiter
-from app.services import llm, rag
-from app.services.rule_engine import offline_flag
+from app.services import llm, rag, trace as trace_service
+from app.services.rule_engine import offline_rule_hits
 from app.services import stt
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["scan"])
 
@@ -36,11 +39,16 @@ class ScanResult(BaseModel):
     community_report_count: int
     offline_flags_matched: int
     transcript: str | None = None
+    # The reasoning trace (ARCHITECTURE.md §03). Optional in the schema because
+    # the audit sub-record is best-effort — see `_append_audit_record`.
+    trace: dict | None = None
 
 
 def _report_to_community_radar(text: str, language: str) -> int:
     """Anonymized aggregate counter — we hash the message, never store raw text here."""
-    pattern_hash = hashlib.sha256(text.strip().lower().encode()).hexdigest()
+    # Same digest the audit payload uses, so a community count and an audit
+    # record can be correlated to the same message without either holding it.
+    pattern_hash = trace_service.hash_text(text)
     supabase = get_supabase()
     response = supabase.rpc(
         "increment_community_report",
@@ -49,50 +57,110 @@ def _report_to_community_radar(text: str, language: str) -> int:
     return response.data if isinstance(response.data, int) else 1
 
 
+def _append_audit_record(
+    scan_id: str | None, user_id: str, payload: dict
+) -> dict | None:
+    """Best-effort append to the hash-chained log.
+
+    Deliberately non-fatal. A user in front of a live scam gets their verdict
+    even if the audit write fails; the alternative is withholding a fraud
+    warning because a compliance record could not be written, which inverts
+    what this product is for. The failure is loud in the logs, and the missing
+    record is visible in the response as an absent `trace.audit` rather than
+    being papered over."""
+    try:
+        response = get_supabase().rpc(
+            "append_verdict_audit",
+            {"p_scan_id": scan_id, "p_user_id": user_id, "p_payload": payload},
+        ).execute()
+        rows = response.data or []
+        if not rows:
+            return None
+        row = rows[0]
+        return {
+            "record_id": str(row["id"]),
+            "hash": row["hash"],
+            "prev_hash": row["prev_hash"],
+        }
+    except Exception:
+        logger.exception("Audit chain append failed for scan %s", scan_id)
+        return None
+
+
 def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) -> dict:
     """Shared by both /scan/text and /scan/audio once we have plain text in
     hand — same RAG retrieval + LLM classification + offline fallback +
     persistence for either input type."""
-    offline_matches = offline_flag(text, language)
+    hits = offline_rule_hits(text, language)
 
     patterns = rag.retrieve_similar_patterns(text, language)
     context_block = rag.format_context_block(patterns)
 
+    classification: llm.Classification | None = None
     try:
-        result = llm.classify_message(text, language, context_block)
+        classification = llm.classify_message(text, language, context_block)
+        result = classification.result
     except Exception:
-        if offline_matches:
+        if hits:
             result = {
                 "risk_score": 70,
                 "verdict": "suspicious",
-                "flagged_phrases": offline_matches,
+                "flagged_phrases": [hit.matched_text for hit in hits],
                 "explanation": "AI service unavailable — flagged by offline pattern rules as a precaution.",
                 "recommended_action": "Do not share OTP/personal details. Verify with the official app/helpline before acting.",
             }
         else:
             raise HTTPException(status_code=503, detail="Detection service temporarily unavailable")
 
+    trace = trace_service.build_trace(hits, patterns, classification)
     community_count = _report_to_community_radar(text, language)
 
     supabase = get_supabase()
-    supabase.table("scans").insert(
-        {
-            "user_id": user_id,
-            "input_type": input_type,
-            "input_text": text,
-            "language": language,
-            "risk_score": result["risk_score"],
-            "verdict": result["verdict"],
-            "flagged_phrases": result["flagged_phrases"],
-            "explanation": result["explanation"],
-            "recommended_action": result["recommended_action"],
-        }
-    ).execute()
+    inserted = (
+        supabase.table("scans")
+        .insert(
+            {
+                "user_id": user_id,
+                "input_type": input_type,
+                "input_text": text,
+                "language": language,
+                "risk_score": result["risk_score"],
+                "verdict": result["verdict"],
+                "flagged_phrases": result["flagged_phrases"],
+                "explanation": result["explanation"],
+                "recommended_action": result["recommended_action"],
+                "trace": trace,
+            }
+        )
+        .execute()
+    )
+    scan_rows = inserted.data or []
+    scan_id = scan_rows[0]["id"] if scan_rows else None
+
+    audit = _append_audit_record(
+        scan_id,
+        user_id,
+        trace_service.build_audit_payload(
+            input_hash=trace_service.audit_digest(text),
+            language=language,
+            input_type=input_type,
+            verdict=result["verdict"],
+            risk_score=result["risk_score"],
+            trace=trace,
+        ),
+    )
+    # A new dict rather than mutating `trace` in place: the copy already handed
+    # to the scans insert must not grow an `audit` key afterwards. The stored
+    # trace legitimately has none — the audit record cannot exist until the scan
+    # row it points at does, and the link is navigable the other way via
+    # verdict_audit.scan_id.
+    response_trace = {**trace, "audit": audit} if audit else trace
 
     return {
         **result,
         "community_report_count": community_count,
-        "offline_flags_matched": len(offline_matches),
+        "offline_flags_matched": len(hits),
+        "trace": response_trace,
     }
 
 
