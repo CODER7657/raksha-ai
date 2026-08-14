@@ -49,7 +49,7 @@ read-aloud output, low-literacy phrasing, and interrupting rather than advising.
 | **Investment / trading scams** | >75% of all rupees lost in 2025 | ⚠️ Weak — patterns exist, no dedicated flow |
 | **UPI fraud** | Up 85% in FY24, sustained through 2025 | ✅ Checker shipped; payment interrupt planned |
 | **Phishing links / fake QR** | Named lead vector in UPI fraud | ⚠️ UPI-only today; general URL scanning planned |
-| **Remote-access apps** | RBI issued a specific advisory | ❌ **Not covered — highest-value gap** |
+| **Remote-access apps** | RBI issued a specific advisory | ❌ **Not covered — highest-value gap, SDK-only (§03)** |
 | **Digital arrest** | 2,41,537 cases, ₹3,012 cr (2022–25) | ⚠️ Call analysis planned |
 | **SIM swap** | Named in RBI/NPCI fraud typologies | ❌ Not covered |
 | **Fake job / part-time income** | Primary vector against younger users | ⚠️ Patterns exist only |
@@ -62,10 +62,29 @@ between ₹15,000 and ₹2 lakh. The mechanism is consistent: the victim is talk
 into installing a remote-desktop app, shares the access code, and the attacker
 operates the banking app themselves.
 
-This is the highest-value thing we do not currently detect, and it is unusually
-tractable — *a remote-access app in the foreground while a banking app is open* is
-a narrow, high-confidence signal that is almost never legitimate. See
-[`AGENTS.md`](AGENTS.md) §Screen-share sentinel.
+This is the highest-value thing we do not currently detect. It is **not** as
+tractable as this document originally claimed, and the correction matters
+because it moves the work rather than cancelling it.
+
+*A remote-access app in the foreground while a banking app is open* is indeed a
+narrow, high-confidence signal. **A third-party app cannot observe it.** Android
+15's `DETECT_SCREEN_RECORDING` is per-app by design: an app learns only that its
+own UI is being captured, never that another app's is. There is no permission
+that grants the general view, and that is a deliberate privacy property of the
+platform, not an oversight to work around.
+
+So the signal is real and only two parties can see it:
+
+1. **The operating system.** Google shipped precisely this — an unsaved-number
+   call plus active screen sharing plus a banking app opening triggers a
+   full-screen warning and a 30-second forced pause. It is a **US pilot** with
+   partner banks, previously tested in the UK. **Not available in India.**
+2. **The banking app itself**, which can detect capture of its own UI.
+
+Which makes this a feature of the **bank-side SDK**, not the consumer app — and
+one of the stronger arguments in that pitch, since the OS-level equivalent does
+not reach our market and the banks we would sell to are not the ones Google
+partnered with.
 
 ### The gap that is largest by rupee value
 
@@ -99,8 +118,10 @@ seconds where enforcement structurally cannot reach.
 
 1. **Payment interrupt stays the critical path.** Recovery is 24% at best; the
    only intervention worth 100% is the one that stops the transfer.
-2. **Screen-share sentinel jumps the queue.** RBI-flagged, narrow signal, low
-   false-positive risk, currently uncovered.
+2. **Screen-share sentinel moves to the SDK, and stays high priority there.**
+   RBI-flagged, narrow signal, low false-positive risk, currently uncovered — but
+   only observable by the banking app or the OS (§03). It is not consumer-app
+   work, and planning it as such wastes whoever picks it up.
 3. **Seniors are the design target, not a segment.** 5× loss-per-victim justifies
    voice-first and interrupt-first choices.
 4. **Investment-scam coverage is a known, named weakness.** State it before a

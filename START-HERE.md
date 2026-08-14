@@ -30,6 +30,35 @@ If you internalise one sentence before writing code, make it this one:
 
 ---
 
+## 1b. Where it runs
+
+None of this was written down, and none of it is discoverable from the code —
+you would have to already know. Recording it so nobody has to guess again.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Backend | Render, free tier — `https://raksha-ai-c5yu.onrender.com` | Sleeps after ~15 min idle; cold start is 40-50s |
+| Frontend | Vercel | Deployed per push to `master` |
+| Database | Supabase (Postgres + pgvector) | Migrations in `supabase/migrations/`, applied by hand via the SQL editor |
+
+**Config that exists only in a dashboard.** These are not in the repo and cannot
+be inferred from it:
+
+- `VITE_API_BASE_URL` — set in **Vercel**. The `.env` files in `frontend/` point
+  at `http://localhost:8000`, so production depends entirely on this being right.
+- `AUDIT_HASH_PEPPER` — set in **Render**. Without it the audit log's message
+  digest is a bare SHA-256, which is reversible for anything low-entropy. Changing
+  it makes existing digests uncorrelatable with new ones, so treat rotation as
+  deliberate.
+- Provider keys (`GROQ_API_KEY`, `GEMINI_API_KEY`, `SARVAM_API_KEY`,
+  `SUPABASE_*`) — in **Render**, and in your local `backend/.env`, which is
+  gitignored.
+
+**Keeping the backend awake** is delegated to an external uptime pinger hitting
+`/health` every 5 minutes — see the reasoning in `.github/workflows/keep-alive.yml`
+for why it is not a GitHub Actions schedule. If a request takes ~45s, that pinger
+has stopped working.
+
 ## 2. One-time machine setup
 
 ### Node 22.12.0 or newer

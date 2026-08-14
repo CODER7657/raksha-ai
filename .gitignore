@@ -34,3 +34,8 @@ android/captures/
 *.log
 
 .env*
+
+# Hackathon-era presentation exports. Large binaries, and one of them is a CV.
+*.pptx
+*.pdf
+Gemini_Generated_Image_*.png
