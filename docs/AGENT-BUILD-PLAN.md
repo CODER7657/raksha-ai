@@ -296,29 +296,104 @@ Mapped to `CODEOWNERS` so it does not cut across review boundaries.
 | Who | Owns |
 |---|---|
 | **@CODER7657** | Benchmark harness and corpus spec. A6 loop architecture, judge design and calibration. A2 sandbox and dual-LLM policy layer. OWASP mapping. All prompt and rule semantics. |
-| **@Ayush3422** | Multilingual evasion strategies — transliteration, code-mixing, script obfuscation — and the Indic half of the benchmark corpus. This is the language layer he already owns, and it is where our worst gaps are (#23). Later: A7 localiser. |
-| **@Hem60** | The human gate: A1 review queue, the benchmark dashboard (per-language precision/recall over time), and extending the evidence viewer from #19 to render agent findings. Nothing agent-generated ships without a human, and a bad queue makes the human the bottleneck. |
+| **@Ayush3422** | Everything language-shaped: rule coverage across all twelve, multilingual evasion strategy, the voice channel, and A7. |
+| **@Hem60** | Everything human-shaped: the review queue, the benchmark dashboard, agent provenance in the UI, and the operator console. |
 
 Parallelism: the corpus (Pavan) and the Indic evasion set (Ayush) can be built at
 the same time against an agreed JSONL schema. The review queue (Hem) only needs
 that schema, not the agents — so all three tracks can start on day one, given the
 schema is fixed first.
 
+### @Ayush3422 — the language surface
+
+**A. Offline rules exist in three languages out of twelve.** `RULES` covers
+`en`, `hi`, `gu`. The other nine — `mr bn ta te kn ml pa or ur` — fall through to
+the English rules, which will not match native script. The consequence is not
+cosmetic: when both LLM providers fail, `scan.py` only degrades to a conservative
+verdict if a rule fired, and otherwise raises 503. **In nine languages, a
+textbook scam with both providers down produces an error page rather than a
+warning** — the exact failure #18 fixed for three languages and left standing in
+the rest.
+
+The cheapest part is nearly free: Marathi is written in Devanagari, and the same
+message that fires three rules as `hi` fires **zero** as `mr`, because the
+language key is missing rather than because the patterns fail. Script-sharing
+languages should inherit before anyone writes a new regex.
+
+Then real coverage, per language, with a native speaker signing off. This is A7's
+job description in advance of A7 existing — and doing it by hand first is what
+teaches us what A7 must draft.
+
+**B. Multilingual evasion strategies for A6** (§02): transliteration,
+code-mixing, script obfuscation, homoglyphs. Ours is a market where romanised
+Hindi and code-mixed English are the *default* register, not an edge case.
+
+**C. The voice channel, which nobody else will think about.** The rule engine
+also runs over STT transcripts, and a transcript is not an SMS. Sarvam and
+Whisper produce disfluencies, homophone errors, missing punctuation — and our
+rules depend on sentence boundaries (`_GAP` stops at `.!?`), which ASR output
+frequently lacks. A transcript-specific evasion set and a transcript-specific
+rule review belong to whoever owns the voice ladder.
+
+**D. A7 Content Localiser** (`AGENTS.md` §08) once A6 is running: drafts
+translations of approved patterns and safety copy, always for native-speaker
+review. Ayush owns both the agent and the review workflow, since he is the person
+who can say whether a draft is safe to show.
+
+### @Hem60 — the human surface
+
+Every agent that can affect users produces **drafts**, and a human approves them.
+That makes the review interface load-bearing: if triage is slow, the human gate
+becomes the bottleneck and the pressure to auto-approve becomes real. This is
+design work with a security consequence.
+
+**A. A1 review queue.** Keyboard-first triage — accept, reject, skip, undo —
+because a reviewer will process hundreds. Each candidate shows its source, the
+nearest existing patterns by similarity, and **what accepting it would do to the
+benchmark**. A reviewer who cannot see that last number is guessing.
+
+**B. Benchmark dashboard.** Precision and recall over time, **broken out per
+language**, never as a single aggregate — an aggregate across twelve languages
+hides that Odia has three cases and English has three hundred. This is also how
+Ayush's coverage work above becomes visible to everyone.
+
+**C. Provenance in the UI.** Once agents draft patterns, some content is
+machine-generated and human-approved, and some is hand-written. A reviewer — and
+eventually an auditor — must be able to tell which, and when, and by whom. The
+audit chain from #18 already records this shape; the UI does not show it yet.
+
+**D. Operator console.** `AGENTS.md` §09 requires a per-agent kill switch, budget
+caps, and a run log with cost and outcome. Something has to render that, or those
+controls exist only in the document. Minimum: agent status, spend against cap,
+last run, one button to stop.
+
+**E. Agent findings in the evidence viewer.** Extend the #19 `TraceViewer` so a
+verdict influenced by an agent shows it, with the same collapsed-by-default
+discipline — evidence one keypress away, never in the primary user's way.
+
 ---
 
 ## 09 · Sequencing
 
-| Order | Work | Blocked by | Done when |
-|---|---|---|---|
-| 0 | Corpus schema agreed | — | schema in repo, all three sides agree |
-| 1 | Benchmark harness | 0 | one command, per-language precision/recall, runs in CI |
-| 2 | Indic corpus expansion | 0 | each of 12 languages has a stated case count; gaps named |
-| 3 | A6 loop | 1, 2 | reproduces #23 gaps unaided; findings land in corpus |
-| 4 | Rule fixes from A6 output | 3 | benchmark moves; #23 closed with evidence |
-| 5 | Review queue + dashboard | 0 | a reviewer can accept/reject a draft and see benchmark impact |
-| 6 | A2 sandbox + dual-LLM | 1, 5 | injection test changes nothing; egress test fails closed |
-| 7 | A1 pattern discovery | 5, 6 | drafts only, nothing auto-approved |
-| 8 | OWASP mapping | 3, 6 | one page, every category answered |
+| Order | Work | Owner | Blocked by | Done when |
+|---|---|---|---|---|
+| 0 | Corpus schema agreed | all | — | schema in repo, all three sides agree |
+| 0b | **Rule coverage for the nine uncovered languages** | Ayush | — | no supported language falls through to English-only; 503-instead-of-warning is gone |
+| 1 | Benchmark harness | Pavan | 0 | one command, per-language precision/recall, runs in CI |
+| 2 | Indic corpus expansion | Ayush | 0 | each of 12 languages has a stated case count; gaps named |
+| 3 | A6 loop | Pavan | 1, 2 | reproduces #23 gaps unaided; findings land in corpus |
+| 4 | Rule fixes from A6 output | Pavan + Ayush | 3 | benchmark moves; #23 closed with evidence |
+| 5 | Review queue + dashboard | Hem | 0 | a reviewer can accept/reject a draft and see benchmark impact |
+| 5b | Operator console (kill switches, spend) | Hem | 5 | every agent can be stopped from a UI, and its spend is visible |
+| 6 | Transcript-specific rule review | Ayush | 1 | ASR output evaluated separately from SMS; gaps named |
+| 7 | A2 sandbox + dual-LLM | Pavan | 1, 5 | injection test changes nothing; egress test fails closed |
+| 8 | A1 pattern discovery | Pavan + Hem | 5, 7 | drafts only, nothing auto-approved |
+| 9 | A7 localiser | Ayush | 3, 5 | drafts only, native-speaker review workflow exists |
+| 10 | OWASP mapping | Pavan | 3, 7 | one page, every category answered |
+
+**0b is not agent work and does not wait for anything.** It is a live defect in
+the offline safety net, in nine of twelve languages, and it should start
+immediately regardless of what happens to the rest of this plan.
 
 A3, A4, A5 and A7 are unchanged from `AGENTS.md` §11 and stay after this.
 
