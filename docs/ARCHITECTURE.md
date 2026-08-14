@@ -173,6 +173,16 @@ traffic growth does not translate one-to-one into spend.
   concurrent scans forking the chain, and it puts a ceiling on append
   throughput. Not a constraint at pilot scale; it becomes one before the
   institution dashboard does.
+- **Audit records outlive the account that produced them.** `verdict_audit`
+  references scans and users by value, not by foreign key — an append-only
+  table cannot participate in referential actions, because every referential
+  action is a mutation, and an `on delete` rule would either fail the deletion
+  or delete the evidence. So closing an account leaves audit rows carrying a
+  `user_id` that no longer resolves. The payload holds a digest and never the
+  message, so what remains is pseudonymous, but this is not yet an answer to a
+  DPDP erasure request. A real one means a documented process — a compensating
+  erasure record, or crypto-shredding the pepper per user — and neither exists
+  yet. **Decide this before a pilot handles real users' data.**
 - On-device model size versus low-end Android RAM is unvalidated.
 - Prompt-injection hardening is partial, not solved.
 

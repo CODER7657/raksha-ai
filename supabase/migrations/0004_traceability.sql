@@ -40,11 +40,21 @@ create table if not exists public.verdict_audit (
   -- bigserial, not uuid: the chain needs a total order, and a random uuid
   -- gives none.
   id bigserial primary key,
-  -- `set null`, never `cascade`. If deleting a scan deleted its audit record
-  -- the log would be neither append-only nor tamper-evident — removing the
-  -- evidence would become as easy as removing the scan.
-  scan_id uuid references public.scans(id) on delete set null,
-  user_id uuid references auth.users(id) on delete set null,
+  -- Plain uuids, deliberately NOT foreign keys.
+  --
+  -- An append-only table cannot participate in referential actions, because
+  -- every referential action is a mutation. `on delete set null` here issues an
+  -- UPDATE against this table, which the append-only trigger below refuses —
+  -- so deleting a scan would fail outright, and since auth.users cascades to
+  -- scans, deleting a user account would fail with it. `on delete cascade`
+  -- would be worse: removing the evidence would become as easy as removing the
+  -- scan it evidences.
+  --
+  -- So the references are by value. A deleted scan leaves a scan_id pointing at
+  -- nothing, which is the correct shape for an audit record — it says "this
+  -- verdict concerned scan X" whether or not X still exists.
+  scan_id uuid,
+  user_id uuid,
   payload jsonb not null,
   prev_hash text,
   hash text not null unique,
