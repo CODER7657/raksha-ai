@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { HighlightedText } from '../components/HighlightedText'
+import { TraceViewer } from '../components/TraceViewer'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { VERDICT_META, type ScanResult } from '../lib/scanResult'
 import { cancelVoice, prefetchVoice, speak as speakText } from '../lib/voice'
@@ -193,6 +194,8 @@ export function ResultPage() {
         <p className="text-[11px] text-ink/50 mb-6">
           {t('result.reported', { count: result.community_report_count })}
         </p>
+
+        <TraceViewer result={result} />
 
         <div className="flex flex-col sm:flex-row gap-2">
           <button

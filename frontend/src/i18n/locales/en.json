@@ -91,6 +91,35 @@
     "shareWhatToDo": "What to do",
     "preparing": "Preparing voice..."
   },
+  "trace": {
+    "show": "Show the evidence",
+    "hide": "Hide the evidence",
+    "intro": "Everything the check used to reach this verdict, so the decision can be reviewed rather than taken on trust.",
+    "offlineRules": "Offline rules that fired",
+    "offlineRulesCount_one": "{{count}} offline rule matched, before any AI was involved.",
+    "offlineRulesCount_other": "{{count}} offline rules matched, before any AI was involved.",
+    "offlineRulesNone": "No offline rule matched — this verdict came from the AI check.",
+    "ruleUnknown": "Pattern rule: {{pattern}}",
+    "rules": {
+      "otp_share": "Asks you to share an OTP",
+      "kyc_expiry": "Claims your KYC is expiring or suspended",
+      "lottery_win": "Says you have won something",
+      "account_lock": "Threatens to lock your account",
+      "refund_click": "Offers a refund behind a link",
+      "urgent_verify": "Pushes you to verify urgently"
+    },
+    "matchedText": "Matched in your message",
+    "retrievedPatterns": "Known scam patterns it was compared against",
+    "similarity": "{{percent}}% similar",
+    "model": "Judged by",
+    "provider": "Provider",
+    "modelName": "Model",
+    "promptVersion": "Prompt version",
+    "auditRecord": "Audit record",
+    "recordId": "Record",
+    "recordHash": "Hash",
+    "pending": "Some evidence is not shown yet: the matched scam patterns, the model version and the audit record are not returned by the service so far."
+  },
   "history": {
     "eyebrow": "History dashboard",
     "loading": "Loading history…",
