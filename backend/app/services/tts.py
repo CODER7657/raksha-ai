@@ -288,7 +288,7 @@ def _pick_google_voice(bcp47: str, api_key: str) -> str | None:
         _google_voice_cache[bcp47] = None
         return None
 
-    best = sorted(affordable, key=lambda v: _google_voice_rank(v.get("name", "")))[0]
+    best = min(affordable, key=lambda v: _google_voice_rank(v.get("name", "")))
     name = best.get("name")
     _google_voice_cache[bcp47] = name
     return name

@@ -1,0 +1,29 @@
+# Lint config, added when `ruff check . || true` became `ruff check .` — a gate
+# that cannot fail is worse than no gate, because people believe it.
+#
+# Two rules are disabled, each for a reason rather than to make the build pass.
+# Everything else ruff reports is treated as real and fixed.
+
+[lint]
+ignore = [
+  # B008 — function call in a default argument.
+  #
+  # `credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)` is how
+  # FastAPI dependency injection is spelled. The rule is right in general and
+  # wrong for this framework, and rewriting the endpoints to satisfy it would
+  # make them worse.
+  "B008",
+
+  # BLE001 — blind `except Exception`.
+  #
+  # Deliberate, and load-bearing. This service fails safe by design: a scan
+  # still returns a verdict when the audit write fails, and the provider ladder
+  # falls from Groq to Gemini to offline rules on *any* provider error, not on a
+  # list of exception types we guessed in advance. Narrowing these would mean an
+  # unanticipated error from a third-party SDK takes down a fraud warning.
+  #
+  # The rule's real complaint — silently swallowing — is worth honouring, so
+  # every one of these logs. If you add a blind except that does not, that is a
+  # review comment, not a lint exemption.
+  "BLE001",
+]

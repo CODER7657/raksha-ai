@@ -1,17 +1,16 @@
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
-import logging
-
 from app.core.auth import get_current_user
 from app.core.config import get_settings
 from app.core.supabase_client import get_supabase
 from app.rate_limit import limiter
-from app.services import llm, rag, trace as trace_service
+from app.services import llm, rag, stt
+from app.services import trace as trace_service
 from app.services.rule_engine import offline_rule_hits
-from app.services import stt
 
 logger = logging.getLogger(__name__)
 

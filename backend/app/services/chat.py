@@ -3,8 +3,12 @@ pattern as app/services/llm.py, but returns free-form text for a back-and-forth
 conversation instead of a forced-JSON single classification.
 """
 
+import logging
+
 from app.core import languages
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are the Raksha AI Assistant — a friendly, patient safety \
 helper for first-time digital banking users in India. Your job is to help people \
@@ -93,7 +97,10 @@ def chat_reply(message: str, language: str, context_block: str, history: list[di
     try:
         return _call_groq(messages).strip()
     except Exception:
-        pass
+        # Fall through to Gemini. Logged rather than swallowed silently: if Groq
+        # is failing every request we degrade to the slower provider and nothing
+        # anywhere says why.
+        logger.warning("Groq chat call failed, falling back to Gemini", exc_info=True)
 
     try:
         return _call_gemini(messages).strip()
