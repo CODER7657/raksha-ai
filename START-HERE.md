@@ -101,15 +101,17 @@ deleting the commit.
 
 | You | You own | Your first task |
 |---|---|---|
-| **Pavan** `@CODER7657` | Architecture, detection core, security, migrations | Persist retrieval evidence; port the rule engine to run on-device |
+| **Pavan** `@CODER7657` | Architecture, detection core, security, migrations, **content + QA + evaluation** | Persist retrieval evidence, then the labelled benchmark |
 | **Hem** `@Hem60` | Frontend — web app, design system, accessibility | Trace viewer UI, then the institution dashboard |
 | **Ayush** `@Ayush3422` | Voice, language, Android client | Android shell + SMS auto-scan — the first real interception |
-| **Harsh** `@harshpansuriya71-sudo` | Content and QA — scam patterns, practice bank, evaluation | Labelled benchmark set and eval harness |
 
-**On the benchmark:** this is not the junior task. Right now we cannot state a
-precision or recall figure, which means every accuracy claim we make is
-unsupported. A jury already asked and we had no number. Nothing else on the
-roadmap can be defended until this exists.
+**Content, QA and evaluation sit with Pavan for now.** A fourth contributor may
+pick it up later.
+
+**On the benchmark:** it is not busywork. Right now we cannot state a precision or
+recall figure, which means every accuracy claim we make is unsupported — a jury
+already asked and we had no number. Nothing else on the roadmap can be defended
+until it exists, which is why it sits in P0 next to the traceability work.
 
 ---
 

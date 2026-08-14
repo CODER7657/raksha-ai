@@ -233,7 +233,7 @@ pilot**, not assumptions to design around now.
 | Phase | Deliverable | Why this order | Owner |
 |---|---|---|---|
 | P0 | Traceability UI + persisted evidence | Closes the gap that lost marks; data already exists | Pavan |
-| P0 | Accuracy benchmark + labelled set | Every later claim depends on being able to measure | Harsh |
+| P0 | Accuracy benchmark + labelled set | Every later claim depends on being able to measure | Pavan |
 | P1 | Android shell + SMS auto-scan | First true interception; no alarming permissions | Ayush |
 | P1 | On-device rule engine port | Removes the network from the hot path | Pavan |
 | P2 | Payment interrupt (UPI watcher) | The terminal intervention — highest value | Ayush |
@@ -256,14 +256,14 @@ being the only one allowed to touch it.
 
 | Person | Owns | First deliverable |
 |---|---|---|
-| **Pavan** `@CODER7657` | Architecture, detection core, security, migrations | Traceability persistence; on-device rule engine port |
+| **Pavan** `@CODER7657` | Architecture, detection core, security, migrations, content + QA + evaluation | Traceability persistence, then the labelled benchmark |
 | **Hem** `@Hem60` | Frontend — web app, design system, accessibility | Trace viewer UI, then institution dashboard |
 | **Ayush** `@Ayush3422` | Voice, language, Android client | Android shell + SMS auto-scan |
-| **Harsh** `@harshpansuriya71-sudo` | Content and QA — scam patterns, practice bank, evaluation | Labelled benchmark set and eval harness |
 
-**On the benchmark role.** This is not a junior task. Nothing in the roadmap can
-be claimed to work until someone can measure whether it does — and every accuracy
-question a jury or a bank asks lands on that work.
+**Content, QA and evaluation** are held by the lead until a fourth contributor
+joins. Nothing in the roadmap can be claimed to work until someone can measure
+whether it does — and every accuracy question a jury or a bank asks lands on that
+work, so it is owned, not deferred.
 
 ---
 

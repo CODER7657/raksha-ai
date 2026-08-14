@@ -30,8 +30,10 @@
 
 # --- Content: scam patterns and practice bank -------------------------------
 # Data, not code - but wrong data here teaches people the wrong thing.
-/backend/app/services/practice_content.py   @harshpansuriya71-sudo @CODER7657
-/backend/scripts/seed_scam_patterns.py      @harshpansuriya71-sudo @CODER7657
+# Held by the lead until a dedicated content/QA owner joins.
+/backend/app/services/practice_content.py   @CODER7657
+/backend/scripts/seed_scam_patterns.py      @CODER7657
+/backend/tests/                             @CODER7657
 
 # --- Security-sensitive: auth, config, database -----------------------------
 # Two reviewers by policy. A mistake here is a data breach, not a bug.

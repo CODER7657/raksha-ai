@@ -1,15 +1,19 @@
 # Contributing to Raksha AI
 
-Four of us, one private repo. This doc is the whole process.
+Three of us, one private repo. This doc is the whole process.
 
 ## 1. Team and ownership
 
 | Person | GitHub | Owns | Why |
 |---|---|---|---|
-| **Pavan Patel** | `@CODER7657` | Tech lead, architecture, detection core (RAG, prompts, rules), security, migrations | Accuracy and auth are the two places a mistake is not recoverable |
+| **Pavan Patel** | `@CODER7657` | Tech lead, architecture, detection core (RAG, prompts, rules), security, migrations — **and** content, QA and evaluation | Accuracy and auth are the two places a mistake is not recoverable |
 | **Hem Patel** | `@Hem60` | Frontend — web app, UI, design system, accessibility | Owns everything a user actually sees |
-| **Ayush Bawaskar** | `@Ayush3422` | Voice and language — STT/TTS, i18n, language directives | Built the Sarvam/Whisper ladder and the language layer |
-| **Harsh Pansuriya** | `@harshpansuriya71-sudo` | Content and QA — scam pattern curation, practice bank, test coverage | Wrong content teaches people the wrong thing; this is a safety role, not a chore |
+| **Ayush Bawaskar** | `@Ayush3422` | Voice and language — STT/TTS, i18n, language directives, Android client | Built the Sarvam/Whisper ladder and the language layer |
+
+> **Content, QA and evaluation** — scam patterns, practice bank, accuracy benchmark —
+> sit with the lead for now. A fourth contributor may pick this up later; until then
+> treat it as owned, not unowned. It is the work that lets every accuracy claim be
+> defended.
 
 Ownership is enforced by `.github/CODEOWNERS` — GitHub auto-requests the right
 reviewer. It means *accountable for reviewing*, not *only one allowed to edit*.
@@ -40,7 +44,7 @@ Then open a PR into `master`.
 ## 3. PR rules
 
 - **Every PR needs one review** from another member, even for small changes.
-- CI must be green before merge.
+- CI is visible but not a required check — **do not approve a PR with red CI.**
 - **Squash and merge.** Keeps `master` readable.
 - Delete the branch after merging.
 - Never push directly to `master`.
