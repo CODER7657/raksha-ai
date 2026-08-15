@@ -5,6 +5,7 @@ import { ScanInputPage } from './pages/ScanInputPage'
 import { ResultPage } from './pages/ResultPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { BenchmarkPage } from './pages/BenchmarkPage'
+import { ReviewQueuePage } from './pages/ReviewQueuePage'
 import { AboutPage } from './pages/AboutPage'
 import { PracticePage } from './pages/PracticePage'
 import { ChatPage } from './pages/ChatPage'
@@ -33,6 +34,7 @@ function App() {
             nav — it is internal, and there is no role system to gate it with
             yet. See the PR for why that gate is still needed. */}
         <Route path="benchmark" element={<BenchmarkPage />} />
+        <Route path="review" element={<ReviewQueuePage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>
     </Routes>
