@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Hindi UI strings.
+
+  Unlike trace.rules.*, these have no counterpart in the web app, so there is
+  nothing for them to drift from and they live here rather than being generated
+  from frontend/src/i18n/locales. See the generator note in app/build.gradle.kts.
+
+  NOT REVIEWED BY A NATIVE SPEAKER — same caveat as the offline rules added in
+  #31, and covered by #52. Verbs use the neutral imperative so the text does not
+  guess the reader's gender, matching the instruction in the LLM system prompt.
+-->
+<resources>
+    <string name="scanning_heading">संदेश जाँच</string>
+    <string name="scanning_on">चालू — नए संदेश इसी फ़ोन पर जाँचे जा रहे हैं</string>
+    <string name="scanning_off">बंद — कोई संदेश नहीं जाँचा जा रहा</string>
+    <string name="scanning_enable">संदेश जाँच चालू करें</string>
+    <string name="scanning_disable">बंद करें</string>
+    <string name="scanning_permission_needed">आने वाले संदेश पढ़ने के लिए Raksha को अनुमति चाहिए। वे इसी फ़ोन पर जाँचे जाते हैं और कहीं नहीं भेजे जाते।</string>
+    <string name="scanning_permission_denied">अनुमति नहीं मिली। आप अपने मैसेजिंग ऐप से संदेश Raksha को साझा करके भी उसे जाँच सकते हैं।</string>
+    <string name="scanning_coverage_note">केवल SMS जाँचा जाता है। WhatsApp, RCS और अन्य चैट ऐप को कोई भी बाहरी ऐप नहीं पढ़ सकता, यह ऐप भी नहीं।</string>
+
+    <string name="warnings_blocked_title">चेतावनी आप तक नहीं पहुँच सकती</string>
+    <string name="warnings_blocked_body">संदेश जाँचे जा रहे हैं, लेकिन सूचनाएँ बंद हैं, इसलिए Raksha आपको धोखाधड़ी की चेतावनी नहीं दे सकता। Raksha के लिए सूचनाएँ चालू करें।</string>
+    <string name="warnings_blocked_action">सूचना सेटिंग खोलें</string>
+    <string name="protected_status">संदेश जाँचे जा रहे हैं और चेतावनी आप तक पहुँच सकती है।</string>
+
+    <string name="shared_heading">साझा किया गया संदेश</string>
+    <string name="shared_clean">इस संदेश में धोखाधड़ी का कोई ज्ञात लक्षण नहीं मिला।</string>
+    <string name="shared_flagged">यह संदेश धोखाधड़ी जैसा लगता है:</string>
+    <string name="shared_hint">किसी संदेश को जाँचने के लिए उसे अपने मैसेजिंग ऐप से Raksha को साझा करें।</string>
+
+    <string name="warning_title">यह संदेश धोखाधड़ी जैसा लगता है</string>
+    <string name="warning_channel_name">धोखाधड़ी चेतावनी</string>
+    <string name="warning_channel_description">जब कोई संदेश धोखाधड़ी जैसा लगे तो चेतावनी देता है। संदेश आपके फ़ोन पर ही जाँचे जाते हैं और कहीं नहीं भेजे जाते।</string>
+
+    <string name="language_heading">भाषा</string>
+</resources>

@@ -38,6 +38,25 @@ object SafeLog {
     }
 
     /**
+     * A message was flagged but the warning could not be shown.
+     *
+     * This is the state that looks exactly like a broken app from the outside:
+     * scanning is on, the scan worked, rules fired — and the user sees nothing,
+     * because notifications are denied. Without this line, logcat cannot tell
+     * "no rule fired" apart from "we had something to say and no way to say it",
+     * and a Play reviewer testing the deny path would reasonably conclude the
+     * app does not work.
+     *
+     * Rule ids only, never message text.
+     */
+    fun warningSuppressed(ruleIds: List<String>, reason: String) {
+        Log.w(
+            TAG,
+            "warning NOT shown ($reason): ${ruleIds.size} rule(s) had fired ${ruleIds.sorted()}",
+        )
+    }
+
+    /**
      * Something failed. Takes a [Throwable], not a message — an exception's own
      * text can carry content if the thrower was careless, so only the class
      * name is recorded.

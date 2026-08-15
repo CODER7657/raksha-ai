@@ -124,6 +124,21 @@ abstract class GenerateRuleStrings : DefaultTask() {
     @Suppress("UNCHECKED_CAST")
     @TaskAction
     fun generate() {
+        // This task reads outside the Gradle root, which is correct in the
+        // monorepo and confusing anywhere else. Without this check a standalone
+        // `android/` checkout fails with a bare path error from deep inside
+        // JsonSlurper, and the reader has no way to know the directory is meant
+        // to be there (#49).
+        val locales = localesDir.get().asFile
+        require(locales.isDirectory) {
+            "Cannot find the web app's i18n bundles at ${locales.absolutePath}.\n" +
+                "The Android build reads its rule labels straight from the web " +
+                "translations so the two products cannot describe the same rule " +
+                "differently (#29 §1), which means `android/` builds only inside a " +
+                "full checkout of the repository — not on its own. If you copied " +
+                "`android/` somewhere else, copy `frontend/src/i18n/locales/` with it."
+        }
+
         val root = outputDir.get().asFile
         root.deleteRecursively()
         root.mkdirs()
