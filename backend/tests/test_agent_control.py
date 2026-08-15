@@ -205,3 +205,52 @@ def _stub(monkeypatch, row: dict):
     monkeypatch.setattr(
         agent_control, "get_supabase", lambda: type("C", (), {"table": lambda s, n: Query()})()
     )
+
+
+# --- who may flip the switch (#75 review) ----------------------------------
+
+
+def test_an_empty_allowlist_means_nobody(monkeypatch):
+    """Not everybody. An unset allowlist is "we have not said who the operators
+    are", and resolving that to "any signed-in user" is the hole this closes —
+    signup is open, so authenticated means anyone who registers."""
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("AGENT_OPERATOR_IDS", "")
+    try:
+        assert not agent_control.is_operator("11111111-1111-1111-1111-111111111111")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_only_listed_operators_pass(monkeypatch):
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    monkeypatch.setenv("AGENT_OPERATOR_IDS", "aaaa-1, bbbb-2")
+    try:
+        assert agent_control.is_operator("aaaa-1")
+        # Whitespace around a comma-separated list is a real thing people type.
+        assert agent_control.is_operator("bbbb-2")
+        assert not agent_control.is_operator("cccc-3")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_the_write_endpoint_is_gated_and_the_reads_are_not():
+    """The reads only disclose; this one writes. A stranger stopping the
+    red-team loop, or planting a string in disabled_reason for the next
+    operator to read, is a different thing from seeing a spend figure."""
+    import pathlib
+
+    src = (pathlib.Path(__file__).resolve().parents[1] / "app/routes/review.py").read_text(
+        encoding="utf-8"
+    )
+    switch = src.split("def switch_agent(")[1]
+    assert "is_operator" in switch, "the switch endpoint must check the operator allowlist"
+
+    # The read endpoints stay open — tightening them was not the finding, and
+    # doing it here would widen the change beyond what was asked.
+    overview = src.split("def list_agents(")[1].split("def ")[0]
+    assert "is_operator" not in overview

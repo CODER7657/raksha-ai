@@ -154,6 +154,22 @@ def _with_budget(row: dict) -> dict:
     }
 
 
+def is_operator(user_id: str) -> bool:
+    """Whether this user may stop or start an agent.
+
+    An env-var allowlist, and a stopgap — it exists because there is no role
+    system and signup is open, so `authenticated` means anyone who registers.
+    That is fine for the read-only reviewer screens, which only disclose; this
+    endpoint writes.
+
+    Unset means nobody. An empty allowlist is "we have not said who the
+    operators are", and reading that as "everyone" is the hole being closed.
+    """
+    from app.core.config import get_settings
+
+    return user_id in get_settings().agent_operator_id_list
+
+
 def set_enabled(agent_id: str, enabled: bool, reason: str | None, actor: str) -> dict:
     """Flip the switch. Raises, because unlike the read path a failure here must
     not look like success — an operator who believes they stopped an agent and
@@ -187,7 +203,19 @@ def recent_runs(agent_id: str | None = None, limit: int = 25) -> list[dict]:
         query = get_supabase().table("agent_runs").select("*")
         if agent_id:
             query = query.eq("agent_id", agent_id)
-        return query.order("started_at", desc=True).limit(limit).execute().data or []
+        # `id desc` for the same reason `agent_overview` needs it: `now()` is
+        # transaction-scoped, so runs recorded in one transaction share a
+        # `started_at` and time alone orders them arbitrarily. Less severe here
+        # — it misorders a list rather than naming the wrong "latest" — but
+        # fixing the view and leaving the sibling path undercuts the reasoning.
+        return (
+            query.order("started_at", desc=True)
+            .order("id", desc=True)
+            .limit(limit)
+            .execute()
+            .data
+            or []
+        )
     except Exception:
         logger.exception("Could not read the agent run log")
         return []

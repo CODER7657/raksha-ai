@@ -40,6 +40,27 @@ class Settings(BaseSettings):
     # uncorrelatable with new ones, which is the intended cost.
     audit_hash_pepper: str = ""
 
+    # Who may stop an agent (#32 D). Comma-separated Supabase user UUIDs.
+    #
+    # There is no role system yet, and signup is open email + Google, so
+    # "authenticated" means "anyone who registers". That is defensible for the
+    # read-only reviewer screens, which only disclose — but the agent switch
+    # *writes*, and a stranger stopping the red-team loop or planting a string
+    # in `disabled_reason` for the next operator to read is a different thing.
+    #
+    # Unset means nobody, deliberately. An empty allowlist is "we have not said
+    # who the operators are", and resolving that to "everyone" is exactly the
+    # hole this closes. The console reports the refusal rather than failing
+    # silently.
+    #
+    # Replace with a real role check when one exists; this is a stopgap that
+    # states its own scope.
+    agent_operator_ids: str = ""
+
+    @property
+    def agent_operator_id_list(self) -> list[str]:
+        return [uid.strip() for uid in self.agent_operator_ids.split(",") if uid.strip()]
+
     # CORS — comma-separated list of allowed frontend origins, no wildcard
     allowed_origins: str = "http://localhost:5173"
 

@@ -126,7 +126,21 @@ def switch_agent(
 
     Errors are surfaced rather than swallowed: an operator who believes they
     stopped an agent and did not is the worst outcome this endpoint can have.
+
+    Unlike the read endpoints beside it, this one is allowlisted. They only
+    disclose; this one writes — and with open signup, "authenticated" is not a
+    meaningful boundary for a write that a stranger could use to stop the
+    red-team loop or leave a string in `disabled_reason` for the next operator.
     """
+    if not agent_control.is_operator(user_id):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Only listed operators can stop or start an agent. Add the user's "
+                "Supabase UUID to AGENT_OPERATOR_IDS. Unset means nobody, on purpose."
+            ),
+        )
+
     try:
         return {"agent": agent_control.set_enabled(agent_id, payload.enabled, payload.reason, user_id)}
     except ValueError as exc:

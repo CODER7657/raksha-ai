@@ -140,7 +140,20 @@ $$;
 -- A view rather than three round trips. Spend is over a rolling 24h because a
 -- calendar-day cap resets at midnight in a timezone nobody agreed on, and an
 -- agent that exhausts its budget at 23:00 should not be free again in an hour.
-create or replace view public.agent_overview as
+-- `security_invoker = on` is load-bearing, even though it changes nothing
+-- today. A Postgres view defaults to executing as its *owner* — `postgres`,
+-- which owns the two tables below and is exempt from their RLS — so without
+-- this the view quietly skips the policies written directly above it.
+--
+-- The policies currently grant every signed-in user read, so the effective
+-- exposure is identical right now. It matters the moment someone adds the
+-- reviewer role this codebase keeps saying it needs: they will tighten the
+-- policy on `agent_state`, and an owner-executing view would carry on
+-- returning everything. A control that looks like it constrains and does not
+-- is worse than no control, because nobody checks it again.
+create or replace view public.agent_overview
+  with (security_invoker = on)
+as
 select
   s.agent_id,
   s.display_name,
@@ -185,3 +198,19 @@ values
   ('a6_redteam', 'A6 Red-Team Adversary', 200),
   ('llm_benchmark', 'RAG + LLM benchmark', 300)
 on conflict (agent_id) do nothing;
+
+-- ── Who may call these ───────────────────────────────────────────────────
+
+-- Both functions are `security invoker`, so RLS default-deny already stops a
+-- non-service caller: the update touches zero rows and the insert is rejected.
+-- These revokes state the intent rather than leaving it to that backstop —
+-- Postgres grants EXECUTE to PUBLIC by default and Supabase exposes every
+-- public-schema function over PostgREST, so without them the API surface says
+-- "anyone may call this" and only the policy disagrees.
+--
+-- Same reasoning as the revokes on the audit chain in 0004.
+revoke execute on function public.set_agent_enabled(text, boolean, text, uuid) from public, anon, authenticated;
+revoke execute on function public.record_agent_run(text, text, int, jsonb) from public, anon, authenticated;
+
+grant execute on function public.set_agent_enabled(text, boolean, text, uuid) to service_role;
+grant execute on function public.record_agent_run(text, text, int, jsonb) to service_role;
