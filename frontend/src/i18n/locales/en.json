@@ -118,7 +118,10 @@
     "auditRecord": "Audit record",
     "recordId": "Record",
     "recordHash": "Hash",
-    "pending": "Some evidence is not shown yet: the matched scam patterns, the model version and the audit record are not returned by the service so far."
+    "pending": "Some evidence is not shown yet: the matched scam patterns, the model version and the audit record are not returned by the service so far.",
+    "agentDrafted": "agent-drafted",
+    "agentInfluenced_one": "{{count}} of the {{total}} patterns behind this verdict was drafted by an agent and approved by a person.",
+    "agentInfluenced_other": "{{count}} of the {{total}} patterns behind this verdict were drafted by an agent and approved by a person."
   },
   "history": {
     "eyebrow": "History dashboard",

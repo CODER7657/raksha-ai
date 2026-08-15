@@ -15,6 +15,15 @@ export interface RetrievedPattern {
   pattern_text: string
   category: string
   similarity: number
+  /** Where this pattern came from (#32 C/E). `agent` means an agent drafted it
+   * and a person approved it into the database — never that an agent put it
+   * there unreviewed, which the schema forbids.
+   *
+   * Optional because a verdict recorded before provenance existed genuinely
+   * does not know, and absence must not be rendered as `human`: "we did not
+   * record it" and "a person wrote it" are different claims. */
+  provenance?: 'human' | 'agent'
+  drafted_by?: string | null
 }
 
 /** One offline rule that fired before any network call. `rule_id` is looked up

@@ -84,9 +84,13 @@ def test_audit_payload_drops_pattern_text_but_keeps_the_scores():
     only what cannot be recovered: which category matched and how closely."""
     payload = build_payload()
     assert "Your KYC is expiring" not in str(payload)
+    # `provenance` joined this in #32 E. It belongs in the record for the
+    # opposite reason `pattern_text` does not: the text is reproducible from the
+    # pattern table, whereas whether a pattern was machine-drafted is exactly
+    # what a later edit or deletion would destroy.
     assert payload["retrieved"] == [
-        {"category": "kyc_scam", "similarity": 0.8095},
-        {"category": "lottery", "similarity": 0.31},
+        {"category": "kyc_scam", "similarity": 0.8095, "provenance": "human"},
+        {"category": "lottery", "similarity": 0.31, "provenance": "human"},
     ]
 
 
