@@ -56,28 +56,21 @@ change touches a response model.
 
 ## 02 · ⚠️ Immediate, before anything else
 
-**1. Merge #70 with `--admin`.** `MERGEABLE/BLOCKED`, not a conflict — `/.github/`
-is lead-owned and GitHub will not accept the author's own approval. Until it
-lands the weekly smoke check tests three rungs instead of five, so the batch
-keys are unwatched.
+**1. Review #71** (Hem, one source of truth for UI strings). The only PR open.
 
-```bash
-gh pr merge 70 --squash --admin --delete-branch
-```
-
-**2. Review #71** (Hem, one source of truth for UI strings).
-
-**3. Deploy.** `#66`, `#68` and `#69` are on `master` and **not live**. #68
+**2. Deploy.** `#66`, `#68` and `#69` are on `master` and **not live**. #68
 carries migration `0005_verdict_cache.sql`, which goes in **before** the deploy.
 Until then the verdict cache does nothing and the rule fixes protect nobody.
 
-**4. Re-run the LLM benchmark.** The committed report was scored against 72
+**3. Re-run the LLM benchmark.** The committed report was scored against 72
 corpus rows; there are now 79. The dashboard is currently displaying a staleness
 banner saying so, which is the mechanism working — but the fix is a re-run:
 
 ```bash
 cd backend && python scripts/run_llm_benchmark.py --run --out ../testdata/benchmark/llm-latest.json
 ```
+
+Run it inside `backend/.venv`, not the system Python — see §07.
 
 ---
 
@@ -270,6 +263,16 @@ a diff and can never be reviewed. Found in `SmsAssembly.kt`; use ` `.
 verified locally. CI is the only proof — which is why #27 exists.
 
 **Git Bash mangles Devanagari in `curl -d`.** Test Indic text via Python.
+
+**Run backend scripts inside `backend/.venv`, never the system Python.** The
+pins resolve `protobuf` to 5.x. A global interpreter shared with other projects
+drifts to protobuf 7, and then the first embedding call dies with
+`MessageToDict() got an unexpected keyword argument 'float_precision'` —
+`proto-plus` caps at `<7.0.0`, `requirements.txt` does not re-state that cap, so
+nothing stops the global env from violating it. It looks like a broken script;
+it is a broken environment. Render is unaffected, because it builds clean from
+the pins on Python 3.11.9. The same drift explains any local run where
+`google-generativeai` is 0.8.5 rather than the pinned 0.8.2.
 
 ---
 
