@@ -48,6 +48,13 @@ def build_trace(
                 "pattern_text": pattern.pattern_text,
                 "category": pattern.category,
                 "similarity": round(pattern.similarity, 4),
+                # #32 C/E: a reviewer, and eventually an auditor, must be able
+                # to tell which evidence behind a verdict was machine-drafted.
+                # Carried per pattern rather than as a summary flag, because
+                # "one of five patterns came from an agent" and "all five did"
+                # are different claims about how much to trust the verdict.
+                "provenance": pattern.provenance,
+                "drafted_by": pattern.drafted_by,
             }
             for pattern in patterns
         ],
@@ -170,9 +177,24 @@ def build_audit_payload(
         "risk_score": risk_score,
         "rules_fired": [rule["rule_id"] for rule in trace.get("offline_rules_fired", [])],
         "retrieved": [
-            {"category": pattern["category"], "similarity": pattern["similarity"]}
+            {
+                "category": pattern["category"],
+                "similarity": pattern["similarity"],
+                # In the hash-chained record, not only the response. "Was this
+                # verdict influenced by an agent?" is a question an auditor asks
+                # months later, about a decision nobody remembers — and by then
+                # the pattern row may have been edited or deleted. Only the
+                # audit entry can answer it, and only if it was written down at
+                # the time.
+                "provenance": pattern.get("provenance", "human"),
+            }
             for pattern in trace.get("retrieved_patterns", [])
         ],
+        # A single flag so the question is answerable without walking the list.
+        "agent_influenced": any(
+            pattern.get("provenance") == "agent"
+            for pattern in trace.get("retrieved_patterns", [])
+        ),
         "model": trace.get("model"),
     }
 

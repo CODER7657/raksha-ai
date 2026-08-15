@@ -15,6 +15,13 @@ class RetrievedPattern:
     pattern_text: str
     category: str
     similarity: float
+    #: 'human' or 'agent'. Defaulted so a caller constructing one by hand — and
+    #: every existing test — keeps working, and because a pattern whose origin
+    #: we cannot establish is a hand-written one until proven otherwise.
+    #: Claiming 'agent' on a missing value would overstate agent involvement,
+    #: which is the exact number #32 C exists to report honestly.
+    provenance: str = "human"
+    drafted_by: str | None = None
 
 
 def retrieve_similar_patterns(
@@ -38,6 +45,8 @@ def retrieve_similar_patterns(
             pattern_text=row["pattern_text"],
             category=row["category"],
             similarity=row["similarity"],
+            provenance=row.get("provenance") or "human",
+            drafted_by=row.get("drafted_by"),
         )
         for row in rows
     ]

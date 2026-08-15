@@ -21,6 +21,10 @@ export function TraceViewer({ result }: { result: ScanResult }) {
   const trace = result.trace ?? undefined
   const rules = trace?.offline_rules_fired ?? []
   const patterns = trace?.retrieved_patterns ?? []
+  // Counted rather than a boolean: "one of five patterns came from an agent"
+  // and "all five did" are different claims about how much of the verdict
+  // rests on machine-drafted evidence.
+  const agentDrafted = patterns.filter((p) => p.provenance === 'agent').length
 
   // The backend returns a bare count today and the itemised list later; prefer
   // the list when it is there, fall back to the count so the section is never
@@ -84,6 +88,18 @@ export function TraceViewer({ result }: { result: ScanResult }) {
 
           {patterns.length > 0 && (
             <TraceSection label={t('trace.retrievedPatterns')}>
+              {/* #32 E. Stated once above the list rather than inferred from
+                  badges: "some of the evidence behind this verdict was drafted
+                  by an agent" is a claim about the verdict, and a reader
+                  scanning five rows should not have to assemble it themselves.
+                  Only rendered when it is true — a line saying "no agents were
+                  involved" on every ordinary verdict is noise that trains
+                  people to skip the section. */}
+              {agentDrafted > 0 && (
+                <p className="mb-2 border-l-2 border-accent bg-accent/10 px-2 py-1 text-[11px] text-ink leading-relaxed">
+                  {t('trace.agentInfluenced', { count: agentDrafted, total: patterns.length })}
+                </p>
+              )}
               <ul className="space-y-2">
                 {patterns.map((pattern, i) => (
                   <li key={i} className="border border-line bg-white p-2.5">
@@ -92,6 +108,18 @@ export function TraceViewer({ result }: { result: ScanResult }) {
                         {pattern.category}
                       </span>
                       <span className="text-[11px] text-ink/60 shrink-0">
+                        {pattern.provenance === 'agent' && (
+                          <span
+                            className="mr-1.5 bg-ink px-1 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-white"
+                            title={
+                              pattern.drafted_by
+                                ? `Drafted by ${pattern.drafted_by}, approved by a person`
+                                : undefined
+                            }
+                          >
+                            {t('trace.agentDrafted')}
+                          </span>
+                        )}
                         {t('trace.similarity', { percent: Math.round(pattern.similarity * 100) })}
                       </span>
                     </div>
