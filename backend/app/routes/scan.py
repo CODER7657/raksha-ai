@@ -8,7 +8,7 @@ from app.core.auth import get_current_user
 from app.core.config import get_settings
 from app.core.supabase_client import get_supabase
 from app.rate_limit import limiter
-from app.services import llm, rag, stt
+from app.services import llm, rag, stt, verdict_cache
 from app.services import trace as trace_service
 from app.services.rule_engine import offline_rule_hits
 
@@ -91,6 +91,31 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
     hand — same RAG retrieval + LLM classification + offline fallback +
     persistence for either input type."""
     hits = offline_rule_hits(text, language)
+    digest = trace_service.hash_text(text)
+
+    # Ask the cache before spending anything. A scam campaign sends one message
+    # to thousands of people, and judging it once is the difference between a
+    # burst of traffic costing 1 classification and costing 1,000 — which is how
+    # a rate limit becomes a user with no warning (#48).
+    #
+    # Retrieval is skipped on a hit as well. It is the cheaper call, but it is
+    # still a call, and the patterns are only ever used to build the prompt for
+    # the classification we are not making.
+    cached = verdict_cache.lookup(digest, language)
+    if cached is not None:
+        result = cached["result"]
+        trace = trace_service.build_trace_from_cache(
+            hits, cached["provider"], cached["model"], cached["cached_at"]
+        )
+        return _persist_and_respond(
+            text=text,
+            language=language,
+            input_type=input_type,
+            user_id=user_id,
+            result=result,
+            trace=trace,
+            hits=hits,
+        )
 
     patterns = rag.retrieve_similar_patterns(text, language)
     context_block = rag.format_context_block(patterns)
@@ -112,6 +137,37 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
             raise HTTPException(status_code=503, detail="Detection service temporarily unavailable")
 
     trace = trace_service.build_trace(hits, patterns, classification)
+    verdict_cache.store(digest, language, result, classification)
+
+    return _persist_and_respond(
+        text=text,
+        language=language,
+        input_type=input_type,
+        user_id=user_id,
+        result=result,
+        trace=trace,
+        hits=hits,
+    )
+
+
+def _persist_and_respond(
+    *,
+    text: str,
+    language: str,
+    input_type: str,
+    user_id: str,
+    result: dict,
+    trace: dict,
+    hits: list,
+) -> dict:
+    """Everything after a verdict exists, shared by the cached and live paths.
+
+    Extracted so a cache hit takes exactly the same route through persistence
+    and the audit chain as a fresh classification. A second copy of this would
+    eventually diverge, and the way it would diverge is by forgetting to write
+    an audit record for the cheap path - which is the one that will run most
+    often once a campaign is circulating.
+    """
     community_count = _report_to_community_radar(text, language)
 
     supabase = get_supabase()
@@ -150,7 +206,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
     )
     # A new dict rather than mutating `trace` in place: the copy already handed
     # to the scans insert must not grow an `audit` key afterwards. The stored
-    # trace legitimately has none — the audit record cannot exist until the scan
+    # trace legitimately has none - the audit record cannot exist until the scan
     # row it points at does, and the link is navigable the other way via
     # verdict_audit.scan_id.
     response_trace = {**trace, "audit": audit} if audit else trace
@@ -161,7 +217,6 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
         "offline_flags_matched": len(hits),
         "trace": response_trace,
     }
-
 
 @router.post("/scan/text", response_model=ScanResult)
 @limiter.limit(get_settings().scan_rate_limit)

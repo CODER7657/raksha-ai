@@ -182,3 +182,87 @@ def test_audit_payload_sent_to_the_chain_excludes_the_message(monkeypatch, sink)
     assert SCAM not in str(payload)
     assert len(payload["input_digest"]) == 64
     assert payload["verdict"] == "high_risk"
+
+
+# --- the verdict cache in the pipeline (#48) ------------------------------
+
+
+def _cache_hit(*_args, **_kwargs):
+    return {
+        "result": {
+            "verdict": "high_risk",
+            "risk_score": 92,
+            "flagged_phrases": ["Share your OTP now"],
+            "explanation": "Asks for an OTP.",
+            "recommended_action": "Do not share it.",
+        },
+        "provider": "groq",
+        "model": "llama-3.3-70b-versatile",
+        "cached_at": "2026-08-15T10:00:00+00:00",
+    }
+
+
+def _explode(*_args, **_kwargs):
+    raise AssertionError("a cache hit must not reach this")
+
+
+def test_a_cache_hit_skips_the_model_and_the_retrieval(monkeypatch, sink):
+    """The entire point. A campaign sending one message to a thousand people
+    should cost one classification, not a thousand."""
+    sink()
+    monkeypatch.setattr(scan.verdict_cache, "lookup", _cache_hit)
+    monkeypatch.setattr(scan.llm, "classify_message", _explode)
+    monkeypatch.setattr(scan.rag, "retrieve_similar_patterns", _explode)
+
+    out = scan._run_scan_pipeline(SCAM, "en", "text", "user-1")
+
+    assert out["verdict"] == "high_risk"
+    assert out["trace"]["model"]["cached"] is True
+
+
+def test_a_cache_hit_still_writes_a_scan_row_and_an_audit_record(monkeypatch, sink):
+    """The cheap path is the one that will run most often once a campaign is
+    circulating, so it is the one that must not quietly skip the audit chain."""
+    written = sink()
+    monkeypatch.setattr(scan.verdict_cache, "lookup", _cache_hit)
+    monkeypatch.setattr(scan.llm, "classify_message", _explode)
+    monkeypatch.setattr(scan.rag, "retrieve_similar_patterns", _explode)
+
+    out = scan._run_scan_pipeline(SCAM, "en", "text", "user-1")
+
+    assert written["scan_row"]["verdict"] == "high_risk"
+    assert out["trace"]["audit"]["hash"] == "h" * 64
+
+
+def test_a_cache_hit_still_runs_the_offline_rules(monkeypatch, sink):
+    """They are free, they are what the UI names to the user, and they are the
+    only part of the trace that is current rather than replayed."""
+    sink()
+    monkeypatch.setattr(scan.verdict_cache, "lookup", _cache_hit)
+    monkeypatch.setattr(scan.llm, "classify_message", _explode)
+    monkeypatch.setattr(scan.rag, "retrieve_similar_patterns", _explode)
+
+    out = scan._run_scan_pipeline(SCAM, "en", "text", "user-1")
+
+    fired = {r["rule_id"] for r in out["trace"]["offline_rules_fired"]}
+    assert "otp_share" in fired
+    assert out["offline_flags_matched"] == len(out["trace"]["offline_rules_fired"])
+
+
+def test_a_degraded_verdict_is_not_offered_to_the_cache(monkeypatch, sink):
+    """`store` refuses it too, but the pipeline should not even ask — a caller
+    that offers a degraded verdict is a caller one refactor away from caching
+    it."""
+    sink()
+    offered = []
+    monkeypatch.setattr(scan.verdict_cache, "lookup", lambda *a, **k: None)
+    monkeypatch.setattr(scan.llm, "classify_message", classify_down)
+    monkeypatch.setattr(
+        scan.verdict_cache,
+        "store",
+        lambda digest, language, result, classification: offered.append(classification),
+    )
+
+    scan._run_scan_pipeline(SCAM, "en", "text", "user-1")
+
+    assert offered == [None], "the degraded path must offer no classification"
