@@ -6,6 +6,7 @@ import { ResultPage } from './pages/ResultPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { BenchmarkPage } from './pages/BenchmarkPage'
 import { ReviewQueuePage } from './pages/ReviewQueuePage'
+import { EvasionQueuePage } from './pages/EvasionQueuePage'
 import { AboutPage } from './pages/AboutPage'
 import { PracticePage } from './pages/PracticePage'
 import { ChatPage } from './pages/ChatPage'
@@ -35,6 +36,7 @@ function App() {
             yet. See the PR for why that gate is still needed. */}
         <Route path="benchmark" element={<BenchmarkPage />} />
         <Route path="review" element={<ReviewQueuePage />} />
+        <Route path="evasions" element={<EvasionQueuePage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>
     </Routes>

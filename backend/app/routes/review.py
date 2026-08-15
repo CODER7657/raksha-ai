@@ -13,7 +13,7 @@ somewhere honest to put them. The UI says so rather than implying otherwise.
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import get_current_user
-from app.services import pattern_review
+from app.services import evasion_review, pattern_review
 
 router = APIRouter(prefix="/api", tags=["review"])
 
@@ -54,3 +54,22 @@ def draft_context(draft_id: str, _user_id: str = Depends(get_current_user)) -> d
         raise HTTPException(status_code=404, detail="No such draft")
 
     return pattern_review.review_card(match)
+
+
+@router.get("/review/evasions")
+def list_evasions(_user_id: str = Depends(get_current_user)) -> dict:
+    """Variants that got past the detector and still need a human decision.
+
+    Only `open` entries. `fixed` closed itself when the detector caught up
+    (#53) and `wontfix` was already judged — a queue that never empties gets
+    ignored, and then a real evasion sits in it unnoticed.
+
+    Each entry carries the seed case it was mutated from and a token-level
+    diff, because the reviewer's question is "is this still the same fraud?"
+    and the variant alone cannot answer it.
+
+    The `text` on these records is adversarial by construction. It is returned
+    as data and never used to build a prompt; nothing on this path calls a
+    model.
+    """
+    return evasion_review.build_queue()
