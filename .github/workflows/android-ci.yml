@@ -83,6 +83,29 @@ jobs:
         working-directory: android
         run: ./gradlew :core:rules:test --stacktrace
 
+      # The sentence directly above - "assembleDebug alone would never execute
+      # a unit test" - is true of :app as well, and this workflow stopped at
+      # :core:rules. So every unit test in the app module has been dormant
+      # since it was written: RuleLabelCoverageTest, SafeLogContractTest,
+      # SmsAssemblyTest, and the shadowing guard added by #71, whose whole
+      # subject is the one failure the string generator cannot see by
+      # construction.
+      #
+      # Nothing was wrong with those tests. Nothing ever ran them. That is the
+      # #22 lesson in its quietest form: not a check that passes when it should
+      # fail, but a check nobody notices is not being asked.
+      #
+      # testDebugUnitTest, not `test`, deliberately: `test` runs debug AND
+      # release variants and would roughly double the cost for a second run of
+      # identical assertions. The debug variant compiles the same sources and
+      # triggers the same string generator, so it proves the same thing.
+      #
+      # Placed before assembleDebug so a failing assertion is the first thing
+      # reported rather than something found after an APK has been built.
+      - name: App unit tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace
@@ -99,6 +122,18 @@ jobs:
       - name: Build release APK (R8 enabled)
         working-directory: android
         run: ./gradlew assembleRelease --stacktrace
+
+      # Same reasoning as the rule report below, and more load-bearing here:
+      # Gradle's daemon cannot start in some sandboxed local environments, so
+      # for anyone in that position CI is the only place these tests ever run.
+      # A bare "task failed" with no report would leave them with nothing.
+      - name: Upload app test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-unit-test-report
+          path: android/app/build/reports/tests/testDebugUnitTest/
+          retention-days: 7
 
       - name: Upload rule test report
         if: failure()
