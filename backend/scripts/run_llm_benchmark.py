@@ -23,7 +23,9 @@ import sys
 # tests via `pythonpath`; a plain script has no such help.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from app.services import benchmark_llm
+from app.services import agent_control, benchmark_llm
+
+AGENT_ID = "llm_benchmark"
 
 
 def _write_report(result: dict, path: pathlib.Path) -> None:
@@ -63,11 +65,30 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.run:
+        # Same gate as the red-team loop: a scored run spends production's own
+        # keys, so a disabled agent must not be startable from a terminal
+        # either. A dry run costs nothing and is deliberately never blocked —
+        # finding out what a run would cost is not spending.
+        planned = benchmark_llm.estimate(
+            benchmark_llm.load_corpus(), benchmark_llm.load_cache()
+        )["classification_calls"]
+        decision = agent_control.may_run(AGENT_ID, planned)
+        if not decision.allowed:
+            print(f"REFUSED: {decision.reason}")
+            agent_control.record_run(AGENT_ID, "blocked", 0, {"reason": decision.reason})
+            return 1
+
     result = benchmark_llm.run(
         confirm_cost=args.run,
         languages=args.languages,
         max_calls=args.max_calls,
     )
+
+    if args.run:
+        agent_control.record_run(
+            AGENT_ID, "ok", result["run"]["api_calls"], {"models": result["run"]["models"]}
+        )
 
     if args.out:
         if result["dry_run"]:
