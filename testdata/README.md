@@ -2,7 +2,8 @@
 
 `rule_corpus.jsonl` is the **specification** for the offline rule engine. The
 Python implementation in `backend/app/services/rule_engine.py` and the Kotlin
-port planned in #28 are both implementations of it, and both must reproduce it.
+one in `android/core/rules` are both implementations of it, and both must
+reproduce it.
 
 It lives at the repository root rather than under `backend/` deliberately: the
 moment it belongs to one implementation, the other one's disagreements start
@@ -56,14 +57,37 @@ what should happen; the engine is what might be wrong.
 
 Concept-level and shared across languages — the Hindi and English "share your
 OTP" rules are the same `otp_share`. The ids are also i18n keys: the frontend
-renders `trace.rules.<rule_id>` (#19), and the Kotlin port will key off the same
+renders `trace.rules.<rule_id>` (#19), and the Kotlin port keys off the same
 strings. **A new language must reuse the existing ids, not invent new ones.**
 
 Current ids: `otp_share`, `kyc_expiry`, `account_lock`, `lottery_win`,
 `refund_click`, `urgent_verify`.
 
-## Coverage today
+## Coverage, and what coverage does not mean
 
-`RULES` covers `en`, `hi`, `gu`. The other nine languages have no rules at all
-and fall through to English patterns — see #31, which is why several rows here
-are `known_gap` with a language code as the only reason.
+All twelve supported languages have rules. That was not true before #31, when
+nine of them fired nothing and fell through to English patterns they could not
+match — and no `known_gap` row carries a language code as its reason any more.
+
+**This file deliberately does not restate which languages are covered.** The
+previous version of this section did, and it was wrong for every commit between
+#42 and the one that noticed: it still claimed nine languages had no rules long
+after they did. A count copied into prose has no test holding it to the code.
+
+The authority is `REVIEW_STATUS` and `SCRIPT_INHERITANCE` in
+`backend/app/services/rule_engine.py`, and the benchmark reports both under
+`corpus.languages_with_rules` and `corpus.languages_unreviewed`. Read those.
+
+What is worth writing down here, because it is a property of the corpus rather
+than of the engine:
+
+> A passing row proves the plumbing — that the script matches, the patterns
+> compile, and both engines agree. It does not prove the vocabulary is what a
+> scammer would actually write.
+
+Most languages have very few cases, so their per-language scores are dominated
+by whichever rows somebody happened to write. Only `en` and `hi` have enough to
+mean much. `REVIEW_STATUS` marks a language `unreviewed` until a native speaker
+has actually read its rules; coverage is not confidence, and the two are
+reported separately so they cannot be mistaken for each other. See
+`docs/RULE-PARITY.md` §02b.
