@@ -136,24 +136,29 @@ export function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-4 sm:px-8 py-20 sm:py-28 grid gap-12 md:grid-cols-2 md:items-center">
+        {/* The `short:` variants are the fix for #12's second half. `sm:` keys
+            off width alone, so a phone in landscape (667x375) gets desktop
+            padding and a 60px heading inside a 375px-tall window — the CTA
+            landed 217px below the fold. Height has to be part of the
+            condition, not inferred from width. */}
+        <section className="mx-auto max-w-6xl px-4 sm:px-8 py-20 sm:py-28 short:py-6 grid gap-12 short:gap-6 md:grid-cols-2 md:items-center">
           <div>
-            <div className="flex items-center gap-2 mb-5">
+            <div className="flex items-center gap-2 mb-5 short:mb-2">
               <span className="h-2 w-2 bg-accent" aria-hidden="true" />
               <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
                 Financial Safety for Rural India
               </span>
             </div>
-            <h1 className="text-4xl sm:text-6xl font-extrabold uppercase tracking-tight leading-[0.95]">
+            <h1 className="text-4xl sm:text-6xl short:text-3xl font-extrabold uppercase tracking-tight leading-[0.95]">
               Spot the scam
               <br />
               before it costs you
             </h1>
-            <p className="mt-5 text-sm sm:text-base text-ink/70 leading-relaxed max-w-md">
+            <p className="mt-5 short:mt-3 text-sm sm:text-base text-ink/70 leading-relaxed max-w-md">
               Paste a message, a UPI request, or a call recording. Raksha AI checks it against real
               scam patterns and tells you — in your own language — exactly what to do next.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 short:mt-4 flex flex-wrap gap-3">
               <Link
                 to="/login"
                 className="bg-accent px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
