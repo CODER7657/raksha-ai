@@ -131,9 +131,24 @@ console.log({
 })
 ```
 
-Check **640px** at minimum — a low-end Android in a browser with its chrome
-showing, which is what most of our users have. `fits: false` is a blocker, and
-so is single-digit slack: it means the next small copy change breaks it again.
+Check these three, not just the one your machine happens to be:
+
+| viewport | why |
+|---|---|
+| `360 × 640` | low-end Android with browser chrome showing — what most of our users hold |
+| `667 × 375` | **the same phone rotated.** Tailwind's `sm:` fires on *width*, so landscape hands a 375px-tall window desktop typography |
+| `1280 × 800` | that the shrink did not follow you up to desktop |
+
+Landscape is the one people skip, and it is the one that broke. The first pass
+at #12 measured portrait and desktop, called it fixed, and missed a 217px
+overflow sitting in the middle of the range.
+
+`fits: false` is a blocker, and so is single-digit slack: it means the next
+small copy change breaks it again.
+
+If the hero needs to shrink on short viewports, use the `short:` variant
+(`@custom-variant short` in `index.css`) rather than another width breakpoint.
+Height is the thing you are actually responding to.
 
 This is a manual check because the frontend has no test runner yet. When one
 lands, this belongs in it — a checklist item only works while people remember

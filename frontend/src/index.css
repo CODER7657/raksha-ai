@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Viewport height is a layout input, not just width.
+   #12 came back at 667x375 — a phone in landscape, where `sm:` applies on
+   width and hands a 375px-tall window desktop padding and a 60px heading, so
+   the primary CTA sat 217px below the fold. `short:` lets the hero shrink on
+   height without disturbing any width breakpoint.
+   700px rather than something tighter: at 600px tall the pre-fix hero already
+   had only 8px of slack, and a threshold that only just passes is one copy
+   change from failing again. */
+@custom-variant short (@media (max-height: 700px));
+
+
 @theme {
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --font-sans: "Inter", system-ui, sans-serif;
