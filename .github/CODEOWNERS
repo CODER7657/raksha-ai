@@ -24,7 +24,26 @@
 
 # --- Frontend: web app, UI, i18n -------------------------------------------
 /frontend/                      @Hem60 @CODER7657
-/frontend/src/i18n/             @Hem60 @Ayush3422
+#
+# THREE names here, not two. The locale bundles are the one path where the
+# two-owner rule at the top of this file was not enough.
+#
+# Ayush was the second name because he owns the language surface, and that is
+# still the right reason for him to be listed. But Hem writes nearly every
+# change under this path, which leaves exactly one person who can approve it -
+# and while Ayush is unavailable, that is nobody. #71 was MERGEABLE, green, and
+# unmergeable without an admin override, for no reason connected to the change
+# itself.
+#
+# That is the same deadlock the header describes, reached the other way round:
+# not one owner who happens to be the author, but two owners of whom one wrote
+# the change and one is absent. A rule that needs everyone present is a rule
+# that blocks the moment somebody takes leave.
+#
+# The lead is the third name for the same reason #26 added second names
+# everywhere else: so the requirement stays satisfiable when one person is the
+# author and another is away.
+/frontend/src/i18n/             @Hem60 @Ayush3422 @CODER7657
 
 # --- Android client ----------------------------------------------------------
 # The on-device interception surface. Ayush owns the client end to end.
