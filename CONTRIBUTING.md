@@ -108,3 +108,33 @@ to warm it on demand before a demo.
 - [ ] No console errors on the happy path
 - [ ] Degrades gracefully when the network or a provider fails
 - [ ] Docs updated if you changed the API contract
+- [ ] If you touched the hero or landing layout: the CTA still fits above the fold (below)
+
+### Does the CTA still fit above the fold?
+
+#12 was a hero that grew — bigger heading, more padding, a stat row — until "Get
+started" sat at 714px on a 694px viewport. Nobody noticed, because it looks fine
+on the machine it was built on. Everything about that is easy to repeat, so
+measure instead of eyeballing.
+
+Load the landing page, set the window to your shortest target, and paste this:
+
+```js
+const cta = [...document.querySelectorAll('a,button')]
+  .find(e => /get started/i.test(e.textContent || ''))
+const { top, bottom } = cta.getBoundingClientRect()
+console.log({
+  viewport: innerHeight,
+  ctaTop: Math.round(top),
+  fits: bottom <= innerHeight,
+  slack: Math.round(innerHeight - bottom),
+})
+```
+
+Check **640px** at minimum — a low-end Android in a browser with its chrome
+showing, which is what most of our users have. `fits: false` is a blocker, and
+so is single-digit slack: it means the next small copy change breaks it again.
+
+This is a manual check because the frontend has no test runner yet. When one
+lands, this belongs in it — a checklist item only works while people remember
+to read the checklist.
