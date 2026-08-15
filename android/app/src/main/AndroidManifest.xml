@@ -2,14 +2,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      Phase 1 is the shell: no permissions at all, deliberately.
+      RECEIVE_SMS is a Play Console RESTRICTED permission. It requires a
+      declaration, a demo video and a justification, and review takes weeks;
+      fraud prevention is not an automatic exemption (#29 §6, still unresolved).
 
-      RECEIVE_SMS arrives in Phase 2 alongside the on-device rule engine, and
-      not before. It is a Play Console restricted permission, so requesting it
-      early - in a build that cannot yet act on a message - would mean asking
-      the user for the most sensitive permission in the app while delivering
-      nothing in return. See docs/SMS-AUTOSCAN-PLAN.md.
+      Two consequences are designed for rather than hoped away:
+        - the app must be useful without it, which is why the share-to-app
+          fallback below is a first-class path and not a stopgap;
+        - the permission is requested when the user turns scanning on, never at
+          launch. Holding it is not consent to use it - ScanPreferences gates
+          the receiver independently.
     -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <!-- API 33+. Without it the warning cannot be shown at all. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+      The app is useful on a device with no SMS hardware through the
+      share-to-app path, so telephony is not required for installation.
+    -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
 
     <application
         android:allowBackup="false"
@@ -25,7 +40,28 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!--
+              The fallback for a refused RECEIVE_SMS declaration: the user
+              shares a suspicious message from their messaging app instead.
+              Same engine, same verdict, one extra tap.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".sms.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

@@ -18,6 +18,7 @@ composeBom = "2026.08.00"
 # Test-only. Used by :core:rules to read the shared corpus; the production
 # source set of that module has no dependencies at all, deliberately.
 kotlinxSerializationJson = "1.11.0"
+junit4 = "4.13.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +30,11 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+# Android unit tests run on JUnit4 by default. kotlin-test-junit maps
+# kotlin.test.* onto it, so the app and :core:rules tests read the same way
+# even though the two modules use different runners underneath.
+junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
+kotlin-test-junit = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit", version.ref = "kotlin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
