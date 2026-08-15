@@ -54,6 +54,42 @@ def test_the_committed_report_matches_the_shape_the_dashboard_expects():
         } <= language.keys()
 
 
+def test_a_run_records_what_it_scored_against():
+    """Without this the report goes stale invisibly — cases get added, the
+    numbers keep rendering, and they describe a corpus that no longer exists.
+    Deliberately not a currency check: re-running spends API quota, so failing
+    the build on every corpus edit would discourage adding cases. This only
+    pins that the field exists, so the drift stays *detectable*."""
+    report = benchmark_llm.load_report()
+    if report is None:
+        return
+
+    run = report["run"]
+    assert {"corpus_rows", "scored_rows", "corpus_digest"} <= run.keys(), (
+        "a run must record the corpus it measured, or staleness is undetectable"
+    )
+    assert run["corpus_rows"] >= run["scored_rows"]
+    assert len(run["corpus_digest"]) == 12
+
+
+def test_digest_tracks_content_not_formatting():
+    """Reordering rows or reformatting the file must not read as a corpus
+    change — the question is "were these the same cases?", not "was the file
+    byte-identical?"."""
+    a = [{"id": "x", "text": "one"}, {"id": "y", "text": "two"}]
+    assert benchmark_llm.corpus_digest(a) == benchmark_llm.corpus_digest(list(reversed(a)))
+
+
+def test_digest_changes_when_a_case_is_added_or_edited():
+    base = [{"id": "x", "text": "one"}]
+    assert benchmark_llm.corpus_digest(base) != benchmark_llm.corpus_digest(
+        [*base, {"id": "y", "text": "two"}]
+    )
+    assert benchmark_llm.corpus_digest(base) != benchmark_llm.corpus_digest(
+        [{"id": "x", "text": "one edited"}]
+    )
+
+
 def test_both_halves_itemise_false_positives_the_same_way():
     """The dashboard renders both with one component, so the field has to exist
     on both. It was a bare count on the offline half until #50."""

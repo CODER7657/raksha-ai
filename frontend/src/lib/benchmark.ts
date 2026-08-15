@@ -101,8 +101,27 @@ export type LlmBenchmarkReport =
   | {
       available: true
       languages: LlmLanguageBenchmark[]
-      run: { api_calls: number; cache_hits: number; models: string[]; prompt_version: string }
+      run: {
+        api_calls: number
+        cache_hits: number
+        models: string[]
+        prompt_version: string
+        /** Absent on artifacts written before currency was recorded. Absence
+         * means "unknown", which must never render as "current". */
+        corpus_rows?: number
+        scored_rows?: number
+        corpus_digest?: string
+      }
       leakage: { leaked_cases: number; threshold: number; held_out: boolean }
+      /** Whether the committed run still describes the corpus on disk. A figure
+       * silently out of date is worse than none, because it looks maintained. */
+      currency: {
+        corpus_rows_now: number
+        corpus_digest_now: string
+        corpus_rows_at_run: number | null
+        corpus_digest_at_run: string | null
+        stale: boolean
+      }
       provenance: { prompt_version: string; models: string[]; measures: string }
     }
 

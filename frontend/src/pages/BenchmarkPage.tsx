@@ -221,10 +221,11 @@ export function BenchmarkReportView({
  * see what answered. Leakage is stated for the same reason: a reader seeing
  * 95.7% deserves to know whether anything was excluded to get there. */
 function RunProvenance({ llm }: { llm: Extract<LlmBenchmarkReport, { available: true }> }) {
-  const { run, leakage } = llm
+  const { run, leakage, currency } = llm
 
   return (
     <div className="border border-line bg-white p-3 mb-8 text-[11px] text-ink/60 leading-relaxed">
+      {currency?.stale && <StaleRun currency={currency} />}
       <p>
         RAG&nbsp;+&nbsp;LLM figures come from the last committed run — prompt{' '}
         <span className="font-mono text-ink">{run.prompt_version}</span>, scored by{' '}
@@ -247,6 +248,44 @@ function RunProvenance({ llm }: { llm: Extract<LlmBenchmarkReport, { available: 
         )}
       </p>
     </div>
+  )
+}
+
+/** Said plainly when the committed run no longer describes the corpus.
+ *
+ * Not a build failure by design: re-running spends real API quota, so gating
+ * CI on it would discourage adding corpus cases, which is the opposite of what
+ * the corpus is for. The cost of that choice is that a report can drift, so the
+ * drift has to be impossible to miss here instead.
+ *
+ * An older artifact with no recorded corpus state reads "unknown", never
+ * "current" — absence of evidence is not evidence of currency. */
+function StaleRun({
+  currency,
+}: {
+  currency: Extract<LlmBenchmarkReport, { available: true }>['currency']
+}) {
+  const at = currency.corpus_rows_at_run
+  const now = currency.corpus_rows_now
+  const added = at === null ? null : now - at
+
+  return (
+    <p className="border-l-4 border-amber-600 bg-amber-50 -m-3 mb-3 px-3 py-2 text-ink">
+      <strong>These figures are out of date.</strong>{' '}
+      {at === null ? (
+        <>
+          This run did not record which corpus it scored against, so there is no way to tell what
+          it covers. The corpus holds {now} cases today. Re-run to get a figure that can be
+          trusted.
+        </>
+      ) : (
+        <>
+          Scored against {at} of {now} cases —{' '}
+          {added === 1 ? '1 case has' : `${added} cases have`} been added since. Precision and
+          recall below describe a corpus that no longer exists.
+        </>
+      )}
+    </p>
   )
 }
 

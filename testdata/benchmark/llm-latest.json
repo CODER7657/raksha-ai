@@ -2,7 +2,7 @@
   "dry_run": false,
   "languages": [
     {
-      "benign_cases": 9,
+      "benign_cases": 11,
       "false_negatives": 0,
       "false_positive_cases": [
         {
@@ -18,13 +18,13 @@
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": 0.9565,
+      "precision": 0.963,
       "recall": 1.0,
-      "scam_cases": 22,
-      "scored_cases": 31,
-      "total_cases": 31,
-      "true_negatives": 8,
-      "true_positives": 22
+      "scam_cases": 26,
+      "scored_cases": 37,
+      "total_cases": 37,
+      "true_negatives": 10,
+      "true_positives": 26
     },
     {
       "benign_cases": 0,
@@ -61,7 +61,7 @@
       "true_positives": 4
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -72,13 +72,13 @@
       "precision": 1.0,
       "recall": 1.0,
       "scam_cases": 1,
-      "scored_cases": 1,
-      "total_cases": 1,
-      "true_negatives": 0,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
       "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -89,13 +89,13 @@
       "precision": 1.0,
       "recall": 1.0,
       "scam_cases": 1,
-      "scored_cases": 1,
-      "total_cases": 1,
-      "true_negatives": 0,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
       "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -106,13 +106,13 @@
       "precision": 1.0,
       "recall": 1.0,
       "scam_cases": 1,
-      "scored_cases": 1,
-      "total_cases": 1,
-      "true_negatives": 0,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
       "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -120,16 +120,16 @@
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": null,
-      "recall": null,
-      "scam_cases": 0,
-      "scored_cases": 0,
-      "total_cases": 0,
-      "true_negatives": 0,
-      "true_positives": 0
+      "precision": 1.0,
+      "recall": 1.0,
+      "scam_cases": 1,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
+      "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -137,16 +137,16 @@
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": null,
-      "recall": null,
-      "scam_cases": 0,
-      "scored_cases": 0,
-      "total_cases": 0,
-      "true_negatives": 0,
-      "true_positives": 0
+      "precision": 1.0,
+      "recall": 1.0,
+      "scam_cases": 1,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
+      "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -154,16 +154,16 @@
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": null,
-      "recall": null,
-      "scam_cases": 0,
-      "scored_cases": 0,
-      "total_cases": 0,
-      "true_negatives": 0,
-      "true_positives": 0
+      "precision": 1.0,
+      "recall": 1.0,
+      "scam_cases": 1,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
+      "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -171,16 +171,16 @@
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": null,
-      "recall": null,
-      "scam_cases": 0,
-      "scored_cases": 0,
-      "total_cases": 0,
-      "true_negatives": 0,
-      "true_positives": 0
+      "precision": 1.0,
+      "recall": 1.0,
+      "scam_cases": 1,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
+      "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -188,16 +188,16 @@
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": null,
-      "recall": null,
-      "scam_cases": 0,
-      "scored_cases": 0,
-      "total_cases": 0,
-      "true_negatives": 0,
-      "true_positives": 0
+      "precision": 1.0,
+      "recall": 1.0,
+      "scam_cases": 1,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
+      "true_positives": 1
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 1,
       "false_negatives": 0,
       "false_positive_cases": [],
       "false_positives": 0,
@@ -208,9 +208,9 @@
       "precision": 1.0,
       "recall": 1.0,
       "scam_cases": 1,
-      "scored_cases": 1,
-      "total_cases": 1,
-      "true_negatives": 0,
+      "scored_cases": 2,
+      "total_cases": 2,
+      "true_negatives": 1,
       "true_positives": 1
     }
   ],
@@ -220,12 +220,15 @@
     "threshold": 0.95
   },
   "run": {
-    "api_calls": 17,
-    "cache_hits": 35,
+    "api_calls": 5,
+    "cache_hits": 67,
+    "corpus_digest": "40b6d138332e",
+    "corpus_rows": 72,
     "models": [
       "gemini-2.5-flash",
       "llama-3.3-70b-versatile"
     ],
-    "prompt_version": "scan-v1"
+    "prompt_version": "scan-v1",
+    "scored_rows": 72
   }
 }

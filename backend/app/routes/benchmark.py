@@ -61,9 +61,28 @@ def llm_benchmark(_user_id: str = Depends(get_current_user)) -> dict:
     if report is None:
         return {"available": False}
 
+    # What the corpus looks like *now*, so the client can say plainly when the
+    # committed run no longer describes it. Computed here rather than trusted
+    # from the artifact: the whole point is to detect that the artifact is out
+    # of date, so it cannot be the source for both sides of the comparison.
+    corpus = benchmark.load_corpus()
+    run = report.get("run", {})
+
     return {
         "available": True,
         **report,
+        "currency": {
+            "corpus_rows_now": len(corpus),
+            "corpus_digest_now": benchmark_llm.corpus_digest(corpus),
+            "corpus_rows_at_run": run.get("corpus_rows"),
+            "corpus_digest_at_run": run.get("corpus_digest"),
+            # `corpus_rows` predates this field on older artifacts, so absence
+            # means "unknown", which the UI must not render as "current".
+            "stale": (
+                run.get("corpus_digest") is None
+                or run.get("corpus_digest") != benchmark_llm.corpus_digest(corpus)
+            ),
+        },
         "provenance": {
             "prompt_version": report.get("run", {}).get("prompt_version"),
             # Observed, not assumed. The provider ladder means a run can be

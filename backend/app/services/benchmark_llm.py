@@ -138,6 +138,21 @@ def save_cache(cache: dict, path: pathlib.Path = CACHE_PATH) -> None:
     path.write_text(json.dumps(cache, indent=1, sort_keys=True), encoding="utf-8")
 
 
+def corpus_digest(corpus: list[dict]) -> str:
+    """Short fingerprint of the corpus a run was scored against.
+
+    Over case ids and text rather than the raw file, so reformatting the JSONL
+    or reordering rows does not read as a content change — the question this
+    answers is "were these the same cases?", not "was the file byte-identical?".
+    Twelve hex characters: enough to distinguish corpus states in a report
+    header, short enough to sit in one without dominating it.
+    """
+    joined = "\x1f".join(
+        f"{case['id']}\x1e{case['text']}" for case in sorted(corpus, key=lambda c: c["id"])
+    )
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:12]
+
+
 def load_report(path: pathlib.Path | None = None) -> dict | None:
     """The last committed run, or None if nobody has produced one yet.
 
@@ -295,7 +310,8 @@ def run(
     API quota, and `max_calls` bounds it — a runaway benchmark on a free tier is
     a self-inflicted outage of the product itself, since it shares the keys.
     """
-    cases = [c for c in load_corpus(path) if not languages or c["language"] in languages]
+    corpus = load_corpus(path)
+    cases = [c for c in corpus if not languages or c["language"] in languages]
     cache = load_cache(cache_path)
 
     if not confirm_cost:
@@ -342,6 +358,19 @@ def run(
                 {rec["model"] for records in by_language.values() for _, rec in records}
             ),
             "prompt_version": llm.PROMPT_VERSION,
+            # What this run was measured against. Without it a committed report
+            # goes stale invisibly: cases get added, the numbers keep rendering,
+            # and they quietly describe a corpus that no longer exists. A figure
+            # silently out of date is worse than none, because it looks
+            # maintained.
+            #
+            # Deliberately not a CI failure. Re-running costs API quota, so
+            # blocking the build on every corpus edit would discourage adding
+            # cases — the opposite of what the corpus is for. Visible, not
+            # blocking.
+            "corpus_rows": len(corpus),
+            "scored_rows": len(cases),
+            "corpus_digest": corpus_digest(corpus),
         },
         "leakage": {
             "leaked_cases": leaked_total,
