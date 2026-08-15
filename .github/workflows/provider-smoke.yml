@@ -1,0 +1,53 @@
+name: Provider smoke check
+
+# Are the model ids we depend on still real?
+#
+# `gemini-1.5-flash` was retired and the fallback 404'd for an unknown number of
+# weeks. No test caught it, and no test could: a retired model is only
+# observable by calling the API, and mocking that call is exactly what hid it.
+#
+# COST. Three API calls and about a minute of runner time, weekly — roughly 5
+# minutes a month against the 2,000 a private repo gets. The keep-alive ping was
+# moved off a schedule because */5 would have cost 8,640; this is not that.
+#
+# SECRETS REQUIRED. GROQ_API_KEY and GEMINI_API_KEY must be set under
+# Settings -> Secrets and variables -> Actions. Without them the script reports
+# every rung as SKIP and passes, so a missing secret shows up as a suspiciously
+# quiet run rather than a false alarm.
+
+on:
+  schedule:
+    # Monday 04:00 UTC — 09:30 IST, so a failure is waiting at the start of the
+    # week rather than discovered mid-demo.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Fails only on a dead model or a bad key. A 429 passes — rate limiting is
+      # the ladder working as designed, and a check that cries wolf on it gets
+      # muted, which is the `pytest || true` failure from #22 in another costume.
+      - name: Check every provider rung
+        working-directory: backend
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: https://stub.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: stub-key-not-used-by-this-check
+        run: python scripts/check_providers.py
