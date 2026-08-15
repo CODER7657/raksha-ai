@@ -53,16 +53,39 @@ class RuleHit:
 # Verb stems, not whole words: real messages say "expiring", "blocked",
 # "sharing" — matching only the dictionary form is why several of these
 # silently never fired.
-_OTP = r"\bOTP\b"
-_SHARE_EN = r"\b(?:shar\w*|send\w*|tell\w*|forward\w*|provid\w*|giv\w*)\b"
+#
+# The acronym AND the thing it stands for. Keying only on "OTP" is what the
+# red-team loop walked straight past (#44): a paraphrase asking for "the numeric
+# code sent to your phone" fired nothing at all, in a message the judge
+# confirmed was the same fraud. Real scam copy avoids the acronym constantly —
+# "verification code", "6-digit code", "one time password" — and a rule that
+# only knows the abbreviation only catches lazy scammers.
+_OTP = r"\b(?:OTP|O\.T\.P\.?|one[\s-]?time[\s-]?(?:password|passcode|pin|code))\b"
+_CODE_WORD = (
+    # "code" alone is far too common in legitimate SMS ("coupon code",
+    # "referral code"), so it only counts when qualified by something that
+    # implies authentication or delivery-to-your-phone.
+    r"\b(?:verification|security|authentication|auth|access|confirmation|"
+    r"numeric|numerical|\d[\s-]?digit|six[\s-]?digit|secret)[\s-]?(?:code|pin)\b"
+    r"|\bcode\s+(?:sent|received|texted|messaged)\b"
+    r"|\b(?:code|pin)\s+(?:sent|received)\s+to\s+your\b"
+)
+#: What an OTP rule matches on either side of the request. The union is what
+#: makes `otp_share` robust to a scammer who never writes the acronym.
+_OTP_ANY = f"(?:{_OTP}|{_CODE_WORD})"
+
+_SHARE_EN = r"\b(?:shar\w*|send\w*|tell\w*|forward\w*|provid\w*|giv\w*|enter\w*|submit\w*|confirm\w*)\b"
 _KYC = r"\bKYC\b"
-_KYC_ACTION = r"\b(?:updat\w*|expir\w*|suspend\w*|deactivat\w*|re-?verif\w*|complet\w*)"
-_LOCK_EN = r"\b(?:lock|block|freez|suspend|deactivat|clos)\w*\b"
-_ACCOUNT_EN = r"\baccount\b"
+# suspen, not suspend: "suspension" is not "suspend" plus a suffix, so the old
+# stem matched "suspended" and missed "suspension" entirely (#44). Every stem
+# here is now the longest prefix common to the verb and its noun form.
+_KYC_ACTION = r"\b(?:updat\w*|expir\w*|suspen\w*|deactivat\w*|re-?verif\w*|complet\w*)"
+_LOCK_EN = r"\b(?:lock|block|freez|suspen|deactivat|clos|restrict|disabl)\w*\b"
+_ACCOUNT_EN = r"\b(?:account|a/c|banking\s+services?)\b"
 
 RULES: dict[str, list[Rule]] = {
     "en": [
-        Rule("otp_share", _either_order(_OTP, _SHARE_EN)),
+        Rule("otp_share", _either_order(_OTP_ANY, _SHARE_EN)),
         Rule("kyc_expiry", _either_order(_KYC, _KYC_ACTION)),
         Rule("lottery_win", r"\byou(?:'ve|\s+have)?\s*won\b|\b(?:lottery|lucky\s+draw|prize\s+money)\b"),
         Rule("account_lock", _either_order(_LOCK_EN, _ACCOUNT_EN)),
