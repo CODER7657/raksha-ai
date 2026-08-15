@@ -4,6 +4,7 @@ import { AuthPage } from './pages/AuthPage'
 import { ScanInputPage } from './pages/ScanInputPage'
 import { ResultPage } from './pages/ResultPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { BenchmarkPage } from './pages/BenchmarkPage'
 import { AboutPage } from './pages/AboutPage'
 import { PracticePage } from './pages/PracticePage'
 import { ChatPage } from './pages/ChatPage'
@@ -28,6 +29,10 @@ function App() {
         <Route path="practice" element={<PracticePage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="history" element={<HistoryPage />} />
+        {/* Reviewer tooling. Reachable by URL but deliberately not in the main
+            nav — it is internal, and there is no role system to gate it with
+            yet. See the PR for why that gate is still needed. */}
+        <Route path="benchmark" element={<BenchmarkPage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>
     </Routes>
