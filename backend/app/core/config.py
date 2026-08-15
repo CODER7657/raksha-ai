@@ -14,8 +14,23 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = ""
 
     # LLM providers (Groq primary, Gemini fallback — both free tier)
+    #
+    # Two pools, split by who is waiting. The interactive keys serve scans and
+    # chat, where a person is on the other end, often mid-scam. The batch keys
+    # serve the benchmark and the red-team loop, where nobody is.
+    #
+    # They are separate because on 15 August they were not: a red-team run made
+    # ~30 calls in a burst, rate-limited Groq, and — with the Gemini fallback
+    # dead at the time — took live detection down with it. An internal tool
+    # spending the budget a user needed is an architectural problem, and it does
+    # not go away when the fallback works.
+    #
+    # Batch keys are optional. Unset, batch work falls back to the interactive
+    # pool with a warning, so a fresh clone with one key still runs.
     groq_api_key: str = ""
     gemini_api_key: str = ""
+    groq_api_key_batch: str = ""
+    gemini_api_key_batch: str = ""
 
     # Server-held pepper for the audit log's message digest. Unset, the digest
     # is a bare SHA-256, which is reversible for a low-entropy message — a bare

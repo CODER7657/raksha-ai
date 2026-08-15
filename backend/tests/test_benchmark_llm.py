@@ -29,11 +29,11 @@ def stubbed(monkeypatch):
     """Retrieval returns one weak match; classification says high_risk."""
     calls = {"classify": 0, "retrieve": 0}
 
-    def fake_retrieve(text, language, top_k=5):
+    def fake_retrieve(text, language, top_k=5, pool=None):
         calls["retrieve"] += 1
         return [RetrievedPattern(pattern_text="unrelated", category="kyc_scam", similarity=0.4)]
 
-    def fake_classify(text, language, context):
+    def fake_classify(text, language, context, pool=None):
         calls["classify"] += 1
         return FakeClassification("high_risk", 90)
 
@@ -73,7 +73,7 @@ def test_missed_scam_is_itemised(monkeypatch, tmp_path, stubbed):
     monkeypatch.setattr(
         benchmark_llm.llm,
         "classify_message",
-        lambda text, language, context: FakeClassification("safe", 5),
+        lambda text, language, context, pool=None: FakeClassification("safe", 5),
     )
     monkeypatch.setattr(benchmark_llm, "load_corpus", lambda path=None: [case("missed-1")])
     result = benchmark_llm.run(confirm_cost=True, cache_path=tmp_path / "c.json")
@@ -126,7 +126,7 @@ def test_leaked_case_is_excluded_and_reported(monkeypatch, tmp_path, stubbed):
     monkeypatch.setattr(
         benchmark_llm.rag,
         "retrieve_similar_patterns",
-        lambda text, language, top_k=5: [
+        lambda text, language, top_k=5, pool=None: [
             RetrievedPattern(pattern_text=text, category="kyc_scam", similarity=0.99)
         ],
     )

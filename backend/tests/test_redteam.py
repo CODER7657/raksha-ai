@@ -29,7 +29,7 @@ class FakeLlm:
         self.detector_calls = 0
         self.judge_saw: list[str] = []
 
-    def complete(self, system_prompt, user_prompt):
+    def complete(self, system_prompt, user_prompt, pool=None):
         if system_prompt is redteam._GENERATOR_SYSTEM:
             batch = self.generator_batches.pop(0) if self.generator_batches else []
             return _completion(json.dumps({"variants": batch}))
@@ -38,7 +38,7 @@ class FakeLlm:
         reply = self.judge_replies.pop(0) if self.judge_replies else '{"still_same_scam": false}'
         return _completion(reply)
 
-    def classify(self, text, language, context):
+    def classify(self, text, language, context, pool=None):
         self.detector_calls += 1
         verdict = self.detector_verdicts.pop(0) if self.detector_verdicts else "high_risk"
         return _classification(verdict)
@@ -65,7 +65,9 @@ def wire(monkeypatch):
     def _wire(fake):
         monkeypatch.setattr(redteam.llm, "complete", fake.complete)
         monkeypatch.setattr(redteam.llm, "classify_message", fake.classify)
-        monkeypatch.setattr(redteam.rag, "retrieve_similar_patterns", lambda t, l, top_k=5: [])
+        monkeypatch.setattr(
+            redteam.rag, "retrieve_similar_patterns", lambda t, l, top_k=5, pool=None: []
+        )
         monkeypatch.setattr(redteam.rag, "format_context_block", lambda p: "")
         monkeypatch.setattr(redteam, "offline_rule_hits", lambda t, l: [])
         return fake

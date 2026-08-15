@@ -85,16 +85,29 @@ def check(name: str, call) -> Result:
     return Result(name, "ok")
 
 
-def check_groq() -> Result:
-    if not get_settings().groq_api_key:
-        return Result("groq (primary)", "skipped", "GROQ_API_KEY not set")
-    return check("groq (primary)", lambda: llm._call_groq(_SYSTEM, _USER))
+def check_groq(pool: str = llm.INTERACTIVE) -> Result:
+    label = f"groq (primary, {pool})"
+    if not llm.keys_for(pool)[0]:
+        return Result(label, "skipped", "no key for this pool")
+    return check(label, lambda: llm._call_groq(_SYSTEM, _USER, pool))
 
 
-def check_gemini() -> Result:
-    if not get_settings().gemini_api_key:
-        return Result("gemini (fallback)", "skipped", "GEMINI_API_KEY not set")
-    return check("gemini (fallback)", lambda: llm._call_gemini(_SYSTEM, _USER))
+def check_gemini(pool: str = llm.INTERACTIVE) -> Result:
+    label = f"gemini (fallback, {pool})"
+    if not llm.keys_for(pool)[1]:
+        return Result(label, "skipped", "no key for this pool")
+    return check(label, lambda: llm._call_gemini(_SYSTEM, _USER, pool))
+
+
+def batch_pool_is_distinct() -> bool:
+    """True when the batch keys are actually separate credentials.
+
+    When they are not, checking the batch pool would just spend the interactive
+    quota twice to learn the same thing — so the checks are skipped and the
+    report says why. That is also the state #51 exists to get us out of.
+    """
+    settings = get_settings()
+    return bool(settings.groq_api_key_batch or settings.gemini_api_key_batch)
 
 
 def check_embeddings() -> Result:
@@ -107,7 +120,20 @@ def check_embeddings() -> Result:
     return check("gemini embeddings (RAG)", lambda: embed("smoke test", "retrieval_query"))
 
 
-CHECKS = [check_groq, check_gemini, check_embeddings]
+def all_checks() -> list:
+    checks = [check_groq, check_gemini, check_embeddings]
+    if batch_pool_is_distinct():
+        # Batch keys are a separate account, so they can be separately dead —
+        # and a nightly agent run failing at 04:00 is exactly the thing nobody
+        # is awake to notice.
+        checks += [
+            lambda: check_groq(llm.BATCH),
+            lambda: check_gemini(llm.BATCH),
+        ]
+    return checks
+
+
+CHECKS = all_checks()
 
 _SYMBOL = {
     "ok": "OK  ",
@@ -161,6 +187,11 @@ def main() -> int:
 
     if all(r.status == "ok" for r in results):
         print("Every rung answered.")
+    if not batch_pool_is_distinct():
+        print(
+            "\nNote: no separate batch keys, so agent runs draw on the interactive "
+            "pool and can rate-limit live scans. See #51."
+        )
     return 0
 
 
