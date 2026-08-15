@@ -7,6 +7,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { BenchmarkPage } from './pages/BenchmarkPage'
 import { ReviewQueuePage } from './pages/ReviewQueuePage'
 import { EvasionQueuePage } from './pages/EvasionQueuePage'
+import { OperatorConsolePage } from './pages/OperatorConsolePage'
 import { AboutPage } from './pages/AboutPage'
 import { PracticePage } from './pages/PracticePage'
 import { ChatPage } from './pages/ChatPage'
@@ -37,6 +38,7 @@ function App() {
         <Route path="benchmark" element={<BenchmarkPage />} />
         <Route path="review" element={<ReviewQueuePage />} />
         <Route path="evasions" element={<EvasionQueuePage />} />
+        <Route path="operator" element={<OperatorConsolePage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>
     </Routes>

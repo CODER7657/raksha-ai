@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from app.services import evasion_queue, redteam
+from app.services import agent_control, evasion_queue, redteam
 from app.services.benchmark import load_corpus
 
 
@@ -65,6 +65,9 @@ def verify_queue(detector: str) -> int:
             "\nAdd each as a corpus row, or set resolution.corpus_id if one exists."
         )
     return 0
+
+
+AGENT_ID = "a6_redteam"
 
 
 def main() -> int:
@@ -117,6 +120,16 @@ def main() -> int:
         print("\nestimate only — re-run with --run to spend.")
         return 0
 
+    # The kill switch, checked before anything is spent (#32 D). An operator who
+    # stopped this agent in the console expects it stopped everywhere, including
+    # for someone running it by hand from a terminal. An estimate is never
+    # blocked: finding out what a run would cost is not spending.
+    decision = agent_control.may_run(AGENT_ID, estimate["max_model_calls_per_round"])
+    if not decision.allowed:
+        print(f"\nREFUSED: {decision.reason}")
+        agent_control.record_run(AGENT_ID, "blocked", 0, {"reason": decision.reason})
+        return 1
+
     stats = redteam.run(
         seeds,
         confirm_cost=True,
@@ -125,6 +138,15 @@ def main() -> int:
         max_model_calls=args.budget,
         max_rounds=args.rounds,
         detector=args.detector,
+    )
+
+    # Recorded after the fact with what it actually cost, not what it planned.
+    # The estimate is an upper bound; the console should show spend, not intent.
+    agent_control.record_run(
+        AGENT_ID,
+        "ok",
+        stats.model_calls,
+        {"detector": stats.detector, "rounds": stats.rounds, "evaded": stats.evaded},
     )
 
     print(
