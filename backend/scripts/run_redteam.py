@@ -30,6 +30,14 @@ def main() -> int:
     parser.add_argument("--variants", type=int, default=3, help="variants per strategy")
     parser.add_argument("--budget", type=int, default=200, help="max model calls")
     parser.add_argument("--rounds", type=int, default=5)
+    parser.add_argument(
+        "--detector",
+        choices=sorted(redteam.DETECTORS),
+        default="rules",
+        help="which layer to attack: rules (on-device, free) or full (what a "
+             "website user gets). Defaults to rules — it is cheaper and it is "
+             "the layer the full pipeline hides.",
+    )
     args = parser.parse_args()
 
     corpus = load_corpus()
@@ -47,7 +55,7 @@ def main() -> int:
     strategies = args.strategies or list(redteam.STRATEGIES)
     estimate = redteam.estimate(seeds, strategies, args.variants)
 
-    print(f"seeds: {len(seeds)}   strategies: {len(strategies)}")
+    print(f"seeds: {len(seeds)}   strategies: {len(strategies)}   detector: {args.detector}")
     print(f"per round, at most: {estimate['max_model_calls_per_round']} model calls")
 
     if not args.run:
@@ -61,6 +69,7 @@ def main() -> int:
         variants_per_strategy=args.variants,
         max_model_calls=args.budget,
         max_rounds=args.rounds,
+        detector=args.detector,
     )
 
     print(

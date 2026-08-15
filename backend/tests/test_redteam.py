@@ -247,3 +247,78 @@ def test_every_strategy_has_an_instruction():
     """A strategy without an instruction would silently generate nothing useful."""
     for name, instruction in redteam.STRATEGIES.items():
         assert instruction.strip(), name
+
+
+def test_rules_detector_needs_no_model_and_costs_no_budget(wire):
+    """The offline engine is free and instant, so a rules run must not be billed
+    for detections it never made — otherwise a free run exhausts a budget it
+    never spent."""
+    fake = wire(
+        FakeLlm(
+            generator_batches=[["Share your OTP now"]],
+            judge_replies=['{"still_same_scam": true, "reason": "same"}'],
+            detector_verdicts=[],
+        )
+    )
+    stats = redteam.run(
+        [SEED],
+        confirm_cost=True,
+        strategies=["paraphrase"],
+        variants_per_strategy=1,
+        detector="rules",
+        max_rounds=1,
+    )
+
+    assert fake.detector_calls == 0, "the rules detector must not call the model"
+    # One generator call and one judge call. A third would mean the detection
+    # was billed, which is the regression this guards.
+    assert stats.model_calls == 2
+    assert stats.detector == "rules"
+
+
+def test_rules_detector_flags_what_the_rules_catch(monkeypatch):
+    caught = redteam.detect_rules("Please share the OTP you just received", "en")
+    assert caught["verdict"] == "suspicious"
+    assert "otp_share" in caught["rules_fired"]
+
+    missed = redteam.detect_rules("Your parcel arrives Tuesday", "en")
+    assert missed["verdict"] == "safe"
+    assert missed["rules_fired"] == []
+
+
+def test_rules_detector_finds_what_the_full_pipeline_hides(wire):
+    """The point of the mode. Obfuscated OTP defeats the regex; the LLM catches
+    it anyway, so a full-pipeline run reports no evasion and the on-device hole
+    stays invisible."""
+    wire(
+        FakeLlm(
+            generator_batches=[["Kindly provide the O.T.P sent to you"]],
+            judge_replies=['{"still_same_scam": true, "reason": "same OTP request"}'],
+            detector_verdicts=["high_risk"],  # the LLM catches it
+        )
+    )
+    stats = redteam.run(
+        [SEED],
+        confirm_cost=True,
+        strategies=["obfuscation"],
+        variants_per_strategy=1,
+        detector="rules",
+    )
+
+    assert stats.evaded == 1, "the rule engine misses O.T.P even though the LLM does not"
+    assert stats.evasions[0].detector == "rules"
+
+
+def test_unknown_detector_is_rejected():
+    with pytest.raises(ValueError, match="unknown detector"):
+        redteam.run([SEED], confirm_cost=True, detector="vibes")
+
+
+def test_evasions_path_points_at_the_shared_testdata_directory():
+    """The default path was wrong on first run — it resolved inside backend/,
+    where no testdata directory exists, so a real run found evasions and then
+    threw them away on write. Every other test passes tmp_path, which is exactly
+    why nothing caught it."""
+    assert redteam.EVASIONS_PATH.parent.name == "testdata"
+    assert redteam.EVASIONS_PATH.parent.is_dir(), redteam.EVASIONS_PATH.parent
+    assert (redteam.EVASIONS_PATH.parent / "rule_corpus.jsonl").exists()
