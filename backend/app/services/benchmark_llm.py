@@ -54,6 +54,16 @@ LEAK_SIMILARITY = 0.95
 #: Gitignored. Deleting it costs money, not correctness.
 CACHE_PATH = pathlib.Path(__file__).resolve().parents[2] / ".benchmark_cache.json"
 
+#: The last scored run, committed. Written by `scripts/run_llm_benchmark.py
+#: --out` and read by the dashboard route — a scored run costs API quota, so the
+#: UI reads a result a human deliberately produced rather than triggering one.
+#: Lives beside the corpus at the repo root, not under frontend/, for the reason
+#: in testdata/README.md and because it must not be statically served: see
+#: `load_report`.
+REPORT_PATH = (
+    pathlib.Path(__file__).resolve().parents[3] / "testdata" / "benchmark" / "llm-latest.json"
+)
+
 #: Verdicts that count as "this is a scam" when scoring against `label`.
 SCAM_VERDICTS = {"suspicious", "high_risk"}
 
@@ -126,6 +136,47 @@ def load_cache(path: pathlib.Path = CACHE_PATH) -> dict:
 
 def save_cache(cache: dict, path: pathlib.Path = CACHE_PATH) -> None:
     path.write_text(json.dumps(cache, indent=1, sort_keys=True), encoding="utf-8")
+
+
+def corpus_digest(corpus: list[dict]) -> str:
+    """Short fingerprint of the corpus a run was scored against.
+
+    Over case ids and text rather than the raw file, so reformatting the JSONL
+    or reordering rows does not read as a content change — the question this
+    answers is "were these the same cases?", not "was the file byte-identical?".
+    Twelve hex characters: enough to distinguish corpus states in a report
+    header, short enough to sit in one without dominating it.
+    """
+    joined = "\x1f".join(
+        f"{case['id']}\x1e{case['text']}" for case in sorted(corpus, key=lambda c: c["id"])
+    )
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:12]
+
+
+def load_report(path: pathlib.Path | None = None) -> dict | None:
+    """The last committed run, or None if nobody has produced one yet.
+
+    **Why this is a route and not a bundled import.** The obvious way to get a
+    committed artifact into a dashboard is to import it at build time, or drop
+    it in `frontend/public/`. Both would serve it unauthenticated from a public
+    site, and `missed_cases` is a list of messages that evade our detector —
+    a map of what to send to get past it. The offline half is already behind
+    `get_current_user`; publishing this half statically would make the more
+    sensitive of the two the one with no gate at all.
+
+    Reading the file from an authenticated route costs nothing, spends no
+    quota, and keeps both halves reachable the same way, so one component can
+    render them without caring which is which.
+    """
+    source = path or REPORT_PATH
+    if not source.exists():
+        return None
+    try:
+        return json.loads(source.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        # A malformed artifact must not take the dashboard down with it — the
+        # offline half still renders, and the UI says this one is unavailable.
+        return None
 
 
 def classify_case(case: dict, cache: dict) -> dict:
@@ -259,7 +310,8 @@ def run(
     API quota, and `max_calls` bounds it — a runaway benchmark on a free tier is
     a self-inflicted outage of the product itself, since it shares the keys.
     """
-    cases = [c for c in load_corpus(path) if not languages or c["language"] in languages]
+    corpus = load_corpus(path)
+    cases = [c for c in corpus if not languages or c["language"] in languages]
     cache = load_cache(cache_path)
 
     if not confirm_cost:
@@ -306,6 +358,19 @@ def run(
                 {rec["model"] for records in by_language.values() for _, rec in records}
             ),
             "prompt_version": llm.PROMPT_VERSION,
+            # What this run was measured against. Without it a committed report
+            # goes stale invisibly: cases get added, the numbers keep rendering,
+            # and they quietly describe a corpus that no longer exists. A figure
+            # silently out of date is worse than none, because it looks
+            # maintained.
+            #
+            # Deliberately not a CI failure. Re-running costs API quota, so
+            # blocking the build on every corpus edit would discourage adding
+            # cases — the opposite of what the corpus is for. Visible, not
+            # blocking.
+            "corpus_rows": len(corpus),
+            "scored_rows": len(cases),
+            "corpus_digest": corpus_digest(corpus),
         },
         "leakage": {
             "leaked_cases": leaked_total,

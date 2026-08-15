@@ -61,6 +61,9 @@ class LanguageBenchmark:
     # unchanged — `frozen` protects the binding here, and the dict contents
     # were never deeply immutable anyway.
     missed_cases: list[dict] = field(default_factory=list)
+    #: Benign cases a rule fired on. Mirrors the LLM half's field of the same
+    #: name so the dashboard can render both with one component (#41).
+    false_positive_cases: list[dict] = field(default_factory=list)
 
 
 def load_corpus(path: pathlib.Path | None = None) -> list[dict]:
@@ -91,6 +94,7 @@ def score_language(language: str, cases: list[dict]) -> LanguageBenchmark:
 
     tp = fn = fp = tn = exact = 0
     missed: list[dict] = []
+    false_positive_cases: list[dict] = []
     for case in mine:
         fired = sorted({hit.rule_id for hit in offline_rule_hits(case["text"], language)})
         if fired == sorted(case["expected_rule_ids"]):
@@ -113,6 +117,20 @@ def score_language(language: str, cases: list[dict]) -> LanguageBenchmark:
         else:
             if fired:
                 fp += 1
+                # Itemised for the same reason the LLM half itemises its own
+                # (benchmark_llm.LlmLanguageBenchmark): over-warning is the
+                # accepted failure direction, and "accepted" only means
+                # something while we can name what is being warned about. A
+                # precision figure alone cannot distinguish one odd edge case
+                # from every bank alert in the country.
+                false_positive_cases.append(
+                    {
+                        "id": case["id"],
+                        "text": case["text"],
+                        "fired_rule_ids": fired,
+                        "note": case.get("note"),
+                    }
+                )
             else:
                 tn += 1
 
@@ -137,6 +155,7 @@ def score_language(language: str, cases: list[dict]) -> LanguageBenchmark:
         precision=_ratio(tp, tp + fp),
         recall=_ratio(tp, tp + fn),
         missed_cases=missed,
+        false_positive_cases=false_positive_cases,
     )
 
 
