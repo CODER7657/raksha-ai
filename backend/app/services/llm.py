@@ -5,13 +5,22 @@ during the live demo.
 """
 
 import json
+import logging
 from dataclasses import dataclass
 
 from app.core import languages
 from app.core.config import get_settings
 
+logger = logging.getLogger(__name__)
+
 GROQ_MODEL = "llama-3.3-70b-versatile"
-GEMINI_MODEL = "gemini-1.5-flash"
+# `gemini-1.5-flash` was retired and now 404s, which had quietly left the
+# fallback dead — see the note on `classify_message`. Pinned to an exact
+# version rather than the `gemini-flash-latest` alias on purpose: an
+# auto-advancing model would move verdicts underneath a stamped
+# PROMPT_VERSION, and reproducing a six-month-old decision is the whole reason
+# the stamp exists (ARCHITECTURE.md §03).
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # Bump whenever SYSTEM_PROMPT or _build_user_prompt changes in a way that could
 # move a verdict. Without it, a decision made six months ago cannot be
@@ -103,6 +112,15 @@ class Classification:
 
 
 def classify_message(message: str, language: str, context_block: str) -> Classification:
+    """Groq first, Gemini second.
+
+    Both failures are logged. They used to be swallowed, and that is how the
+    fallback came to be dead without anyone noticing: `gemini-1.5-flash` was
+    retired, every fallback attempt 404'd, and the only visible symptom was the
+    combined "Both Groq and Gemini failed" — which reads like a provider outage
+    rather than a model id we needed to change. A two-provider ladder whose
+    second rung fails silently is a one-provider ladder that looks like two.
+    """
     user_prompt = _build_user_prompt(message, language, context_block)
 
     raw: str | None = None
@@ -110,6 +128,7 @@ def classify_message(message: str, language: str, context_block: str) -> Classif
     try:
         raw = _call_groq(SYSTEM_PROMPT, user_prompt)
     except Exception:
+        logger.warning("Groq classification failed, falling back to Gemini", exc_info=True)
         raw = None
 
     if raw is None:
@@ -117,6 +136,7 @@ def classify_message(message: str, language: str, context_block: str) -> Classif
         try:
             raw = _call_gemini(SYSTEM_PROMPT, user_prompt)
         except Exception as exc:
+            logger.exception("Gemini fallback failed as well")
             raise RuntimeError("Both Groq and Gemini failed") from exc
 
     result = json.loads(raw)
