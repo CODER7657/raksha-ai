@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CornerBrackets } from '../components/CornerBrackets'
+import { Shortcuts } from '../components/triage'
+import { useKeyboardTriage } from '../lib/useKeyboardTriage'
 import { LANGUAGES } from '../lib/languages'
 import {
   REJECTION_REASONS,
@@ -129,6 +131,7 @@ export function ReviewQueue({
 
   useKeyboardTriage({
     enabled: !done,
+    reasons: REJECTION_REASONS,
     choosingReason,
     onAccept: () => current && record({ draftId: current.id, action: 'accepted' }, 'Accepted'),
     onRejectStart: () => setChoosingReason(true),
@@ -182,111 +185,8 @@ export function ReviewQueue({
   )
 }
 
-/** Global key handling for triage.
- *
- * Ignores keystrokes while focus is in a text field, or an `r` typed into a
- * search box rejects the card behind it. Also ignores modified keys so browser
- * and OS shortcuts keep working. */
-function useKeyboardTriage(opts: {
-  enabled: boolean
-  choosingReason: boolean
-  onAccept: () => void
-  onRejectStart: () => void
-  onRejectCancel: () => void
-  onReason: (code: string, label: string) => void
-  onSkip: () => void
-  onUndo: () => void
-}) {
-  const ref = useRef(opts)
-  ref.current = opts
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      const o = ref.current
-      if (!o.enabled) return
-      if (event.metaKey || event.ctrlKey || event.altKey) return
 
-      const target = event.target as HTMLElement | null
-      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
-        return
-      }
-
-      const key = event.key.toLowerCase()
-
-      if (o.choosingReason) {
-        if (key === 'escape') {
-          event.preventDefault()
-          o.onRejectCancel()
-          return
-        }
-        const reason = REJECTION_REASONS.find((r) => r.key === event.key)
-        if (reason) {
-          event.preventDefault()
-          o.onReason(reason.code, reason.label)
-        }
-        return
-      }
-
-      if (key === 'a') {
-        event.preventDefault()
-        o.onAccept()
-      } else if (key === 'r') {
-        event.preventDefault()
-        o.onRejectStart()
-      } else if (key === 's') {
-        event.preventDefault()
-        o.onSkip()
-      } else if (key === 'u') {
-        event.preventDefault()
-        o.onUndo()
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
-}
-
-function Shortcuts({ choosingReason }: { choosingReason: boolean }) {
-  return (
-    <div className="border border-line bg-white px-3 py-2 mb-4 text-[11px] text-ink/60 flex flex-wrap gap-x-4 gap-y-1">
-      {choosingReason ? (
-        <>
-          <span className="text-ink font-bold">Why reject?</span>
-          {REJECTION_REASONS.map((r) => (
-            <span key={r.code}>
-              <Key>{r.key}</Key> {r.label}
-            </span>
-          ))}
-          <span>
-            <Key>Esc</Key> cancel
-          </span>
-        </>
-      ) : (
-        <>
-          <span>
-            <Key>A</Key> accept
-          </span>
-          <span>
-            <Key>R</Key> reject
-          </span>
-          <span>
-            <Key>S</Key> skip
-          </span>
-          <span>
-            <Key>U</Key> undo
-          </span>
-        </>
-      )}
-    </div>
-  )
-}
-
-function Key({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="border border-ink px-1 font-mono text-[10px] font-bold text-ink">{children}</kbd>
-  )
-}
 
 function DraftCard({
   draft,
