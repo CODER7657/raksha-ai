@@ -54,6 +54,16 @@ LEAK_SIMILARITY = 0.95
 #: Gitignored. Deleting it costs money, not correctness.
 CACHE_PATH = pathlib.Path(__file__).resolve().parents[2] / ".benchmark_cache.json"
 
+#: The last scored run, committed. Written by `scripts/run_llm_benchmark.py
+#: --out` and read by the dashboard route — a scored run costs API quota, so the
+#: UI reads a result a human deliberately produced rather than triggering one.
+#: Lives beside the corpus at the repo root, not under frontend/, for the reason
+#: in testdata/README.md and because it must not be statically served: see
+#: `load_report`.
+REPORT_PATH = (
+    pathlib.Path(__file__).resolve().parents[3] / "testdata" / "benchmark" / "llm-latest.json"
+)
+
 #: Verdicts that count as "this is a scam" when scoring against `label`.
 SCAM_VERDICTS = {"suspicious", "high_risk"}
 
@@ -126,6 +136,32 @@ def load_cache(path: pathlib.Path = CACHE_PATH) -> dict:
 
 def save_cache(cache: dict, path: pathlib.Path = CACHE_PATH) -> None:
     path.write_text(json.dumps(cache, indent=1, sort_keys=True), encoding="utf-8")
+
+
+def load_report(path: pathlib.Path | None = None) -> dict | None:
+    """The last committed run, or None if nobody has produced one yet.
+
+    **Why this is a route and not a bundled import.** The obvious way to get a
+    committed artifact into a dashboard is to import it at build time, or drop
+    it in `frontend/public/`. Both would serve it unauthenticated from a public
+    site, and `missed_cases` is a list of messages that evade our detector —
+    a map of what to send to get past it. The offline half is already behind
+    `get_current_user`; publishing this half statically would make the more
+    sensitive of the two the one with no gate at all.
+
+    Reading the file from an authenticated route costs nothing, spends no
+    quota, and keeps both halves reachable the same way, so one component can
+    render them without caring which is which.
+    """
+    source = path or REPORT_PATH
+    if not source.exists():
+        return None
+    try:
+        return json.loads(source.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        # A malformed artifact must not take the dashboard down with it — the
+        # offline half still renders, and the UI says this one is unavailable.
+        return None
 
 
 def classify_case(case: dict, cache: dict) -> dict:

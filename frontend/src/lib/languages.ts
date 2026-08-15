@@ -24,3 +24,13 @@ export const LANGUAGES: LanguageOption[] = [
   { code: 'or', label: 'ଓଡ଼ିଆ (Odia)', speechLang: 'or-IN' },
   { code: 'ur', label: 'اردو (Urdu)', speechLang: 'ur-IN', dir: 'rtl' },
 ]
+
+/** Display name for a language code, falling back to the code itself.
+ *
+ * Lives here rather than in a component file so both the benchmark page and
+ * the comparison table use one implementation — and so neither has to export a
+ * non-component, which breaks fast refresh.
+ */
+export function languageLabel(code: string): string {
+  return LANGUAGES.find((l) => l.code === code)?.label ?? code
+}

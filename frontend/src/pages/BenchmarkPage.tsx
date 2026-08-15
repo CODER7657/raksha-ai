@@ -1,12 +1,15 @@
 import { useEffect, useId, useState } from 'react'
 import { CornerBrackets } from '../components/CornerBrackets'
-import { LANGUAGES } from '../lib/languages'
+import { ComparisonTable, FalsePositives, Metric } from '../components/BenchmarkComparison'
+import { languageLabel } from '../lib/languages'
 import {
   LOW_CONFIDENCE_CASE_COUNT,
+  fetchLlmBenchmark,
   fetchOfflineRuleBenchmark,
-  formatMetric,
   type BenchmarkReport,
   type LanguageBenchmark,
+  type LlmBenchmarkReport,
+  type LlmLanguageBenchmark,
 } from '../lib/benchmark'
 
 /** Reviewer-facing benchmark dashboard (#32 B).
@@ -19,12 +22,19 @@ import {
  * There is deliberately no headline number anywhere on this page. */
 export function BenchmarkPage() {
   const [report, setReport] = useState<BenchmarkReport | null>(null)
+  const [llm, setLlm] = useState<LlmBenchmarkReport | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOfflineRuleBenchmark()
       .then(setReport)
       .catch((e: Error) => setError(e.message))
+    // Failure here is not fatal: the offline half is computed live and always
+    // available, while this one depends on somebody having committed a run.
+    // A missing LLM benchmark degrades to "not run", not to a broken page.
+    fetchLlmBenchmark()
+      .then(setLlm)
+      .catch(() => setLlm({ available: false }))
   }, [])
 
   if (error) {
@@ -41,21 +51,52 @@ export function BenchmarkPage() {
     return <p className="mx-auto max-w-4xl text-sm text-ink/60">Loading benchmark…</p>
   }
 
-  return <BenchmarkReportView report={report} />
+  return <BenchmarkReportView report={report} llm={llm} />
 }
 
 /** The render, split from the fetch so it can be exercised against a captured
  * backend payload without standing up auth. */
-export function BenchmarkReportView({ report }: { report: BenchmarkReport }) {
+export function BenchmarkReportView({
+  report,
+  llm,
+}: {
+  report: BenchmarkReport
+  llm: LlmBenchmarkReport | null
+}) {
   const { corpus, provenance } = report
   const uncovered = corpus.languages_without_rules
+
+  const llmByLanguage = new Map<string, LlmLanguageBenchmark>(
+    llm?.available ? llm.languages.map((l) => [l.language, l]) : [],
+  )
+  const pairs = report.languages.map((rules) => ({
+    language: rules.language,
+    rules,
+    model: llmByLanguage.get(rules.language) ?? null,
+  }))
+
+  // Both halves' false positives, kept in one section rather than split by
+  // engine — a reviewer asking "what are we shouting at?" does not care which
+  // half shouted.
+  const falsePositiveGroups = [
+    ...report.languages.map((l) => ({
+      language: l.language,
+      half: 'offline rules',
+      cases: l.false_positive_cases ?? [],
+    })),
+    ...(llm?.available ? llm.languages : []).map((l) => ({
+      language: l.language,
+      half: 'RAG + LLM',
+      cases: l.false_positive_cases ?? [],
+    })),
+  ]
 
   return (
     <div className="mx-auto max-w-4xl">
       <div className="flex items-center gap-2 mb-6">
         <span className="h-2 w-2 bg-accent" aria-hidden="true" />
         <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
-          Benchmark · offline rule engine
+          Benchmark · both detection halves
         </span>
       </div>
 
@@ -63,10 +104,11 @@ export function BenchmarkReportView({ report }: { report: BenchmarkReport }) {
         <CornerBrackets />
 
         <p className="text-sm text-ink leading-relaxed mb-4">
-          Precision and recall for the <strong>offline rule engine</strong> — the zero-network
-          fallback that decides whether a user gets a warning or a 503 when both LLM providers
-          are down. It says nothing about the RAG&nbsp;+&nbsp;LLM path that normally judges a
-          message.
+          Precision and recall for both halves of detection, against the same corpus. The{' '}
+          <strong>offline rule engine</strong> is the zero-network fallback that decides whether a
+          user gets a warning or a 503 when both providers are down; the{' '}
+          <strong>RAG&nbsp;+&nbsp;LLM path</strong> is what normally judges a message. They
+          disagree, and where they disagree is the part worth reading.
         </p>
 
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
@@ -97,12 +139,36 @@ export function BenchmarkReportView({ report }: { report: BenchmarkReport }) {
       )}
 
       <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
-        Per language
+        Both halves, per language
       </h2>
       <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
-        Never aggregated. Every figure carries the case count that produced it — a percentage
-        drawn from {LOW_CONFIDENCE_CASE_COUNT} cases or fewer is shown dimmed, because it is
-        arithmetic rather than evidence.
+        Never aggregated — a single figure across twelve languages is dominated by whichever one
+        has the most cases. A language with {LOW_CONFIDENCE_CASE_COUNT} cases or fewer reads{' '}
+        <em>too few</em> rather than a percentage: 100% over two cases is arithmetic, not evidence,
+        and a dimmed 100% is still a 100% somebody can screenshot.
+      </p>
+
+      {llm && !llm.available && (
+        <p className="border-l-4 border-ink/30 bg-paper px-4 py-3 mb-3 text-[11px] text-ink/60 leading-relaxed">
+          No RAG&nbsp;+&nbsp;LLM run has been committed, so only the offline half has numbers.
+          Scoring spends API quota per case, so it is a CLI rather than something this page can
+          trigger: <code className="font-mono">python scripts/run_llm_benchmark.py --run --out
+          testdata/benchmark/llm-latest.json</code>
+        </p>
+      )}
+
+      <ComparisonTable pairs={pairs} />
+
+      {llm?.available && <RunProvenance llm={llm} />}
+
+      <FalsePositives groups={falsePositiveGroups} />
+
+      <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
+        Offline rules in detail
+      </h2>
+      <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
+        The zero-network fallback on its own — the half that decides whether a user gets a warning
+        or a 503 when both providers are down.
       </p>
 
       {/* Wide content scrolls inside its own container so the page body never
@@ -147,6 +213,43 @@ export function BenchmarkReportView({ report }: { report: BenchmarkReport }) {
   )
 }
 
+/** Which models and prompt produced the run being displayed.
+ *
+ * Not decoration. The provider ladder means a single run can be scored partly
+ * by Groq and partly by Gemini — the first real run was, because Groq hit its
+ * daily token cap partway through — so two runs are only comparable if you can
+ * see what answered. Leakage is stated for the same reason: a reader seeing
+ * 95.7% deserves to know whether anything was excluded to get there. */
+function RunProvenance({ llm }: { llm: Extract<LlmBenchmarkReport, { available: true }> }) {
+  const { run, leakage } = llm
+
+  return (
+    <div className="border border-line bg-white p-3 mb-8 text-[11px] text-ink/60 leading-relaxed">
+      <p>
+        RAG&nbsp;+&nbsp;LLM figures come from the last committed run — prompt{' '}
+        <span className="font-mono text-ink">{run.prompt_version}</span>, scored by{' '}
+        <span className="font-mono text-ink">{run.models.join(' + ') || 'unknown'}</span>.
+        {run.models.length > 1 && (
+          <> Two models answered, so per-case scores are not from a single judge.</>
+        )}
+      </p>
+      <p className="mt-1">
+        {leakage.held_out ? (
+          <>
+            Held out: no case sits within {leakage.threshold} similarity of a stored pattern, so
+            nothing was graded against its own notes.
+          </>
+        ) : (
+          <span className="text-red-700">
+            {leakage.leaked_cases} case(s) are effectively present in the pattern database and were
+            excluded. These figures cover only the remainder.
+          </span>
+        )}
+      </p>
+    </div>
+  )
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -156,12 +259,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function languageLabel(code: string) {
-  return LANGUAGES.find((l) => l.code === code)?.label ?? code
-}
-
 function LanguageRow({ lang }: { lang: LanguageBenchmark }) {
-  const lowConfidence = lang.total_cases > 0 && lang.total_cases <= LOW_CONFIDENCE_CASE_COUNT
   const unmeasured = lang.total_cases === 0
 
   return (
@@ -178,15 +276,17 @@ function LanguageRow({ lang }: { lang: LanguageBenchmark }) {
         )}
       </td>
       <td className="p-2 text-right tabular-nums">{lang.total_cases}</td>
-      <td className={`p-2 text-right tabular-nums ${lowConfidence ? 'text-ink/40' : ''}`}>
-        {formatMetric(lang.precision)}
+      {/* Same treatment as the comparison table above, deliberately. This table
+          used to dim a small-sample percentage rather than withhold it, which
+          left a bare 100% for a two-case language sitting directly under a
+          table that had just refused to print one. */}
+      <td className="p-2 text-right">
+        <Metric value={lang.precision} cases={lang.total_cases} />
       </td>
       <td
-        className={`p-2 text-right tabular-nums ${
-          lang.recall === 0 ? 'text-red-700 font-bold' : lowConfidence ? 'text-ink/40' : ''
-        }`}
+        className={`p-2 text-right ${lang.recall === 0 ? 'text-red-700 font-bold' : ''}`}
       >
-        {formatMetric(lang.recall)}
+        <Metric value={lang.recall} cases={lang.total_cases} />
       </td>
       <td className="p-2 text-right tabular-nums">
         {lang.false_negatives > 0 ? lang.false_negatives : '—'}

@@ -26,12 +26,41 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from app.services import benchmark_llm
 
 
+def _write_report(result: dict, path: pathlib.Path) -> None:
+    """Persist a scored run so the dashboard has something to render.
+
+    There is no endpoint for this half and there should not be one — a scored
+    run spends production's own API quota, so a route would be a cost amplifier
+    reachable by anyone with a session. A committed file inverts that: the
+    dashboard reads a result someone deliberately produced and reviewed, the
+    cost is paid once by a human at a terminal, and Render's ephemeral disk
+    never enters into it.
+
+    Committing it also makes the run auditable. `git log` on this file is the
+    per-language history that a single mutable row in a table would erase, and
+    a reviewer can see in a diff that recall moved before deciding whether the
+    change that moved it was a good one.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Sorted keys and a trailing newline so a re-run produces a reviewable diff
+    # rather than a reshuffled file.
+    path.write_text(
+        json.dumps(result, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true", help="actually spend API quota")
     parser.add_argument("--languages", nargs="*", help="limit to these language codes")
     parser.add_argument("--max-calls", type=int, help="refuse to run above this many calls")
     parser.add_argument("--json", action="store_true", help="raw JSON instead of a summary")
+    parser.add_argument(
+        "--out",
+        type=pathlib.Path,
+        help="write the scored report here (the dashboard reads the committed copy)",
+    )
     args = parser.parse_args()
 
     result = benchmark_llm.run(
@@ -39,6 +68,13 @@ def main() -> int:
         languages=args.languages,
         max_calls=args.max_calls,
     )
+
+    if args.out:
+        if result["dry_run"]:
+            print("Nothing written: --out needs --run, and a dry run has no scores.\n")
+        else:
+            _write_report(result, args.out)
+            print(f"wrote {args.out}\n")
 
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
