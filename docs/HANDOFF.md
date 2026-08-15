@@ -56,21 +56,33 @@ change touches a response model.
 
 ## 02 · ⚠️ Immediate, before anything else
 
-**1. Review #71** (Hem, one source of truth for UI strings). The only PR open.
+**1. Deploy.** The only item here that no PR can close, and the oldest. `#66`,
+`#68` and `#69` are on `master` and **not live**. #68 carries migration
+`0005_verdict_cache.sql`, which goes in **before** the deploy. Until then the
+verdict cache does nothing and the rule fixes protect nobody.
 
-**2. Deploy.** `#66`, `#68` and `#69` are on `master` and **not live**. #68
-carries migration `0005_verdict_cache.sql`, which goes in **before** the deploy.
-Until then the verdict cache does nothing and the rule fixes protect nobody.
+**2. Merge #71 with `--admin`** (Hem, one source of truth for UI strings), once
+reviewed. It cannot be merged any other way: `/frontend/src/i18n/` is owned by
+`@Hem60 @Ayush3422`, Hem is the author, and Ayush is unavailable — so no
+available person satisfies the CODEOWNERS review. This is the deadlock the
+CODEOWNERS header describes, reached by a second route: not a single owner, but
+a second owner who is not here. **Adding `@CODER7657` to that line is the fix**,
+and it is the same fix #26 applied everywhere else.
 
-**3. Re-run the LLM benchmark.** The committed report was scored against 72
-corpus rows; there are now 79. The dashboard is currently displaying a staleness
-banner saying so, which is the mechanism working — but the fix is a re-run:
+**3. Wire `:app:test` into `android-ci.yml`.** It runs `:core:rules:test`,
+`assembleDebug` and `assembleRelease` — never `:app:test`. Four unit tests under
+`android/app/src/test/` have therefore never executed in CI, including the
+shadowing guard #71 adds, whose whole subject is the one thing the generator
+cannot see. The generator's own `GradleException` does run, so cross-locale
+coverage is genuinely enforced; the shadowing check is not. A check that cannot
+fail is worse than none, and this is four of them.
 
-```bash
-cd backend && python scripts/run_llm_benchmark.py --run --out ../testdata/benchmark/llm-latest.json
-```
-
-Run it inside `backend/.venv`, not the system Python — see §07.
+The LLM benchmark re-run that used to sit here is done. It re-scored against all
+79 rows: recall stays 1.000 everywhere, precision moves to 0.933 (`en`) and
+0.923 (`hi`), and the three benign messages now warned about are named in the
+report. One of them is the cost of #66 teaching the rules that `disclose` is a
+share verb — a parcel firm asking for a delivery address reaches for that word
+too. Re-run it inside `backend/.venv`, not the system Python — see §07.
 
 ---
 
