@@ -38,10 +38,16 @@ class SmsReceiver : BroadcastReceiver() {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
         val appContext = context.applicationContext
-        if (!ScanPreferences(appContext).isScanningEnabled) return
 
-        // Extract on the main thread — the intent's extras are not guaranteed
-        // to outlive the broadcast — but score off it.
+        // The scanning-enabled check used to happen here, on the main thread.
+        // First access to SharedPreferences reads from disk, and this is the
+        // main thread of a broadcast with a ~10s ANR budget — on a cheap handset
+        // that is exactly the kind of small cost that adds up (#49). It now
+        // happens inside the executor, alongside the scan.
+        //
+        // Extraction stays here on purpose: the intent's extras are not
+        // guaranteed to outlive the broadcast, so they must be read before
+        // going async.
         val parts = try {
             Telephony.Sms.Intents.getMessagesFromIntent(intent)
         } catch (error: Exception) {
@@ -73,12 +79,17 @@ class SmsReceiver : BroadcastReceiver() {
     }
 
     private fun scoreAndNotify(context: Context, sender: String, body: String, timestamp: Long) {
+        // Off the main thread: this is the first touch of SharedPreferences and
+        // therefore the disk read. Checked before deduplication so a disabled
+        // app does no work at all beyond the read itself.
+        val preferences = ScanPreferences(context)
+        if (!preferences.isScanningEnabled) return
+
         if (!DEDUPLICATOR.offer(sender, body, timestamp)) {
             SafeLog.duplicateSkipped()
             return
         }
 
-        val preferences = ScanPreferences(context)
         val startedAt = System.nanoTime()
         val hits = offlineRuleHits(body, preferences.language)
         val elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000

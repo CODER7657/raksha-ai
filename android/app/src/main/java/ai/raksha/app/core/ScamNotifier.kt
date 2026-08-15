@@ -35,11 +35,22 @@ class ScamNotifier(private val context: Context) {
         ensureChannel()
 
         // On API 33+ the user can refuse notifications outright. Posting without
-        // the permission throws; there is nothing useful to do but stop.
+        // the permission throws, so there is nothing to do but stop — but it is
+        // recorded on the way out, because silently returning here is
+        // indistinguishable from "nothing was detected" (#49).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
+            SafeLog.warningSuppressed(ruleIds, "POST_NOTIFICATIONS denied")
+            return
+        }
+
+        // Notifications can also be switched off wholesale in system settings,
+        // or the channel muted, without the permission being revoked. Same
+        // user-visible outcome — nothing appears — so it gets the same trace.
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            SafeLog.warningSuppressed(ruleIds, "notifications disabled in settings")
             return
         }
 

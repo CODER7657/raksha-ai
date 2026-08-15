@@ -4,7 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import ai.raksha.app.core.Language
+import ai.raksha.app.core.ProtectionState
 import ai.raksha.app.core.RuleLabels
 import ai.raksha.app.core.ScanPreferences
 import ai.raksha.rules.offlineRuleHits
@@ -53,28 +57,75 @@ class MainActivity : ComponentActivity() {
 
     private val requestSmsPermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { granted ->
-        val smsGranted = granted[Manifest.permission.RECEIVE_SMS] == true
-        ScanPreferences(this).isScanningEnabled = smsGranted
-        permissionRefused = !smsGranted
+    ) {
+        // The result map is deliberately ignored. It contains only the
+        // permissions that were *asked for*, so a permission the user already
+        // granted is absent — and reading `granted[RECEIVE_SMS] == true` off it
+        // returned false whenever SMS was already held and only notifications
+        // were missing. The effect was that denying notifications silently
+        // switched scanning off, which is a worse version of the bug #49 exists
+        // to fix: the user refuses one thing and loses another, with no message
+        // saying so.
+        //
+        // Asking the system what is actually granted has no such edge.
+        ScanPreferences(this).isScanningEnabled = ProtectionState.hasSmsPermission(this)
+        refreshState()
     }
 
-    private var permissionRefused by mutableStateOf(false)
+    private var protection by mutableStateOf(ProtectionState.OFF)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleShare(intent)
+        refreshState()
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(
                         sharedText = sharedText,
-                        permissionRefused = permissionRefused,
+                        protection = protection,
                         onEnableScanning = ::enableScanning,
-                        onDisableScanning = { ScanPreferences(this).isScanningEnabled = false },
+                        onDisableScanning = {
+                            ScanPreferences(this).isScanningEnabled = false
+                            refreshState()
+                        },
+                        onOpenNotificationSettings = ::openNotificationSettings,
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Notifications can be switched off in Settings while the app is in the
+     * background, so the state is re-read on every resume rather than only after
+     * a permission dialog. Without this the user turns warnings off, comes back,
+     * and the app still claims to be protecting them.
+     */
+    override fun onResume() {
+        super.onResume()
+        refreshState()
+    }
+
+    private fun refreshState() {
+        protection = ProtectionState.of(this)
+    }
+
+    private fun openNotificationSettings() {
+        // Deep-links to this app's notification settings, which is the only
+        // place the user can undo this. Falling back to app details keeps the
+        // button honest on OEM builds that do not handle the specific action.
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        if (intent.resolveActivity(packageManager) != null) {
+            startActivity(intent)
+        } else {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", packageName, null),
+                )
+            )
         }
     }
 
@@ -106,7 +157,7 @@ class MainActivity : ComponentActivity() {
         }
         if (missing.isEmpty()) {
             ScanPreferences(this).isScanningEnabled = true
-            permissionRefused = false
+            refreshState()
         } else {
             requestSmsPermission.launch(missing.toTypedArray())
         }
@@ -116,9 +167,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun HomeScreen(
     sharedText: String?,
-    permissionRefused: Boolean,
+    protection: ProtectionState,
     onEnableScanning: () -> Unit,
     onDisableScanning: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val preferences = remember { ScanPreferences(context) }
@@ -126,7 +178,6 @@ private fun HomeScreen(
     var selectedLanguage by remember {
         mutableStateOf(Language.fromCode(preferences.language))
     }
-    var scanningEnabled by remember { mutableStateOf(preferences.isScanningEnabled) }
 
     Scaffold { innerPadding ->
         Column(
@@ -177,34 +228,77 @@ private fun HomeScreen(
                 )
             }
 
-            // --- Scanning toggle ---------------------------------------------
+            // --- Scanning state ----------------------------------------------
             Text(stringResource(R.string.scanning_heading), style = MaterialTheme.typography.titleMedium)
+
+            val scanning = protection != ProtectionState.OFF
             Text(
-                stringResource(
-                    if (scanningEnabled) R.string.scanning_on else R.string.scanning_off
-                ),
+                stringResource(if (scanning) R.string.scanning_on else R.string.scanning_off),
                 style = MaterialTheme.typography.bodyMedium,
             )
 
-            if (scanningEnabled) {
-                OutlinedButton(onClick = { onDisableScanning(); scanningEnabled = false }) {
-                    Text(stringResource(R.string.scanning_disable))
+            when (protection) {
+                ProtectionState.PROTECTED -> {
+                    Text(
+                        stringResource(R.string.protected_status),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
-            } else {
-                Text(
-                    stringResource(R.string.scanning_permission_needed),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Button(onClick = { onEnableScanning(); scanningEnabled = preferences.isScanningEnabled }) {
-                    Text(stringResource(R.string.scanning_enable))
+
+                // The state #49 exists for. Given its own card, error colours and
+                // an action, because it is not a status line — it is a fault the
+                // user has to fix, and it looks identical to "working fine" from
+                // anywhere else in the app.
+                ProtectionState.SCANNING_WITHOUT_WARNINGS -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                    ) {
+                        Column(
+                            Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.warnings_blocked_title),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                stringResource(R.string.warnings_blocked_body),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Button(onClick = onOpenNotificationSettings) {
+                                Text(stringResource(R.string.warnings_blocked_action))
+                            }
+                        }
+                    }
+                }
+
+                ProtectionState.NO_SMS_PERMISSION -> {
+                    Text(
+                        stringResource(R.string.scanning_permission_denied),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                ProtectionState.OFF -> {
+                    Text(
+                        stringResource(R.string.scanning_permission_needed),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
 
-            if (permissionRefused) {
-                Text(
-                    stringResource(R.string.scanning_permission_denied),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            if (scanning) {
+                OutlinedButton(onClick = onDisableScanning) {
+                    Text(stringResource(R.string.scanning_disable))
+                }
+            } else {
+                Button(onClick = onEnableScanning) {
+                    Text(stringResource(R.string.scanning_enable))
+                }
             }
 
             // Honesty about coverage — #29 §5. Users assume an app like this
