@@ -87,6 +87,45 @@ did not intend a behaviour change, the engine regressed.
 
 ---
 
+## 02b · Language coverage, and what coverage does not mean
+
+All twelve supported languages have rules. That was not true before
+[#31](https://github.com/CODER7657/raksha-ai/issues/31), when nine of them fired
+nothing at all — and because `scan.py` only degrades to a conservative verdict
+*when a rule fired*, a textbook scam in those languages produced a 503 rather
+than a warning whenever the LLM path was down. The offline safety net did not
+exist for most of the languages the product advertises.
+
+Two tables in `rule_engine.py` carry this, and both are mirrored in
+`RuleEngine.kt`:
+
+**`SCRIPT_INHERITANCE`** — languages that take another's rules wholesale. Today
+only `mr → hi`: Marathi is written in Devanagari and shares this domain's
+vocabulary with Hindi almost exactly. It is stated in a table rather than implied
+by lookup order so that the borrowing is reviewable — "`mr` has no rules of its
+own" is a different claim from "`mr` is uncovered", and the dashboard needs to
+tell them apart.
+
+**`REVIEW_STATUS`** — how much confidence each language's rules deserve:
+
+| Status | Meaning |
+|---|---|
+| `in-service` | Shipped, exercised by the corpus, corrected by #18 |
+| `inherited` | Borrows another language's rules |
+| `unreviewed` | Written from the concept list, **not yet read by a native speaker** |
+
+`unreviewed` is not a formality. A rule nobody who speaks the language has read
+is a guess, and a guessed rule that never fires is invisible — which is exactly
+how nine languages shipped with no coverage in the first place. Eight languages
+are currently `unreviewed`; the benchmark reports them under
+`corpus.languages_unreviewed` so that coverage is never mistaken for confidence.
+
+Passing corpus rows prove the plumbing — that the script matches, the patterns
+compile, and both engines agree. They do not prove the vocabulary is what a
+scammer would actually write. Only a speaker can say that.
+
+---
+
 ## 03 · Where Python and Java regex disagree
 
 This is the part that bites, and it is subtler than it first appears. Both

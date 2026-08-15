@@ -24,7 +24,13 @@ import pathlib
 
 import pytest
 
-from app.services.rule_engine import RULES, offline_rule_hits
+from app.services.rule_engine import (
+    RESOLVED_RULES,
+    REVIEW_STATUS,
+    RULES,
+    SCRIPT_INHERITANCE,
+    offline_rule_hits,
+)
 
 CORPUS = pathlib.Path(__file__).resolve().parents[2] / "testdata" / "rule_corpus.jsonl"
 
@@ -140,13 +146,55 @@ def test_known_rule_ids_match_the_engine():
 
 
 def test_every_supported_language_has_rules():
-    """#31: nine of twelve languages have no offline rules, so a scam in those
-    languages fires nothing — and scan.py raises 503 rather than degrading to a
-    warning when both LLM providers are down.
+    """#31 is closed by this assertion, and the assertion is what keeps it closed.
 
-    Marked xfail rather than skipped so it flips to a failure the moment #31 is
-    fixed, which is the signal to delete this marker."""
-    missing = sorted(LANGUAGES - set(RULES))
-    if missing:
-        pytest.xfail(f"no offline rules for: {', '.join(missing)} (#31)")
-    assert not missing
+    Before #31, nine of twelve languages had no offline rules, so a scam in
+    those languages fired nothing — and `scan.py` raises 503 rather than
+    degrading to a warning when no rule fired and both LLM providers are down.
+    An offline safety net that does not exist for most of the languages we
+    advertise is a defect, not a gap in a roadmap.
+
+    This used to be an xfail. It is now a real assertion, so adding a
+    thirteenth language to `LanguageCode` without rules fails here rather than
+    shipping silently — which is precisely how the first nine got missed."""
+    missing = sorted(LANGUAGES - set(RESOLVED_RULES))
+    assert not missing, (
+        f"no offline rule coverage for: {', '.join(missing)}. Every code in "
+        f"LanguageCode needs native rules, or an entry in SCRIPT_INHERITANCE "
+        f"pointing at a language whose script it shares."
+    )
+
+
+def test_every_language_has_a_stated_review_status():
+    """A language can be covered by rules nobody who speaks it has read. That is
+    an acceptable state to ship in; it is not an acceptable state to be unable
+    to name. `REVIEW_STATUS` makes it countable."""
+    assert set(REVIEW_STATUS) == LANGUAGES, (
+        f"REVIEW_STATUS does not cover LanguageCode exactly: "
+        f"missing={sorted(LANGUAGES - set(REVIEW_STATUS))}, "
+        f"extra={sorted(set(REVIEW_STATUS) - LANGUAGES)}"
+    )
+    allowed = {"in-service", "inherited", "unreviewed"}
+    for language, status in REVIEW_STATUS.items():
+        assert status in allowed, f"{language} has unknown review status {status!r}"
+
+
+def test_inherited_languages_point_at_a_language_that_has_rules():
+    """An inheritance entry naming a language with no rules of its own would
+    resolve to an empty list — coverage on paper, nothing in practice."""
+    for child, parent in SCRIPT_INHERITANCE.items():
+        assert parent in RULES, f"{child} inherits from {parent}, which has no rules"
+        assert RULES[parent], f"{child} inherits from {parent}, whose rule list is empty"
+        assert REVIEW_STATUS.get(child) == "inherited", (
+            f"{child} is in SCRIPT_INHERITANCE but its review status is "
+            f"{REVIEW_STATUS.get(child)!r}, not 'inherited'"
+        )
+
+
+def test_every_language_is_exercised_by_the_corpus():
+    """Coverage without measurement is how this bug happened once already."""
+    languages_in_corpus = {case["language"] for case in CASES}
+    assert not LANGUAGES - languages_in_corpus, (
+        f"languages with rules but no corpus row: "
+        f"{sorted(LANGUAGES - languages_in_corpus)}"
+    )

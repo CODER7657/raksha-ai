@@ -22,7 +22,7 @@ import json
 import pathlib
 from dataclasses import asdict, dataclass, field
 
-from app.services.rule_engine import RULES, offline_rule_hits
+from app.services.rule_engine import RESOLVED_RULES, REVIEW_STATUS, offline_rule_hits
 
 CORPUS_PATH = (
     pathlib.Path(__file__).resolve().parents[3] / "testdata" / "rule_corpus.jsonl"
@@ -120,7 +120,10 @@ def score_language(language: str, cases: list[dict]) -> LanguageBenchmark:
         language=language,
         # The load-bearing one for #31: a language with no rules at all falls
         # through to the English patterns, which cannot match native script.
-        has_rules=language in RULES,
+        # RESOLVED_RULES, not RULES: Marathi has no rules of its own but
+        # inherits Hindi's, and reporting it as uncovered would understate
+        # coverage as badly as the reverse overstates it (#31).
+        has_rules=bool(RESOLVED_RULES.get(language)),
         total_cases=len(mine),
         scam_cases=sum(1 for c in mine if c["label"] == "scam"),
         benign_cases=sum(1 for c in mine if c["label"] == "benign"),
@@ -149,7 +152,16 @@ def run(path: pathlib.Path | None = None) -> dict:
             "total_cases": len(cases),
             "languages_covered": sum(1 for lang in languages if lang["total_cases"] > 0),
             "languages_supported": len(LANGUAGES),
-            "languages_with_rules": sorted(set(RULES)),
-            "languages_without_rules": sorted(set(LANGUAGES) - set(RULES)),
+            "languages_with_rules": sorted(c for c in LANGUAGES if RESOLVED_RULES.get(c)),
+            "languages_without_rules": sorted(
+                c for c in LANGUAGES if not RESOLVED_RULES.get(c)
+            ),
+            # #31 closed the coverage gap but not the confidence gap: most
+            # of these languages have rules no native speaker has read.
+            # Reporting coverage without that would trade one comfortable
+            # falsehood for another.
+            "languages_unreviewed": sorted(
+                c for c in LANGUAGES if REVIEW_STATUS.get(c) == "unreviewed"
+            ),
         },
     }

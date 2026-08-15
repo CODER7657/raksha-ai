@@ -83,13 +83,127 @@ RULES: dict[str, list[Rule]] = {
         Rule("lottery_win", r"(?:લોટરી|ઇનામ|બક્ષિસ)|જીત"),
         Rule("urgent_verify", _either_order(r"(?:તાત્કાલિક|તરત|જલદી)", r"(?:ચકાસ|વેરિફાઈ|અપડેટ|પુષ્ટિ)")),
     ],
+    "bn": [
+        Rule("otp_share", _either_order(r"(?:ওটিপি|OTP)", r"(?:শেয়ার|পাঠান|পাঠিয়ে|বলুন|জানান)")),
+        Rule("kyc_expiry", _either_order(r"(?:কেওয়াইসি|KYC)", r"(?:আপডেট|মেয়াদ|বন্ধ|স্থগিত|বাতিল)")),
+        Rule("account_lock", _either_order(r"(?:অ্যাকাউন্ট|একাউন্ট|হিসাব)", r"(?:ব্লক|বন্ধ|স্থগিত|ফ্রিজ)")),
+        Rule("lottery_win", r"(?:লটারি|পুরস্কার|লাকি\s*ড্র)|জিতেছেন"),
+        Rule("urgent_verify", _either_order(r"(?:জরুরি|অবিলম্বে|এখনই)", r"(?:যাচাই|ভেরিফাই|আপডেট|নিশ্চিত)")),
+    ],
+    "ta": [
+        Rule("otp_share", _either_order(r"(?:ஓடிபி|OTP)", r"(?:பகிர|அனுப்ப|சொல்ல|தெரிவி)")),
+        Rule("kyc_expiry", _either_order(r"(?:கேஒய்சி|KYC)", r"(?:புதுப்ப|காலாவதி|முடக்க|ரத்து)")),
+        Rule("account_lock", _either_order(r"(?:கணக்கு|கணக்கை|கணக்கின்)", r"(?:முடக்க|தடை|நிறுத்த|முடங்க)")),
+        Rule("lottery_win", r"(?:லாட்டரி|பரிசு|குலுக்கல்)|வென்ற"),
+        Rule("urgent_verify", _either_order(r"(?:அவசர|உடனடி|உடனே)", r"(?:சரிபார|உறுதிப்படுத்த|புதுப்ப)")),
+    ],
+    "te": [
+        Rule("otp_share", _either_order(r"(?:ఓటీపీ|OTP)", r"(?:పంచ|పంపండి|చెప్పండి|తెలియజేయ)")),
+        Rule("kyc_expiry", _either_order(r"(?:కేవైసీ|KYC)", r"(?:అప్‌డేట్|అప్డేట్|గడువు|నిలిపి|రద్ద)")),
+        Rule("account_lock", _either_order(r"(?:ఖాతా|ఖాతాను|అకౌంట్)", r"(?:బ్లాక్|నిలిపి|మూసి|స్తంభింప)")),
+        Rule("lottery_win", r"(?:లాటరీ|బహుమతి|లక్కీ\s*డ్రా)|గెలుచుకున్న"),
+        Rule("urgent_verify", _either_order(r"(?:అత్యవసర|వెంటనే|తక్షణ)", r"(?:ధృవీకరించ|నిర్ధారించ|అప్‌డేట్|అప్డేట్)")),
+    ],
+    "kn": [
+        Rule("otp_share", _either_order(r"(?:ಓಟಿಪಿ|OTP)", r"(?:ಹಂಚ|ಕಳುಹಿಸ|ಹೇಳ|ತಿಳಿಸ)")),
+        Rule("kyc_expiry", _either_order(r"(?:ಕೆವೈಸಿ|KYC)", r"(?:ಅಪ್‌ಡೇಟ್|ಅಪ್ಡೇಟ್|ಅವಧಿ|ಸ್ಥಗಿತ|ರದ್ದು)")),
+        Rule("account_lock", _either_order(r"(?:ಖಾತೆ|ಖಾತೆಯ|ಅಕೌಂಟ್)", r"(?:ಬ್ಲಾಕ್|ಸ್ಥಗಿತ|ಮುಚ್ಚ|ಫ್ರೀಜ್)")),
+        Rule("lottery_win", r"(?:ಲಾಟರಿ|ಬಹುಮಾನ|ಅದೃಷ್ಟ\s*ಡ್ರಾ)|ಗೆದ್ದ"),
+        Rule("urgent_verify", _either_order(r"(?:ತುರ್ತು|ತಕ್ಷಣ|ಕೂಡಲೇ)", r"(?:ಪರಿಶೀಲಿಸ|ದೃಢೀಕರಿಸ|ಅಪ್‌ಡೇಟ್|ಅಪ್ಡೇಟ್)")),
+    ],
+    "ml": [
+        Rule("otp_share", _either_order(r"(?:ഒടിപി|OTP)", r"(?:പങ്കിട|അയയ്|അയക്ക|പറയ|അറിയിക്ക)")),
+        Rule("kyc_expiry", _either_order(r"(?:കെവൈസി|KYC)", r"(?:അപ്ഡേറ്റ്|കാലാവധി|നിർത്ത|റദ്ദ)")),
+        Rule("account_lock", _either_order(r"(?:അക്കൗണ്ട്|അക്കൌണ്ട്)", r"(?:ബ്ലോക്ക്|മരവിപ്പിക്ക|അടയ്ക്ക|നിർത്ത)")),
+        Rule("lottery_win", r"(?:ലോട്ടറി|സമ്മാനം|ഭാഗ്യ\s*നറുക്ക്)|നേടി"),
+        Rule("urgent_verify", _either_order(r"(?:അടിയന്തിര|ഉടൻ|ഉടനടി)", r"(?:പരിശോധിക്ക|സ്ഥിരീകരിക്ക|അപ്ഡേറ്റ്)")),
+    ],
+    "pa": [
+        Rule("otp_share", _either_order(r"(?:ਓਟੀਪੀ|OTP)", r"(?:ਸਾਂਝਾ|ਸ਼ੇਅਰ|ਭੇਜ|ਦੱਸ)")),
+        Rule("kyc_expiry", _either_order(r"(?:ਕੇਵਾਈਸੀ|KYC)", r"(?:ਅਪਡੇਟ|ਮਿਆਦ|ਖਤਮ|ਬੰਦ|ਮੁਅੱਤਲ)")),
+        Rule("account_lock", _either_order(r"(?:ਖਾਤਾ|ਖਾਤੇ|ਅਕਾਊਂਟ)", r"(?:ਬਲਾਕ|ਬੰਦ|ਫ੍ਰੀਜ਼|ਮੁਅੱਤਲ)")),
+        Rule("lottery_win", r"(?:ਲਾਟਰੀ|ਇਨਾਮ|ਲੱਕੀ\s*ਡਰਾਅ)|ਜਿੱਤ"),
+        Rule("urgent_verify", _either_order(r"(?:ਤੁਰੰਤ|ਜਲਦੀ|ਫੌਰਨ)", r"(?:ਤਸਦੀਕ|ਵੈਰੀਫਾਈ|ਅਪਡੇਟ|ਪੁਸ਼ਟੀ)")),
+    ],
+    "or": [
+        Rule("otp_share", _either_order(r"(?:ଓଟିପି|OTP)", r"(?:ସେୟାର|ପଠାନ୍ତୁ|କୁହନ୍ତୁ|ଜଣାନ୍ତୁ)")),
+        Rule("kyc_expiry", _either_order(r"(?:କେୱାଇସି|KYC)", r"(?:ଅପଡେଟ|ମିଆଦ|ଶେଷ|ବନ୍ଦ|ସ୍ଥଗିତ)")),
+        Rule("account_lock", _either_order(r"(?:ଖାତା|ଆକାଉଣ୍ଟ)", r"(?:ବ୍ଲକ|ବନ୍ଦ|ଫ୍ରିଜ|ସ୍ଥଗିତ)")),
+        Rule("lottery_win", r"(?:ଲଟେରୀ|ପୁରସ୍କାର|ଲକି\s*ଡ୍ର)|ଜିତି"),
+        Rule("urgent_verify", _either_order(r"(?:ତୁରନ୍ତ|ଶୀଘ୍ର|ଏବେ)", r"(?:ଯାଞ୍ଚ|ଭେରିଫାଏ|ଅପଡେଟ|ନିଶ୍ଚିତ)")),
+    ],
+    "ur": [
+        # Urdu is RTL, but the patterns are plain character alternations and the
+        # engine matches logical order, so direction does not affect matching.
+        Rule("otp_share", _either_order(r"(?:او\s*ٹی\s*پی|OTP)", r"(?:شیئر|بھیج|بتائ|بتا)")),
+        Rule("kyc_expiry", _either_order(r"(?:کے\s*وائی\s*سی|KYC)", r"(?:اپ\s*ڈیٹ|میعاد|ختم|بند|معطل)")),
+        Rule("account_lock", _either_order(r"(?:اکاؤنٹ|کھاتہ)", r"(?:بلاک|بند|منجمد|معطل)")),
+        Rule("lottery_win", r"(?:لاٹری|انعام|قرعہ\s*اندازی)|جیت"),
+        Rule("urgent_verify", _either_order(r"(?:فوری|جلد|ابھی)", r"(?:تصدیق|توثیق|اپ\s*ڈیٹ|ویری\s*فائی)")),
+    ],
+}
+
+#: Languages that take another language's rules wholesale.
+#:
+#: Marathi is written in Devanagari and shares this domain's vocabulary with
+#: Hindi almost exactly — केवाईसी, ओटीपी, खाता, बंद are the same words. Before
+#: #31 it scored zero on a message that Hindi scored three rules on, and the
+#: only difference was a missing dictionary key.
+#:
+#: Stated here rather than implied by lookup order, so the borrowing is
+#: reviewable: someone reading this table can see that `mr` has no rules of its
+#: own, which is a different claim from `mr` being covered.
+SCRIPT_INHERITANCE: dict[str, str] = {
+    "mr": "hi",
+}
+
+#: How much confidence each language's rules deserve.
+#:
+#: `unreviewed` is not a formality. A rule nobody who speaks the language has
+#: read is a guess, and a guessed rule that never fires is invisible — which is
+#: exactly how nine languages shipped with no coverage at all. Recording the
+#: status makes the gap countable instead of assumed away.
+#:
+#:   in-service  — shipped, exercised by the corpus, corrected by #18
+#:   inherited   — borrows another language's rules; see SCRIPT_INHERITANCE
+#:   unreviewed  — patterns written from the concept list, NOT yet read by a
+#:                 native speaker. They fire on the corpus rows, which proves
+#:                 the plumbing, not the vocabulary.
+REVIEW_STATUS: dict[str, str] = {
+    "en": "in-service",
+    "hi": "in-service",
+    "gu": "in-service",
+    "mr": "inherited",
+    "bn": "unreviewed",
+    "ta": "unreviewed",
+    "te": "unreviewed",
+    "kn": "unreviewed",
+    "ml": "unreviewed",
+    "pa": "unreviewed",
+    "or": "unreviewed",
+    "ur": "unreviewed",
+}
+
+
+def _resolve(language: str) -> list[Rule]:
+    """The rules a language actually uses, following inheritance once."""
+    if language in RULES:
+        return RULES[language]
+    parent = SCRIPT_INHERITANCE.get(language)
+    return RULES.get(parent, []) if parent else []
+
+
+#: Every supported language mapped to the rules it uses, inheritance resolved.
+#: Built once so the lookup in `offline_rule_hits` stays a dictionary hit.
+RESOLVED_RULES: dict[str, list[Rule]] = {
+    language: _resolve(language) for language in REVIEW_STATUS
 }
 
 # Compiled once at import — this runs on every scan, and is meant to stay fast
 # enough to port onto a low-end Android device later.
 _COMPILED: dict[str, list[tuple[Rule, re.Pattern[str]]]] = {
     lang: [(rule, re.compile(rule.pattern, re.IGNORECASE)) for rule in rules]
-    for lang, rules in RULES.items()
+    for lang, rules in RESOLVED_RULES.items()
 }
 
 
