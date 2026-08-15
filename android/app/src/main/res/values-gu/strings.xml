@@ -1,32 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Gujarati UI strings. Same caveats as values-hi/strings.xml: no web
-  counterpart, so not generated; NOT REVIEWED BY A NATIVE SPEAKER (#52);
-  neutral imperative verbs so the text does not guess the reader's gender.
+  Gujarati Android-only strings. Same as values-hi: the shared copy moved to the
+  web bundle under `android.*` (#64), verbatim, and NOT REVIEWED BY A NATIVE
+  SPEAKER (#52).
 -->
 <resources>
-    <string name="scanning_heading">સંદેશ તપાસ</string>
-    <string name="scanning_on">ચાલુ — નવા સંદેશ આ ફોન પર જ તપાસાય છે</string>
-    <string name="scanning_off">બંધ — કોઈ સંદેશ તપાસાતો નથી</string>
-    <string name="scanning_enable">સંદેશ તપાસ ચાલુ કરો</string>
-    <string name="scanning_disable">બંધ કરો</string>
-    <string name="scanning_permission_needed">આવતા સંદેશ વાંચવા માટે Raksha ને પરવાનગી જોઈએ. તે આ ફોન પર જ તપાસાય છે અને ક્યાંય મોકલાતા નથી.</string>
-    <string name="scanning_permission_denied">પરવાનગી મળી નથી. તમે તમારી મેસેજિંગ એપમાંથી સંદેશ Raksha ને શેર કરીને પણ તપાસી શકો છો.</string>
-    <string name="scanning_coverage_note">ફક્ત SMS તપાસાય છે. WhatsApp, RCS અને બીજી ચેટ એપ કોઈ પણ બહારની એપ વાંચી શકતી નથી, આ એપ પણ નહીં.</string>
-
-    <string name="warnings_blocked_title">ચેતવણી તમારા સુધી પહોંચી શકતી નથી</string>
-    <string name="warnings_blocked_body">સંદેશ તપાસાય છે, પણ સૂચનાઓ બંધ છે, તેથી Raksha તમને છેતરપિંડી અંગે ચેતવણી આપી શકતું નથી. Raksha માટે સૂચનાઓ ચાલુ કરો.</string>
-    <string name="warnings_blocked_action">સૂચના સેટિંગ ખોલો</string>
-    <string name="protected_status">સંદેશ તપાસાય છે અને ચેતવણી તમારા સુધી પહોંચી શકે છે.</string>
-
-    <string name="shared_heading">શેર કરેલો સંદેશ</string>
-    <string name="shared_clean">આ સંદેશમાં છેતરપિંડીનું કોઈ જાણીતું લક્ષણ મળ્યું નથી.</string>
-    <string name="shared_flagged">આ સંદેશ છેતરપિંડી જેવો લાગે છે:</string>
-    <string name="shared_hint">કોઈ સંદેશ તપાસવા માટે તેને તમારી મેસેજિંગ એપમાંથી Raksha ને શેર કરો.</string>
-
-    <string name="warning_title">આ સંદેશ છેતરપિંડી જેવો લાગે છે</string>
     <string name="warning_channel_name">છેતરપિંડી ચેતવણી</string>
     <string name="warning_channel_description">જ્યારે કોઈ સંદેશ છેતરપિંડી જેવો લાગે ત્યારે ચેતવણી આપે છે. સંદેશ તમારા ફોન પર જ તપાસાય છે અને ક્યાંય મોકલાતા નથી.</string>
-
-    <string name="language_heading">ભાષા</string>
 </resources>

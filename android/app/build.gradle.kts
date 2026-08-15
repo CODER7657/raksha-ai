@@ -110,6 +110,29 @@ val localeQualifiers = mapOf(
     "gu" to "-gu",
 )
 
+// Android resource names that map to a web key outside the `android.*`
+// namespace, because the string already existed there. `language_heading` was a
+// verbatim duplicate of `common.language` in all three locales — aliasing is
+// better than moving a second copy under `android.*` and having two keys that
+// must be kept identical by hand.
+val sharedStringAliases = mapOf(
+    "language_heading" to listOf("common", "language"),
+)
+
+// Keys with no translation in a locale yet, so the build reports rather than
+// fails. These are not new gaps: `rule_generic_warning` has been falling back to
+// English on Hindi and Gujarati phones since #61, silently. Moving it into the
+// bundles is what made that visible. Tracked in #52, which is open precisely
+// because we have no native-speaker review capacity — and a machine
+// translation of a scam warning is the failure i18n/index.ts warns about, so
+// the honest state is "missing and named", not "filled in by whoever was here".
+//
+// Anything NOT on this list that goes missing fails the build.
+val knownUntranslated = mapOf(
+    "hi" to setOf("rule_generic_warning"),
+    "gu" to setOf("rule_generic_warning"),
+)
+
 abstract class GenerateRuleStrings : DefaultTask() {
 
     @get:InputDirectory
@@ -121,6 +144,15 @@ abstract class GenerateRuleStrings : DefaultTask() {
 
     @get:Input
     abstract val localeToQualifier: MapProperty<String, String>
+
+    /** Android resource name -> path to the web key, for strings that already
+     * lived outside the `android.*` namespace. */
+    @get:Input
+    abstract val aliases: MapProperty<String, List<String>>
+
+    /** locale -> resource names allowed to be absent, with #52 as the reason. */
+    @get:Input
+    abstract val allowedMissing: MapProperty<String, Set<String>>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -157,8 +189,13 @@ abstract class GenerateRuleStrings : DefaultTask() {
 
         val ids = ruleIds.get()
         val missing = mutableListOf<String>()
+        val englishSharedKeys = mutableListOf<String>()
 
-        localeToQualifier.get().forEach { (locale, qualifier) ->
+        // English first, always. The other locales are checked against the key
+        // set it defines, so processing them in map order would silently skip
+        // the check for any locale that happened to come before `en`.
+        val ordered = localeToQualifier.get().entries.sortedBy { if (it.key == "en") 0 else 1 }
+        ordered.forEach { (locale, qualifier) ->
             val source = File(localesDir.get().asFile, "$locale.json")
             if (!source.isFile) {
                 throw GradleException(
@@ -173,6 +210,37 @@ abstract class GenerateRuleStrings : DefaultTask() {
 
             ids.forEach { id -> if (rules[id] == null) missing += "$locale/trace.rules.$id" }
 
+            // Shared UI strings (#64). Every key under `android.*` becomes a
+            // resource of the same name, so the Kotlin call sites do not change
+            // and a reviewer can grep one name across both platforms.
+            val shared = parsed["android"] as? Map<String, Any?> ?: emptyMap()
+
+            // fold rather than a captured var: walking the key path by
+            // reassigning a local inside a lambda is the kind of thing that
+            // compiles on one Kotlin version and not the next.
+            val resolvedAliases = aliases.get().mapNotNull { (resName, path) ->
+                val value = path.fold(parsed as Any?) { node, segment ->
+                    (node as? Map<*, *>)?.get(segment)
+                }
+                value?.let { resName to it.toString() }
+            }.toMap()
+
+            // English defines the contract; the other locales are checked
+            // against it. A key present in one locale and absent from another is
+            // exactly the drift #29 §1 asks CI to catch — except where #52 has
+            // already named it.
+            if (locale == "en") {
+                englishSharedKeys.addAll(shared.keys.map { it.toString() })
+            } else {
+                val excused = allowedMissing.get()[locale].orEmpty()
+                englishSharedKeys.forEach { key ->
+                    if (shared[key] == null && key !in excused) missing += "$locale/android.$key"
+                }
+            }
+            aliases.get().keys.forEach { resName ->
+                if (resolvedAliases[resName] == null) missing += "$locale/${aliases.get()[resName]?.joinToString(".")}"
+            }
+
             val valuesDir = File(root, "values$qualifier").apply { mkdirs() }
             val xml = buildString {
                 appendLine("""<?xml version="1.0" encoding="utf-8"?>""")
@@ -182,6 +250,10 @@ abstract class GenerateRuleStrings : DefaultTask() {
                 ids.forEach { id ->
                     val label = rules[id]?.toString() ?: return@forEach
                     appendLine("""    <string name="trace_rules_$id">${androidEscape(label)}</string>""")
+                }
+                (shared.keys.map { it.toString() } + resolvedAliases.keys).sorted().forEach { name ->
+                    val value = shared[name]?.toString() ?: resolvedAliases[name] ?: return@forEach
+                    appendLine("""    <string name="$name">${androidEscape(value)}</string>""")
                 }
                 appendLine("</resources>")
             }
@@ -199,7 +271,17 @@ abstract class GenerateRuleStrings : DefaultTask() {
             )
         }
 
-        logger.lifecycle("Generated rule labels: ${localeToQualifier.get().size} locales x ${ids.size} rules")
+        val excusedCount = allowedMissing.get().values.sumOf { it.size }
+        logger.lifecycle(
+            "Generated strings: ${localeToQualifier.get().size} locales x " +
+                "(${ids.size} rules + ${englishSharedKeys.size} shared + ${aliases.get().size} aliased)"
+        )
+        if (excusedCount > 0) {
+            logger.warn(
+                "$excusedCount shared string(s) have no translation and fall back to English - see #52: " +
+                    allowedMissing.get().entries.joinToString(", ") { (loc, keys) -> "$loc:${keys.joinToString("/")}" }
+            )
+        }
     }
 }
 
@@ -214,6 +296,8 @@ androidComponents {
             localesDir.set(rootProject.layout.projectDirectory.dir("../frontend/src/i18n/locales"))
             ruleIds.set(requiredRuleIds)
             localeToQualifier.set(localeQualifiers)
+            aliases.set(sharedStringAliases)
+            allowedMissing.set(knownUntranslated)
         }
         variant.sources.res?.addGeneratedSourceDirectory(task, GenerateRuleStrings::outputDir)
     }
