@@ -21,7 +21,7 @@ import hashlib
 import hmac
 from typing import Any
 
-from app.services.llm import Classification
+from app.services.llm import PROMPT_VERSION, Classification
 from app.services.rag import RetrievedPattern
 from app.services.rule_engine import RuleHit
 
@@ -61,6 +61,48 @@ def build_trace(
         }
 
     return trace
+
+
+def build_trace_from_cache(
+    hits: list[RuleHit],
+    provider: str,
+    model: str,
+    cached_at: str | None,
+) -> dict[str, Any]:
+    """The trace for a verdict served from the cache (#48).
+
+    Two things are deliberately different from `build_trace`.
+
+    `retrieved_patterns` is empty, and honestly so: a cache hit skips retrieval,
+    so there were no patterns. Replaying the ones stored with the original
+    verdict would be inventing evidence for a step that did not run.
+
+    `model.cached` says the verdict was reused. Without it the audit record
+    would credit a model call that never happened, and two identical verdicts
+    would be indistinguishable from two independent judgements — which is
+    exactly the sort of thing an auditor is entitled to be able to tell apart.
+
+    The offline rules still run on every scan, so their hits are real and
+    current rather than replayed.
+    """
+    return {
+        "offline_rules_fired": [
+            {
+                "rule_id": hit.rule_id,
+                "pattern": hit.pattern,
+                "matched_text": hit.matched_text,
+            }
+            for hit in hits
+        ],
+        "retrieved_patterns": [],
+        "model": {
+            "provider": provider,
+            "model": model,
+            "prompt_version": PROMPT_VERSION,
+            "cached": True,
+            "first_judged_at": cached_at,
+        },
+    }
 
 
 def _normalise(text: str) -> str:
