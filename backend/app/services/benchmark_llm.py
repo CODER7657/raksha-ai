@@ -132,7 +132,7 @@ def classify_case(case: dict, cache: dict) -> dict:
     """One case through the real pipeline. Returns the scored record and mutates
     `cache`. Retrieval always runs — it is the leakage check as well as the
     prompt context, and it is the cheap half."""
-    patterns = rag.retrieve_similar_patterns(case["text"], case["language"])
+    patterns = rag.retrieve_similar_patterns(case["text"], case["language"], pool=llm.BATCH)
     top_similarity = max((p.similarity for p in patterns), default=0.0)
 
     context = rag.format_context_block(patterns)
@@ -146,7 +146,11 @@ def classify_case(case: dict, cache: dict) -> dict:
         record = dict(cache[key])
         record["cached"] = True
     else:
-        classification = llm.classify_message(case["text"], case["language"], context)
+        # Batch pool: a benchmark run must never be the reason a live scan
+        # gets rate-limited. It measures the same code path either way.
+        classification = llm.classify_message(
+            case["text"], case["language"], context, llm.BATCH
+        )
         record = {
             "verdict": classification.result["verdict"],
             "risk_score": classification.result["risk_score"],

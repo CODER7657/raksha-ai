@@ -218,7 +218,7 @@ def generate_variants(seed: dict, strategy: str, count: int) -> list[str]:
         f"Rewriting instruction: {instruction}\n\n"
         f"Produce {count} variants."
     )
-    completion = llm.complete(_GENERATOR_SYSTEM, user_prompt)
+    completion = llm.complete(_GENERATOR_SYSTEM, user_prompt, llm.BATCH)
     parsed = _parse_json(completion.text)
     if not parsed or not isinstance(parsed.get("variants"), list):
         return []
@@ -233,7 +233,7 @@ def judge_preservation(seed_text: str, variant_text: str) -> tuple[bool, str] | 
         f"Message B (rewritten):\n<<<{variant_text}>>>\n\n"
         f"Does B still attempt the same fraud as A?"
     )
-    completion = llm.complete(_JUDGE_SYSTEM, user_prompt)
+    completion = llm.complete(_JUDGE_SYSTEM, user_prompt, llm.BATCH)
     parsed = _parse_json(completion.text)
     if not parsed or not isinstance(parsed.get("still_same_scam"), bool):
         return None
@@ -245,8 +245,10 @@ def detect_full(text: str, language: str) -> dict:
     """The production path, unmodified. Measuring a copy would measure a system
     we do not ship."""
     hits = offline_rule_hits(text, language)
-    patterns = rag.retrieve_similar_patterns(text, language)
-    classification = llm.classify_message(text, language, rag.format_context_block(patterns))
+    patterns = rag.retrieve_similar_patterns(text, language, pool=llm.BATCH)
+    classification = llm.classify_message(
+        text, language, rag.format_context_block(patterns), llm.BATCH
+    )
     return {
         "verdict": classification.result["verdict"],
         "risk_score": classification.result["risk_score"],
