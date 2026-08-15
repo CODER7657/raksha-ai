@@ -27,12 +27,27 @@ from dataclasses import dataclass
 # combining marks each consume a character.
 _GAP = r"[^.!?\n]{0,40}?"
 
+#: A gap that may cross one sentence boundary, for the rules where that is safe.
+#:
+#: The strict `_GAP` above is load-bearing and stays the default: it is the only
+#: thing stopping "OTP for your login is 449281. Never share it with anyone."
+#: from firing `otp_share`, because the OTP and the word "share" sit in
+#: different sentences. Relaxing it globally would trade a real recall gain for
+#: a false positive on the single most common legitimate bank SMS there is.
+#:
+#: But scam copy splits across sentences constantly — "Refund pending. Click
+#: here." — so the boundary costs recall on rules where no such benign shape
+#: exists. Refunds and KYC notices have no equivalent of the OTP warning, so
+#: they get the looser gap and OTP does not. This is a per-rule judgement, not
+#: a setting, which is why it is two constants rather than a flag.
+_GAP_ACROSS = r"[^\n]{0,60}?"
 
-def _either_order(left: str, right: str) -> str:
+
+def _either_order(left: str, right: str, gap: str = _GAP) -> str:
     """Scam copy does not respect word order — "share your OTP" and "OTP ko
     share karein" are the same rule. Matching only one direction is what made
     the original `\\bOTP\\b.{0,20}\\bshare\\b` unable to fire on real messages."""
-    return f"(?:{left}{_GAP}{right}|{right}{_GAP}{left})"
+    return f"(?:{left}{gap}{right}|{right}{gap}{left})"
 
 
 @dataclass(frozen=True)
@@ -66,15 +81,22 @@ _CODE_WORD = (
     # "referral code"), so it only counts when qualified by something that
     # implies authentication or delivery-to-your-phone.
     r"\b(?:verification|security|authentication|auth|access|confirmation|"
-    r"numeric|numerical|\d[\s-]?digit|six[\s-]?digit|secret)[\s-]?(?:code|pin)\b"
+    r"numeric|numerical|\d[\s-]?digit|six[\s-]?digit|secret|confidential)"
+    r"[\s-]?(?:code|pin)\b"
     r"|\bcode\s+(?:sent|received|texted|messaged)\b"
-    r"|\b(?:code|pin)\s+(?:sent|received)\s+to\s+your\b"
+    r"|\b(?:code|pin)\s+(?:sent|received|transmitted)\s+to\s+your\b"
 )
 #: What an OTP rule matches on either side of the request. The union is what
 #: makes `otp_share` robust to a scammer who never writes the acronym.
 _OTP_ANY = f"(?:{_OTP}|{_CODE_WORD})"
 
-_SHARE_EN = r"\b(?:shar\w*|send\w*|tell\w*|forward\w*|provid\w*|giv\w*|enter\w*|submit\w*|confirm\w*)\b"
+_SHARE_EN = (
+    # reveal and disclose (#63) were found by the red-team loop under the
+    # formality_shift strategy — the register a scammer reaches for when
+    # imitating an official notice, which is exactly when a victim complies.
+    r"\b(?:shar\w*|send\w*|tell\w*|forward\w*|provid\w*|giv\w*|enter\w*"
+    r"|submit\w*|confirm\w*|reveal\w*|disclos\w*)\b"
+)
 _KYC = r"\bKYC\b"
 # suspen, not suspend: "suspension" is not "suspend" plus a suffix, so the old
 # stem matched "suspended" and missed "suspension" entirely (#44). Every stem
@@ -86,18 +108,63 @@ _ACCOUNT_EN = r"\b(?:account|a/c|banking\s+services?)\b"
 RULES: dict[str, list[Rule]] = {
     "en": [
         Rule("otp_share", _either_order(_OTP_ANY, _SHARE_EN)),
-        Rule("kyc_expiry", _either_order(_KYC, _KYC_ACTION)),
+        Rule("kyc_expiry", _either_order(_KYC, _KYC_ACTION, _GAP_ACROSS)),
         Rule("lottery_win", r"\byou(?:'ve|\s+have)?\s*won\b|\b(?:lottery|lucky\s+draw|prize\s+money)\b"),
         Rule("account_lock", _either_order(_LOCK_EN, _ACCOUNT_EN)),
-        Rule("refund_click", _either_order(r"\brefund\w*\b", r"\b(?:click|link|tap|https?://)")),
+        Rule(
+            "refund_click",
+            _either_order(r"\brefund\w*\b", r"\b(?:click|link|tap|https?://)", _GAP_ACROSS),
+        ),
         Rule("urgent_verify", _either_order(r"\b(?:urgent\w*|immediate\w*)\b", r"\b(?:verif\w*|updat\w*|confirm\w*)")),
     ],
+    # Hindi, in both scripts it is actually written in.
+    #
+    # These rules were Devanagari-only, which meant they fired on the way a
+    # newsreader writes Hindi and not on the way anyone texts it (#23). Latin-
+    # script Hindi is the default register for SMS, and it is what an STT
+    # transcript often produces too, so a Devanagari-only rule set misses the
+    # majority of real messages in the language it claims to cover.
+    #
+    # The romanised alternatives are confined to the `hi` rule set rather than
+    # added to English, because words like "band", "do" and "bata" are either
+    # English words or fragments of them. Scoping them here means they are only
+    # ever tried against a message already declared Hindi, which keeps the
+    # false-positive blast radius inside the language they belong to.
     "hi": [
-        Rule("otp_share", _either_order(r"(?:ओटीपी|OTP)", r"(?:शेयर|साझा|भेज|बताइए|बताएं)")),
-        Rule("kyc_expiry", _either_order(r"(?:केवाईसी|KYC)", r"(?:अपडेट|समाप्त|एक्सपायर|बंद|निलंबित)")),
-        Rule("account_lock", _either_order(r"(?:खाता|खाते|अकाउंट)", r"(?:ब्लॉक|बंद|फ्रीज|निलंबित)")),
-        Rule("lottery_win", r"(?:लॉटरी|इनाम|पुरस्कार)|जीत"),
-        Rule("urgent_verify", _either_order(r"(?:तुरंत|जल्दी|शीघ्र)", r"(?:सत्यापित|वेरिफ़ाई|अपडेट|पुष्टि)")),
+        Rule(
+            "otp_share",
+            _either_order(
+                r"(?:ओटीपी|OTP|ek\s*time\s*password)",
+                # bataiye/batao "tell", bhejo/bhejein "send", denge/do "give",
+                # plus the code-mixed "share karo" that is neither language.
+                r"(?:शेयर|साझा|भेज|बताइए|बताएं"
+                r"|bata\w*|bhej\w*|sha?re\s*kar\w*|send\s*kar\w*|de\s*d\w*)",
+            ),
+        ),
+        Rule(
+            "kyc_expiry",
+            _either_order(
+                r"(?:केवाईसी|KYC)",
+                r"(?:अपडेट|समाप्त|एक्सपायर|बंद|निलंबित"
+                r"|update\s*kar\w*|samapt|khatam|band\s*ho)",
+                _GAP_ACROSS,
+            ),
+        ),
+        Rule(
+            "account_lock",
+            _either_order(
+                r"(?:खाता|खाते|अकाउंट|khata|khaata|account)",
+                r"(?:ब्लॉक|बंद|फ्रीज|निलंबित|band\s*ho\w*|block\s*ho\w*|freeze)",
+            ),
+        ),
+        Rule("lottery_win", r"(?:लॉटरी|इनाम|पुरस्कार|lottery|inaam|inam)|जीत|jeet\w*"),
+        Rule(
+            "urgent_verify",
+            _either_order(
+                r"(?:तुरंत|जल्दी|शीघ्र|turant|jaldi|abhi)",
+                r"(?:सत्यापित|वेरिफ़ाई|अपडेट|पुष्टि|verify|update\s*kar\w*)",
+            ),
+        ),
     ],
     "gu": [
         Rule("otp_share", _either_order(r"(?:ઓટીપી|OTP)", r"(?:શેર|મોકલ|જણાવ)")),
