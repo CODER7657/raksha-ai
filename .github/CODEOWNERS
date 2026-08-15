@@ -28,7 +28,18 @@
 
 # --- Android client ----------------------------------------------------------
 # The on-device interception surface. Ayush owns the client end to end.
-/android/                       @Ayush3422
+#
+# Two names for the reason given at the top of this file: a single-owner area
+# becomes unreviewable the moment that owner is the author, and Ayush is the
+# author of nearly every change under /android/. Listed with one name it would
+# have blocked its own owner permanently.
+/android/                       @Ayush3422 @CODER7657
+
+# The on-device rule engine is a port of the lead-owned Python engine and is
+# held to it by testdata/rule_corpus.jsonl. A change here is a detection-core
+# change wearing Kotlin, so it routes to the lead as well.
+/android/core/rules/            @Ayush3422 @CODER7657
+/testdata/rule_corpus.jsonl     @CODER7657 @Ayush3422
 
 # --- Voice, speech and language ---------------------------------------------
 # Ayush built the Sarvam/Whisper ladder and the language-directive layer.

@@ -19,11 +19,17 @@ on:
     branches: [master]
     paths:
       - 'android/**'
+      # :core:rules is tested against the shared corpus, which lives outside
+      # android/. Editing only the corpus must run the Kotlin half of the parity
+      # contract, or a corpus change could be enforced on the server and
+      # silently unchecked on the device.
+      - 'testdata/**'
       - '.github/workflows/android-ci.yml'
   push:
     branches: [master]
     paths:
       - 'android/**'
+      - 'testdata/**'
 
 # A newer push to the same branch makes the running build irrelevant. Without
 # this, an active PR bills every intermediate commit.
@@ -68,9 +74,26 @@ jobs:
       # compileSdk is 37, which the runner may not have preinstalled. The image
       # ships cmdline-tools with licences pre-accepted, so AGP fetches the
       # missing platform itself; that download is the bulk of a cold run.
+      # Runs before the APK build, and in the same job so it costs no extra
+      # Actions minutes. :core:rules is a plain JVM module with no Android
+      # dependencies, so this is seconds and needs no SDK - and `assembleDebug`
+      # alone would never execute a unit test, leaving the device half of the
+      # parity contract unchecked.
+      - name: Rule engine parity against the shared corpus
+        working-directory: android
+        run: ./gradlew :core:rules:test --stacktrace
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload rule test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kotlin-rule-test-report
+          path: android/core/rules/build/reports/tests/test/
+          retention-days: 7
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

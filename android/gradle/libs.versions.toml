@@ -15,6 +15,9 @@ kotlin = "2.4.10"
 coreKtx = "1.19.0"
 activityCompose = "1.13.0"
 composeBom = "2026.08.00"
+# Test-only. Used by :core:rules to read the shared corpus; the production
+# source set of that module has no dependencies at all, deliberately.
+kotlinxSerializationJson = "1.11.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -25,9 +28,14 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+# Plain JVM Kotlin, for :core:rules. This is the standalone Kotlin plugin and
+# does not conflict with AGP 9's built-in Kotlin — that conflict applies only
+# to `kotlin-android` on an Android module.
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 # Since Kotlin 2.0 the Compose compiler ships with Kotlin itself, so this
 # tracks the Kotlin version rather than having one of its own.
