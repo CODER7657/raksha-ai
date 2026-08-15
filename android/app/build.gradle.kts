@@ -26,7 +26,19 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 on. It was off through the shell phase, which was fine while
+            // nothing shipped — but the release APK is what a pilot user
+            // installs, and an unminified build hands anyone who pulls it a
+            // readable map of the detection logic. The rules are not a secret,
+            // yet making them trivially readable helps only the people writing
+            // around them.
+            //
+            // Shrinking resources too: the generated per-language string
+            // resources (see GenerateRuleStrings) grow with every language, and
+            // the target handset is a cheap one where install size is a real
+            // cost to a real person.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
