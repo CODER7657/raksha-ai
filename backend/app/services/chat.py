@@ -1,12 +1,23 @@
 """RAG-grounded conversational assistant. Same Groq-primary/Gemini-fallback
-pattern as app/services/llm.py, but returns free-form text for a back-and-forth
+ladder as app/services/llm.py, but returns free-form text for a back-and-forth
 conversation instead of a forced-JSON single classification.
+
+The model ids are imported from `llm` rather than repeated here. They used to be
+literal strings, and that is how this module kept a dead `gemini-1.5-flash` after
+#45 fixed the one next door: the fallback was retired in one file and left
+running in another, so the chat assistant had no second rung at all while the
+scanner had two. A constant cannot drift from itself.
+
+The ladder itself is still duplicated, because `llm.complete()` takes a single
+system and user prompt while a conversation needs the whole turn history. Worth
+unifying when that shape is worked out; the model ids should not wait for it.
 """
 
 import logging
 
 from app.core import languages
 from app.core.config import get_settings
+from app.services.llm import GEMINI_MODEL, GROQ_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +69,7 @@ def _call_groq(messages: list[dict]) -> str:
     settings = get_settings()
     client = Groq(api_key=settings.groq_api_key)
     completion = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         messages=messages,
         temperature=0.4,
         max_tokens=400,
@@ -82,7 +93,7 @@ def _call_gemini(messages: list[dict]) -> str:
     last_message = turns[-1]["content"]
 
     model = genai.GenerativeModel(
-        "gemini-1.5-flash",
+        GEMINI_MODEL,
         system_instruction=system_content,
         generation_config={"max_output_tokens": 400},
     )
