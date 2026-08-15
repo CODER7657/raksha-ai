@@ -39,3 +39,6 @@ android/captures/
 *.pptx
 *.pdf
 Gemini_Generated_Image_*.png
+
+# LLM benchmark verdict cache — regenerating it costs API quota, not correctness.
+backend/.benchmark_cache.json
