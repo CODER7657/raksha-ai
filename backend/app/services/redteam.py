@@ -403,19 +403,39 @@ def run(
     return stats
 
 
-def write_evasions(stats: LoopStats, path: pathlib.Path = EVASIONS_PATH) -> int:
-    """Appends to a review file. Never touches `scam_patterns` — a human decides
-    what becomes a corpus row, per `AGENT-LAYER.md` §01."""
+def write_evasions(stats: LoopStats, path: pathlib.Path | None = None) -> int:
+    """Appends to the review queue. Never touches `scam_patterns` — a human
+    decides what becomes a corpus row, per `AGENT-LAYER.md` §01.
+
+    New rows arrive with their lifecycle fields already set, so nothing has to
+    infer later whether an entry is still open. See `evasion_queue` for the
+    shape and why it is worth agreeing before building on it.
+    """
+
+    from datetime import datetime, timezone
+
+    from app.services import evasion_queue
+
+    path = path or evasion_queue.QUEUE_PATH
     if not stats.evasions:
         return 0
-    existing = set()
-    if path.exists():
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                existing.add(json.loads(line).get("fingerprint"))
 
+    records = evasion_queue.load(path)
+    existing = {record.get("fingerprint") for record in records}
     fresh = [e for e in stats.evasions if e.fingerprint not in existing]
-    with path.open("a", encoding="utf-8") as handle:
-        for evasion in fresh:
-            handle.write(json.dumps(asdict(evasion), ensure_ascii=False) + "\n")
+    if not fresh:
+        return 0
+
+    today = datetime.now(timezone.utc).date().isoformat()
+    for evasion in fresh:
+        record = asdict(evasion)
+        record.update(
+            id=evasion_queue.record_id(evasion.fingerprint),
+            status=evasion_queue.OPEN,
+            first_seen=today,
+            resolution=None,
+        )
+        records.append(record)
+
+    evasion_queue.save(records, path)
     return len(fresh)

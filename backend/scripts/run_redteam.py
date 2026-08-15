@@ -18,13 +18,65 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from app.services import redteam
+from app.services import evasion_queue, redteam
 from app.services.benchmark import load_corpus
+
+
+def verify_queue(detector: str) -> int:
+    """Close what is already fixed, and report what a fix is not pinned by.
+
+    Run this before opening the queue. Three of its first entries were closed by
+    #46 and sat there for days looking as urgent as the day they were found — a
+    queue that only grows is a queue nobody reads.
+    """
+    records = evasion_queue.load()
+    if not records:
+        print("Queue is empty.")
+        return 0
+
+    before = evasion_queue.summary(records)
+    detect = redteam.DETECTORS[detector]
+    updated, changed = evasion_queue.verify(records, detect, detector=detector)
+
+    if changed:
+        evasion_queue.save(updated)
+        print(f"Closed {len(changed)} evasion(s) the {detector} detector now catches:\n")
+        for record in changed:
+            print(f"  {record['id']}  [{record['strategy']}]  {record['text'][:66]}")
+        print()
+    else:
+        print(f"Nothing newly caught by the {detector} detector.\n")
+
+    after = evasion_queue.summary(updated)
+    print(
+        f"open {after['open']}   fixed {after['fixed']}   "
+        f"wontfix {after['wontfix']}   (was open {before['open']})"
+    )
+
+    loose = evasion_queue.unpinned(updated, load_corpus())
+    if loose:
+        print(
+            f"\n{len(loose)} fixed evasion(s) have no corpus row holding the fix "
+            f"in place. The bug can return and nothing will notice:"
+        )
+        for record in loose:
+            print(f"  {record['id']}  {record['text'][:66]}")
+        print(
+            "\nAdd each as a corpus row, or set resolution.corpus_id if one exists."
+        )
+    return 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true", help="actually spend model calls")
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="re-check open evasions against the detector each was found "
+             "against, close the ones now caught, and exit. Free for the rules "
+             "detector; costs a classification per entry for the full one.",
+    )
     parser.add_argument("--seeds", nargs="*", help="corpus case ids to attack")
     parser.add_argument("--strategies", nargs="*", choices=list(redteam.STRATEGIES))
     parser.add_argument("--variants", type=int, default=3, help="variants per strategy")
@@ -39,6 +91,9 @@ def main() -> int:
              "the layer the full pipeline hides.",
     )
     args = parser.parse_args()
+
+    if args.verify:
+        return verify_queue(args.detector)
 
     corpus = load_corpus()
     seeds = [
