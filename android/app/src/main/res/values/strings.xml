@@ -1,53 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android-only strings. Everything a user reads that also exists on the web now
+  lives in frontend/src/i18n/locales/*.json under `android.*` and is generated
+  into build/generated/i18nRes at build time (#64), so the phone and the site
+  cannot describe the same thing differently.
+
+  What stays here, and why:
+    app_name                   brand/launcher identity, not copy
+    warning_channel_*          Android notification-channel concept, rendered by
+                               system settings; the web has no such surface
+    warning_summary*           notification formatting primitives (%1$s)
+    warning_reason_bullet      pure formatting
+    selected_format            Android positional specifiers (%1$s..%4$s);
+                               i18next uses {{name}}, and converting between the
+                               two invites a silent mismatch
+
+  Anything else added here should probably go in the web bundles instead.
+-->
 <resources>
     <string name="app_name">Raksha AI</string>
-
-    <!--
-      Rule labels are NOT here. They are generated at build time from
-      frontend/src/i18n/locales/*.json into build/generated/i18nRes, so the app
-      and the website describe a rule with the same words. See the generator in
-      app/build.gradle.kts and #29 §1.
-    -->
-
-    <!-- Shown only if a rule id somehow has no generated label. Vague on
-         purpose: never a raw pattern. -->
-    <string name="rule_generic_warning">This message matches a known scam pattern</string>
-
-    <!-- Warning notification -->
     <string name="warning_channel_name">Scam warnings</string>
     <string name="warning_channel_description">Warns you when a message looks like a scam. Messages are checked on your phone and are never sent anywhere.</string>
-    <string name="warning_title">This message looks like a scam</string>
     <string name="warning_summary">From %1$s</string>
     <string name="warning_summary_no_sender">From an unknown sender</string>
     <string name="warning_reason_bullet">• %1$s</string>
-
-    <!-- Scanning setup -->
-    <string name="scanning_heading">Message checking</string>
-    <string name="scanning_on">On — new messages are checked on this phone</string>
-    <string name="scanning_off">Off — no messages are being checked</string>
-    <string name="scanning_enable">Turn on message checking</string>
-    <string name="scanning_disable">Turn off</string>
-    <string name="scanning_permission_needed">Raksha needs permission to read incoming messages. They are checked on this phone and never sent anywhere.</string>
-    <string name="scanning_permission_denied">Permission refused. You can still check a message by sharing it with Raksha from your messaging app.</string>
-
-    <!--
-      The dangerous state, and the reason #49 exists: scanning works, scams are
-      detected, and no warning can reach the user. Worded as a problem to fix
-      rather than a status, because a user who reads this as normal is worse off
-      than one who knows scanning is off.
-    -->
-    <string name="warnings_blocked_title">Warnings cannot reach you</string>
-    <string name="warnings_blocked_body">Messages are being checked, but notifications are turned off, so Raksha cannot warn you about a scam. Turn on notifications for Raksha.</string>
-    <string name="warnings_blocked_action">Open notification settings</string>
-    <string name="protected_status">Messages are checked and warnings can reach you.</string>
-    <string name="scanning_coverage_note">Only SMS is checked. WhatsApp, RCS and other chat apps cannot be read by any third-party app, including this one.</string>
-
-    <!-- Share-to-app fallback -->
-    <string name="shared_heading">Shared message</string>
-    <string name="shared_clean">No scam pattern found in this message.</string>
-    <string name="shared_flagged">This message looks like a scam:</string>
-    <string name="shared_hint">Share a message to Raksha from your messaging app to check it.</string>
-
-    <string name="language_heading">Language</string>
     <string name="selected_format">Selected: %1$s · %2$s · %3$s script · %4$s</string>
 </resources>
