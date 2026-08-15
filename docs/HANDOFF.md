@@ -56,28 +56,33 @@ change touches a response model.
 
 ## 02 · ⚠️ Immediate, before anything else
 
-**1. Merge #70 with `--admin`.** `MERGEABLE/BLOCKED`, not a conflict — `/.github/`
-is lead-owned and GitHub will not accept the author's own approval. Until it
-lands the weekly smoke check tests three rungs instead of five, so the batch
-keys are unwatched.
+**1. Deploy.** The only item here that no PR can close, and the oldest. `#66`,
+`#68` and `#69` are on `master` and **not live**. #68 carries migration
+`0005_verdict_cache.sql`, which goes in **before** the deploy. Until then the
+verdict cache does nothing and the rule fixes protect nobody.
 
-```bash
-gh pr merge 70 --squash --admin --delete-branch
-```
+**2. Merge #71 with `--admin`** (Hem, one source of truth for UI strings), once
+reviewed. It cannot be merged any other way: `/frontend/src/i18n/` is owned by
+`@Hem60 @Ayush3422`, Hem is the author, and Ayush is unavailable — so no
+available person satisfies the CODEOWNERS review. This is the deadlock the
+CODEOWNERS header describes, reached by a second route: not a single owner, but
+a second owner who is not here. **Adding `@CODER7657` to that line is the fix**,
+and it is the same fix #26 applied everywhere else.
 
-**2. Review #71** (Hem, one source of truth for UI strings).
+**3. Wire `:app:test` into `android-ci.yml`.** It runs `:core:rules:test`,
+`assembleDebug` and `assembleRelease` — never `:app:test`. Four unit tests under
+`android/app/src/test/` have therefore never executed in CI, including the
+shadowing guard #71 adds, whose whole subject is the one thing the generator
+cannot see. The generator's own `GradleException` does run, so cross-locale
+coverage is genuinely enforced; the shadowing check is not. A check that cannot
+fail is worse than none, and this is four of them.
 
-**3. Deploy.** `#66`, `#68` and `#69` are on `master` and **not live**. #68
-carries migration `0005_verdict_cache.sql`, which goes in **before** the deploy.
-Until then the verdict cache does nothing and the rule fixes protect nobody.
-
-**4. Re-run the LLM benchmark.** The committed report was scored against 72
-corpus rows; there are now 79. The dashboard is currently displaying a staleness
-banner saying so, which is the mechanism working — but the fix is a re-run:
-
-```bash
-cd backend && python scripts/run_llm_benchmark.py --run --out ../testdata/benchmark/llm-latest.json
-```
+The LLM benchmark re-run that used to sit here is done. It re-scored against all
+79 rows: recall stays 1.000 everywhere, precision moves to 0.933 (`en`) and
+0.923 (`hi`), and the three benign messages now warned about are named in the
+report. One of them is the cost of #66 teaching the rules that `disclose` is a
+share verb — a parcel firm asking for a delivery address reaches for that word
+too. Re-run it inside `backend/.venv`, not the system Python — see §07.
 
 ---
 
@@ -270,6 +275,16 @@ a diff and can never be reviewed. Found in `SmsAssembly.kt`; use ` `.
 verified locally. CI is the only proof — which is why #27 exists.
 
 **Git Bash mangles Devanagari in `curl -d`.** Test Indic text via Python.
+
+**Run backend scripts inside `backend/.venv`, never the system Python.** The
+pins resolve `protobuf` to 5.x. A global interpreter shared with other projects
+drifts to protobuf 7, and then the first embedding call dies with
+`MessageToDict() got an unexpected keyword argument 'float_precision'` —
+`proto-plus` caps at `<7.0.0`, `requirements.txt` does not re-state that cap, so
+nothing stops the global env from violating it. It looks like a broken script;
+it is a broken environment. Render is unaffected, because it builds clean from
+the pins on Python 3.11.9. The same drift explains any local run where
+`google-generativeai` is 0.8.5 rather than the pinned 0.8.2.
 
 ---
 
