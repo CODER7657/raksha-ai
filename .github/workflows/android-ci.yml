@@ -87,6 +87,19 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace
 
+      # The debug build does not run R8, so it cannot tell us whether shrinking
+      # broke anything — and R8 breaks things by *removing* code, which produces
+      # a build that installs and then fails at runtime on the one path nobody
+      # exercised. For this app that path is the SMS receiver, reached by name
+      # from the manifest and referenced from nowhere in the bytecode.
+      #
+      # Unsigned, because there is no keystore in CI and signing is a release
+      # concern rather than a correctness one. What this proves is that the
+      # minified APK assembles at all.
+      - name: Build release APK (R8 enabled)
+        working-directory: android
+        run: ./gradlew assembleRelease --stacktrace
+
       - name: Upload rule test report
         if: failure()
         uses: actions/upload-artifact@v4

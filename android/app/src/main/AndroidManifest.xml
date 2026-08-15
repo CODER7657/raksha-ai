@@ -26,8 +26,21 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <!--
+      allowBackup="false" so scanning preferences never ride out to a cloud
+      backup. There is no message content to leak - nothing is persisted - but
+      the setting also stops a restored backup from silently re-enabling
+      scanning on a device the user never granted it on.
+
+      usesCleartextTraffic="false" is free today and is the point: this app
+      makes no network call at all, and the flag turns "we did not add one" into
+      "the platform will not let one be added quietly". The Play declaration in
+      #39 asserts message content never leaves the device, and that assertion is
+      easier to keep true when the platform is enforcing it too.
+    -->
     <application
         android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.RakshaAI">
