@@ -5,10 +5,13 @@ during the live demo.
 """
 
 import json
+import logging
 from dataclasses import dataclass
 
 from app.core import languages
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GEMINI_MODEL = "gemini-1.5-flash"
@@ -102,26 +105,50 @@ class Classification:
     prompt_version: str = PROMPT_VERSION
 
 
+@dataclass(frozen=True)
+class Completion:
+    """Raw model output plus which provider produced it."""
+
+    text: str
+    provider: str
+    model: str
+
+
+def complete(system_prompt: str, user_prompt: str) -> Completion:
+    """The Groq-primary, Gemini-fallback ladder, for any prompt.
+
+    Public so that callers with a different job — the red-team agent, an
+    evaluation harness — use the same ladder instead of reaching for
+    `_call_groq`. The ladder is the part worth sharing: duplicating it would
+    mean a Groq outage degrades one caller gracefully and breaks another.
+
+    Note this returns text and does not parse it. Only `classify_message` knows
+    what shape its answer must be, and validating someone else's schema here
+    would make this function lie about what it does.
+    """
+    try:
+        return Completion(_call_groq(system_prompt, user_prompt), "groq", GROQ_MODEL)
+    except Exception:
+        # Logged, not swallowed. If Groq is failing every request we quietly
+        # degrade to the slower fallback for every scan, and without this line
+        # nothing anywhere says why. Same reasoning as backend/ruff.toml.
+        logger.warning("Groq call failed, falling back to Gemini", exc_info=True)
+
+    try:
+        return Completion(_call_gemini(system_prompt, user_prompt), "gemini", GEMINI_MODEL)
+    except Exception as exc:
+        raise RuntimeError("Both Groq and Gemini failed") from exc
+
+
 def classify_message(message: str, language: str, context_block: str) -> Classification:
     user_prompt = _build_user_prompt(message, language, context_block)
+    completion = complete(SYSTEM_PROMPT, user_prompt)
 
-    raw: str | None = None
-    provider, model = "groq", GROQ_MODEL
-    try:
-        raw = _call_groq(SYSTEM_PROMPT, user_prompt)
-    except Exception:
-        raw = None
-
-    if raw is None:
-        provider, model = "gemini", GEMINI_MODEL
-        try:
-            raw = _call_gemini(SYSTEM_PROMPT, user_prompt)
-        except Exception as exc:
-            raise RuntimeError("Both Groq and Gemini failed") from exc
-
-    result = json.loads(raw)
+    result = json.loads(completion.text)
     _validate_result_shape(result)
-    return Classification(result=result, provider=provider, model=model)
+    return Classification(
+        result=result, provider=completion.provider, model=completion.model
+    )
 
 
 def _validate_result_shape(result: dict) -> None:
