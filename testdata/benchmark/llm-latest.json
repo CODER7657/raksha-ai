@@ -2,45 +2,60 @@
   "dry_run": false,
   "languages": [
     {
-      "benign_cases": 11,
+      "benign_cases": 14,
       "false_negatives": 0,
       "false_positive_cases": [
         {
           "id": "en-benign-debit-alert-001",
           "note": "Real bank alert. Mentions an account and a phone number without triggering anything.",
-          "risk_score": 80,
+          "risk_score": 40,
           "text": "SBI: Rs 2,000 debited from a/c XX1234 on 12-Aug. Not you? Call 1800111109",
+          "verdict": "suspicious"
+        },
+        {
+          "id": "en-benign-disclose-address-001",
+          "note": "Guards adding reveal/disclose to the share verbs. A share verb with no code word nearby must not fire otp_share on its own.",
+          "risk_score": 20,
+          "text": "Please disclose your delivery address so we can dispatch the parcel.",
           "verdict": "suspicious"
         }
       ],
-      "false_positives": 1,
+      "false_positives": 2,
       "language": "en",
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": 0.963,
+      "precision": 0.9333,
       "recall": 1.0,
-      "scam_cases": 26,
-      "scored_cases": 37,
-      "total_cases": 37,
-      "true_negatives": 10,
-      "true_positives": 26
+      "scam_cases": 28,
+      "scored_cases": 42,
+      "total_cases": 42,
+      "true_negatives": 12,
+      "true_positives": 28
     },
     {
-      "benign_cases": 0,
+      "benign_cases": 2,
       "false_negatives": 0,
-      "false_positive_cases": [],
-      "false_positives": 0,
+      "false_positive_cases": [
+        {
+          "id": "hi-benign-debit-romanized-001",
+          "note": "The romanised twin of en-benign-debit-alert-001, and the nastier guard: it contains 'account' in a message that is entirely legitimate.",
+          "risk_score": 40,
+          "text": "Aapke account se Rs 500 debit hue hain",
+          "verdict": "suspicious"
+        }
+      ],
+      "false_positives": 1,
       "language": "hi",
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": 1.0,
+      "precision": 0.9231,
       "recall": 1.0,
       "scam_cases": 12,
-      "scored_cases": 12,
-      "total_cases": 12,
-      "true_negatives": 0,
+      "scored_cases": 14,
+      "total_cases": 14,
+      "true_negatives": 1,
       "true_positives": 12
     },
     {
@@ -220,15 +235,14 @@
     "threshold": 0.95
   },
   "run": {
-    "api_calls": 5,
-    "cache_hits": 67,
-    "corpus_digest": "40b6d138332e",
-    "corpus_rows": 72,
+    "api_calls": 79,
+    "cache_hits": 0,
+    "corpus_digest": "785697966490",
+    "corpus_rows": 79,
     "models": [
-      "gemini-2.5-flash",
       "llama-3.3-70b-versatile"
     ],
     "prompt_version": "scan-v1",
-    "scored_rows": 72
+    "scored_rows": 79
   }
 }
