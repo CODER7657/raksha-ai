@@ -9,7 +9,8 @@ user-facing surface, which is why it is first.
 
     generator  -> variants of a seed scam, one mutation strategy at a time
     judge      -> is this variant still the same fraud attempt?
-    detector   -> the real pipeline, unmodified
+    detector   -> the layer under attack: the full pipeline, or the offline
+                  rules alone (see DETECTORS)
     curator    -> dedup, record, write for review        (plain code, not an agent)
 
 **The judge is what makes this honest.** A variant that no longer asks for an
@@ -42,9 +43,15 @@ as data:
 
 ## Cost
 
-Two model calls per variant (generate is batched, judge is per variant) plus a
-detection. Unbounded, this is the most expensive thing in the repository, so it
-dry-runs by default and stops on budget rather than degrading quality.
+Two model calls per variant against the `rules` detector (generate is batched,
+judge is per variant), three against `full`, since detection there is itself a
+classification. Unbounded this is the most expensive thing in the repository,
+so it dry-runs by default and stops on budget rather than degrading quality.
+
+Attacking the `rules` layer is the cheaper and arguably more important run: on
+a phone with no signal, and in `scan.py`'s degraded path, the rules are the
+only thing between a user and a scam — and a full-pipeline run hides every gap
+the model happens to cover.
 """
 
 from __future__ import annotations
@@ -59,7 +66,11 @@ from app.services import llm, rag
 from app.services.rule_engine import offline_rule_hits
 
 #: Where confirmed evasions go for human review. Never the pattern table.
-EVASIONS_PATH = pathlib.Path(__file__).resolve().parents[2] / "testdata" / "evasions.jsonl"
+#:
+#: parents[3] is the repository root, not backend/ — evasions sit beside
+#: `rule_corpus.jsonl` because that is where they are headed once a human
+#: accepts one, and because the Kotlin suite reads that directory too.
+EVASIONS_PATH = pathlib.Path(__file__).resolve().parents[3] / "testdata" / "evasions.jsonl"
 
 #: Consecutive rounds producing nothing new before the loop calls it done.
 #: Counting rounds instead would stop while the tail is still yielding, and the
@@ -157,10 +168,12 @@ class Evasion:
     rules_fired: list[str]
     judge_reason: str
     fingerprint: str
+    detector: str = "full"
 
 
 @dataclass
 class LoopStats:
+    detector: str = "full"
     rounds: int = 0
     generated: int = 0
     preserved: int = 0
@@ -228,7 +241,7 @@ def judge_preservation(seed_text: str, variant_text: str) -> tuple[bool, str] | 
     return parsed["still_same_scam"], reason if isinstance(reason, str) else ""
 
 
-def detect(text: str, language: str) -> dict:
+def detect_full(text: str, language: str) -> dict:
     """The production path, unmodified. Measuring a copy would measure a system
     we do not ship."""
     hits = offline_rule_hits(text, language)
@@ -238,7 +251,40 @@ def detect(text: str, language: str) -> dict:
         "verdict": classification.result["verdict"],
         "risk_score": classification.result["risk_score"],
         "rules_fired": [hit.rule_id for hit in hits],
+        "detector": "full",
     }
+
+
+def detect_rules(text: str, language: str) -> dict:
+    """The offline rule engine alone — no network, no model.
+
+    This is the layer that matters most, and the one the full pipeline hides.
+    On the website the LLM covers for a rule that fails; on a phone with no
+    signal, and in `scan.py`'s degraded path when both providers are down, the
+    rules are the only thing standing between a user and a scam. An evasion here
+    is a real hole even when the full pipeline catches it.
+
+    It is also free and instant, so a run against this detector costs one
+    generator call plus one judge call per variant rather than three model
+    calls — cheap enough to attack every language on every seed.
+
+    Verdict mirrors `scan.py`'s degraded path: any rule firing means
+    `suspicious`, nothing firing means `safe`. The rule engine only ever flags,
+    never clears, so those are the only two outcomes available to it.
+    """
+    hits = offline_rule_hits(text, language)
+    return {
+        "verdict": "suspicious" if hits else "safe",
+        "risk_score": 70 if hits else 0,
+        "rules_fired": [hit.rule_id for hit in hits],
+        "detector": "rules",
+    }
+
+
+#: Which layer a run attacks. `rules` is the on-device engine; `full` is what a
+#: website user gets. They answer different questions and a run should say which
+#: one it asked.
+DETECTORS = {"full": detect_full, "rules": detect_rules}
 
 
 def estimate(seeds: list[dict], strategies: list[str], variants_per_strategy: int) -> dict:
@@ -262,6 +308,7 @@ def run(
     variants_per_strategy: int = 3,
     max_model_calls: int = 200,
     max_rounds: int = 5,
+    detector: str = "full",
     seen: set[str] | None = None,
 ) -> LoopStats:
     """Loop until `DRY_ROUNDS_TO_STOP` consecutive rounds find nothing new.
@@ -271,7 +318,10 @@ def run(
     judge rejected reappear every round, and the loop would never converge.
     """
     chosen = strategies or list(STRATEGIES)
-    stats = LoopStats()
+    if detector not in DETECTORS:
+        raise ValueError(f"unknown detector {detector!r}; choose from {sorted(DETECTORS)}")
+    detect = DETECTORS[detector]
+    stats = LoopStats(detector=detector)
 
     if not confirm_cost:
         raise RuntimeError(
@@ -319,7 +369,11 @@ def run(
                         continue
                     stats.preserved += 1
 
-                    stats.model_calls += 1
+                    if detector == "full":
+                        # The rules detector makes no model call, so it must
+                        # not be billed as one — otherwise a free run exhausts
+                        # a budget it never spent.
+                        stats.model_calls += 1
                     result = detect(text, seed["language"])
                     if result["verdict"] in SCAM_VERDICTS:
                         stats.detected += 1
@@ -338,6 +392,7 @@ def run(
                             rules_fired=result["rules_fired"],
                             judge_reason=reason,
                             fingerprint=mark,
+                            detector=detector,
                         )
                     )
 
