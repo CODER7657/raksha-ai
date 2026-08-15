@@ -97,7 +97,116 @@ val RULES: Map<String, List<Rule>> = mapOf(
         Rule("lottery_win", """(?:લોટરી|ઇનામ|બક્ષિસ)|જીત"""),
         Rule("urgent_verify", eitherOrder("""(?:તાત્કાલિક|તરત|જલદી)""", """(?:ચકાસ|વેરિફાઈ|અપડેટ|પુષ્ટિ)""")),
     ),
+    "bn" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ওটিপি|OTP)""", """(?:শেয়ার|পাঠান|পাঠিয়ে|বলুন|জানান)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:কেওয়াইসি|KYC)""", """(?:আপডেট|মেয়াদ|বন্ধ|স্থগিত|বাতিল)""")),
+        Rule("account_lock", eitherOrder("""(?:অ্যাকাউন্ট|একাউন্ট|হিসাব)""", """(?:ব্লক|বন্ধ|স্থগিত|ফ্রিজ)""")),
+        Rule("lottery_win", """(?:লটারি|পুরস্কার|লাকি\s*ড্র)|জিতেছেন"""),
+        Rule("urgent_verify", eitherOrder("""(?:জরুরি|অবিলম্বে|এখনই)""", """(?:যাচাই|ভেরিফাই|আপডেট|নিশ্চিত)""")),
+    ),
+    "ta" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ஓடிபி|OTP)""", """(?:பகிர|அனுப்ப|சொல்ல|தெரிவி)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:கேஒய்சி|KYC)""", """(?:புதுப்ப|காலாவதி|முடக்க|ரத்து)""")),
+        Rule("account_lock", eitherOrder("""(?:கணக்கு|கணக்கை|கணக்கின்)""", """(?:முடக்க|தடை|நிறுத்த|முடங்க)""")),
+        Rule("lottery_win", """(?:லாட்டரி|பரிசு|குலுக்கல்)|வென்ற"""),
+        Rule("urgent_verify", eitherOrder("""(?:அவசர|உடனடி|உடனே)""", """(?:சரிபார|உறுதிப்படுத்த|புதுப்ப)""")),
+    ),
+    "te" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ఓటీపీ|OTP)""", """(?:పంచ|పంపండి|చెప్పండి|తెలియజేయ)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:కేవైసీ|KYC)""", """(?:అప్‌డేట్|అప్డేట్|గడువు|నిలిపి|రద్ద)""")),
+        Rule("account_lock", eitherOrder("""(?:ఖాతా|ఖాతాను|అకౌంట్)""", """(?:బ్లాక్|నిలిపి|మూసి|స్తంభింప)""")),
+        Rule("lottery_win", """(?:లాటరీ|బహుమతి|లక్కీ\s*డ్రా)|గెలుచుకున్న"""),
+        Rule("urgent_verify", eitherOrder("""(?:అత్యవసర|వెంటనే|తక్షణ)""", """(?:ధృవీకరించ|నిర్ధారించ|అప్‌డేట్|అప్డేట్)""")),
+    ),
+    "kn" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ಓಟಿಪಿ|OTP)""", """(?:ಹಂಚ|ಕಳುಹಿಸ|ಹೇಳ|ತಿಳಿಸ)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:ಕೆವೈಸಿ|KYC)""", """(?:ಅಪ್‌ಡೇಟ್|ಅಪ್ಡೇಟ್|ಅವಧಿ|ಸ್ಥಗಿತ|ರದ್ದು)""")),
+        Rule("account_lock", eitherOrder("""(?:ಖಾತೆ|ಖಾತೆಯ|ಅಕೌಂಟ್)""", """(?:ಬ್ಲಾಕ್|ಸ್ಥಗಿತ|ಮುಚ್ಚ|ಫ್ರೀಜ್)""")),
+        Rule("lottery_win", """(?:ಲಾಟರಿ|ಬಹುಮಾನ|ಅದೃಷ್ಟ\s*ಡ್ರಾ)|ಗೆದ್ದ"""),
+        Rule("urgent_verify", eitherOrder("""(?:ತುರ್ತು|ತಕ್ಷಣ|ಕೂಡಲೇ)""", """(?:ಪರಿಶೀಲಿಸ|ದೃಢೀಕರಿಸ|ಅಪ್‌ಡೇಟ್|ಅಪ್ಡೇಟ್)""")),
+    ),
+    "ml" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ഒടിപി|OTP)""", """(?:പങ്കിട|അയയ്|അയക്ക|പറയ|അറിയിക്ക)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:കെവൈസി|KYC)""", """(?:അപ്ഡേറ്റ്|കാലാവധി|നിർത്ത|റദ്ദ)""")),
+        Rule("account_lock", eitherOrder("""(?:അക്കൗണ്ട്|അക്കൌണ്ട്)""", """(?:ബ്ലോക്ക്|മരവിപ്പിക്ക|അടയ്ക്ക|നിർത്ത)""")),
+        Rule("lottery_win", """(?:ലോട്ടറി|സമ്മാനം|ഭാഗ്യ\s*നറുക്ക്)|നേടി"""),
+        Rule("urgent_verify", eitherOrder("""(?:അടിയന്തിര|ഉടൻ|ഉടനടി)""", """(?:പരിശോധിക്ക|സ്ഥിരീകരിക്ക|അപ്ഡേറ്റ്)""")),
+    ),
+    "pa" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ਓਟੀਪੀ|OTP)""", """(?:ਸਾਂਝਾ|ਸ਼ੇਅਰ|ਭੇਜ|ਦੱਸ)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:ਕੇਵਾਈਸੀ|KYC)""", """(?:ਅਪਡੇਟ|ਮਿਆਦ|ਖਤਮ|ਬੰਦ|ਮੁਅੱਤਲ)""")),
+        Rule("account_lock", eitherOrder("""(?:ਖਾਤਾ|ਖਾਤੇ|ਅਕਾਊਂਟ)""", """(?:ਬਲਾਕ|ਬੰਦ|ਫ੍ਰੀਜ਼|ਮੁਅੱਤਲ)""")),
+        Rule("lottery_win", """(?:ਲਾਟਰੀ|ਇਨਾਮ|ਲੱਕੀ\s*ਡਰਾਅ)|ਜਿੱਤ"""),
+        Rule("urgent_verify", eitherOrder("""(?:ਤੁਰੰਤ|ਜਲਦੀ|ਫੌਰਨ)""", """(?:ਤਸਦੀਕ|ਵੈਰੀਫਾਈ|ਅਪਡੇਟ|ਪੁਸ਼ਟੀ)""")),
+    ),
+    "or" to listOf(
+        Rule("otp_share", eitherOrder("""(?:ଓଟିପି|OTP)""", """(?:ସେୟାର|ପଠାନ୍ତୁ|କୁହନ୍ତୁ|ଜଣାନ୍ତୁ)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:କେୱାଇସି|KYC)""", """(?:ଅପଡେଟ|ମିଆଦ|ଶେଷ|ବନ୍ଦ|ସ୍ଥଗିତ)""")),
+        Rule("account_lock", eitherOrder("""(?:ଖାତା|ଆକାଉଣ୍ଟ)""", """(?:ବ୍ଲକ|ବନ୍ଦ|ଫ୍ରିଜ|ସ୍ଥଗିତ)""")),
+        Rule("lottery_win", """(?:ଲଟେରୀ|ପୁରସ୍କାର|ଲକି\s*ଡ୍ର)|ଜିତି"""),
+        Rule("urgent_verify", eitherOrder("""(?:ତୁରନ୍ତ|ଶୀଘ୍ର|ଏବେ)""", """(?:ଯାଞ୍ଚ|ଭେରିଫାଏ|ଅପଡେଟ|ନିଶ୍ଚିତ)""")),
+    ),
+    "ur" to listOf(
+        // Urdu is RTL, but the patterns are plain character alternations and the
+        // engine matches logical order, so direction does not affect matching.
+        Rule("otp_share", eitherOrder("""(?:او\s*ٹی\s*پی|OTP)""", """(?:شیئر|بھیج|بتائ|بتا)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:کے\s*وائی\s*سی|KYC)""", """(?:اپ\s*ڈیٹ|میعاد|ختم|بند|معطل)""")),
+        Rule("account_lock", eitherOrder("""(?:اکاؤنٹ|کھاتہ)""", """(?:بلاک|بند|منجمد|معطل)""")),
+        Rule("lottery_win", """(?:لاٹری|انعام|قرعہ\s*اندازی)|جیت"""),
+        Rule("urgent_verify", eitherOrder("""(?:فوری|جلد|ابھی)""", """(?:تصدیق|توثیق|اپ\s*ڈیٹ|ویری\s*فائی)""")),
+    ),
 )
+
+/**
+ * Languages that take another language's rules wholesale.
+ *
+ * Marathi is written in Devanagari and shares this domain's vocabulary with
+ * Hindi almost exactly. Before #31 it scored zero on a message Hindi scored
+ * three rules on, and the only difference was a missing key.
+ *
+ * Stated here rather than implied by lookup order, so the borrowing is
+ * reviewable: `mr` having no rules of its own is a different claim from `mr`
+ * being covered.
+ */
+val SCRIPT_INHERITANCE: Map<String, String> = mapOf(
+    "mr" to "hi",
+)
+
+/**
+ * How much confidence each language's rules deserve.
+ *
+ * `unreviewed` is not a formality. A rule nobody who speaks the language has
+ * read is a guess, and a guessed rule that never fires is invisible — which is
+ * exactly how nine languages shipped with no coverage at all.
+ *
+ *   in-service — shipped, exercised by the corpus, corrected by #18
+ *   inherited  — borrows another language's rules; see [SCRIPT_INHERITANCE]
+ *   unreviewed — written from the concept list, NOT yet read by a native
+ *                speaker. They fire on the corpus rows, which proves the
+ *                plumbing, not the vocabulary.
+ */
+val REVIEW_STATUS: Map<String, String> = mapOf(
+    "en" to "in-service",
+    "hi" to "in-service",
+    "gu" to "in-service",
+    "mr" to "inherited",
+    "bn" to "unreviewed",
+    "ta" to "unreviewed",
+    "te" to "unreviewed",
+    "kn" to "unreviewed",
+    "ml" to "unreviewed",
+    "pa" to "unreviewed",
+    "or" to "unreviewed",
+    "ur" to "unreviewed",
+)
+
+/** The rules a language actually uses, following inheritance once. */
+private fun resolve(language: String): List<Rule> =
+    RULES[language] ?: SCRIPT_INHERITANCE[language]?.let { RULES[it] } ?: emptyList()
+
+/** Every supported language mapped to the rules it uses, inheritance resolved. */
+val RESOLVED_RULES: Map<String, List<Rule>> =
+    REVIEW_STATUS.keys.associateWith { resolve(it) }
 
 /**
  * Compiled once, at class-load. Rebuilding a [Regex] per message would recompile
@@ -105,12 +214,12 @@ val RULES: Map<String, List<Rule>> = mapOf(
  * reason, and the latency budget on a low-end handset does not have room for it.
  */
 private val COMPILED: Map<String, List<Pair<Rule, Regex>>> =
-    RULES.mapValues { (_, rules) ->
+    RESOLVED_RULES.mapValues { (_, rules) ->
         rules.map { rule -> rule to Regex(rule.pattern, RegexOption.IGNORE_CASE) }
     }
 
-/** The languages this engine has rules for. */
-val supportedLanguages: Set<String> get() = RULES.keys
+/** The languages this engine has rules for, inheritance included. */
+val supportedLanguages: Set<String> get() = RESOLVED_RULES.keys
 
 /**
  * Every rule that fired, with the substring that tripped it.

@@ -47,6 +47,11 @@ class RuleCorpusTest {
             "lottery_win", "refund_click", "urgent_verify",
         )
 
+        /** Mirrors LanguageCode in backend/app/routes/scan.py. */
+        val LANGUAGES = setOf(
+            "en", "hi", "gu", "mr", "bn", "ta", "te", "kn", "ml", "pa", "or", "ur",
+        )
+
         /**
          * Walks up from the module directory to find the repo root. Hardcoding
          * a relative path would break the moment the module moves, and the
@@ -192,5 +197,58 @@ class RuleCorpusTest {
     @Test
     fun `offlineFlag stays backwards compatible`() {
         assertTrue(offlineFlag("Share your OTP now", "en").isNotEmpty())
+    }
+
+    // --- Language coverage (#31) --------------------------------------------
+
+    @Test
+    fun `every supported language has rules`() {
+        // Before #31, nine of twelve languages had no rules, so a scam in those
+        // languages fired nothing at all. This assertion is what stops a
+        // thirteenth language being added the same way.
+        val missing = LANGUAGES - RESOLVED_RULES.keys
+        assertTrue(
+            missing.isEmpty(),
+            "no offline rule coverage for: ${missing.sorted()}. Every language needs " +
+                "native rules, or an entry in SCRIPT_INHERITANCE pointing at a " +
+                "language whose script it shares.",
+        )
+        RESOLVED_RULES.forEach { (language, rules) ->
+            assertTrue(rules.isNotEmpty(), "$language resolves to an empty rule list")
+        }
+    }
+
+    @Test
+    fun `every language has a stated review status`() {
+        assertEquals(LANGUAGES, REVIEW_STATUS.keys, "REVIEW_STATUS must cover every language")
+        val allowed = setOf("in-service", "inherited", "unreviewed")
+        REVIEW_STATUS.forEach { (language, status) ->
+            assertTrue(status in allowed, "$language has unknown review status '$status'")
+        }
+    }
+
+    @Test
+    fun `inherited languages point at a language that has rules`() {
+        SCRIPT_INHERITANCE.forEach { (child, parent) ->
+            assertTrue(
+                RULES[parent]?.isNotEmpty() == true,
+                "$child inherits from $parent, which has no rules of its own",
+            )
+            assertEquals("inherited", REVIEW_STATUS[child], "$child should be marked inherited")
+        }
+    }
+
+    @Test
+    fun `the language tables match the Python engine`() {
+        // The two engines are held together by the corpus for behaviour, but
+        // these tables are structure rather than behaviour, so nothing else
+        // would catch them drifting. Hardcoded from rule_engine.py deliberately:
+        // if that file changes, this fails and someone has to look.
+        assertEquals(mapOf("mr" to "hi"), SCRIPT_INHERITANCE)
+        assertEquals(
+            setOf("en", "hi", "gu", "bn", "ta", "te", "kn", "ml", "pa", "or", "ur"),
+            RULES.keys,
+            "languages with native rules have drifted from the Python engine",
+        )
     }
 }
