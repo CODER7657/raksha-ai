@@ -10,10 +10,12 @@ name: Provider smoke check
 # minutes a month against the 2,000 a private repo gets. The keep-alive ping was
 # moved off a schedule because */5 would have cost 8,640; this is not that.
 #
-# SECRETS REQUIRED. GROQ_API_KEY and GEMINI_API_KEY must be set under
-# Settings -> Secrets and variables -> Actions. Without them the script reports
-# every rung as SKIP and passes, so a missing secret shows up as a suspiciously
-# quiet run rather than a false alarm.
+# SECRETS REQUIRED. Four of them, under Settings -> Secrets and variables ->
+# Actions: GROQ_API_KEY and GEMINI_API_KEY for the interactive pool, and the
+# _BATCH pair for the agents (#51). Without them the script reports every rung
+# as SKIP and passes, so a missing secret shows up as a suspiciously quiet run
+# rather than a false alarm - which is a real failure mode, since a check that
+# silently examines nothing looks identical to one that found nothing wrong.
 
 on:
   schedule:
@@ -46,8 +48,18 @@ jobs:
       - name: Check every provider rung
         working-directory: backend
         env:
+          # Both pools. They are separate accounts (#51), so they expire, get
+          # revoked and hit quota separately - and a check that only watches one
+          # of them reports healthy while the other is dead, which is the #45
+          # failure with an extra step.
+          #
+          # The interactive pair is the more important half: those keys serve
+          # live scans, so their failure is a user with no verdict. The batch
+          # pair only stops the nightly agents.
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY_BATCH: ${{ secrets.GROQ_API_KEY_BATCH }}
+          GEMINI_API_KEY_BATCH: ${{ secrets.GEMINI_API_KEY_BATCH }}
           SUPABASE_URL: https://stub.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: stub-key-not-used-by-this-check
         run: python scripts/check_providers.py
