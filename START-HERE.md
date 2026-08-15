@@ -35,11 +35,17 @@ If you internalise one sentence before writing code, make it this one:
 None of this was written down, and none of it is discoverable from the code —
 you would have to already know. Recording it so nobody has to guess again.
 
-| Piece | Where | Notes |
-|---|---|---|
-| Backend | Render, free tier — `https://raksha-ai-c5yu.onrender.com` | Sleeps after ~15 min idle; cold start is 40-50s |
-| Frontend | Vercel | Deployed per push to `master` |
-| Database | Supabase (Postgres + pgvector) | Migrations in `supabase/migrations/`, applied by hand via the SQL editor |
+| Piece | Where | Deploys | Notes |
+|---|---|---|---|
+| Backend | Render, free tier — `https://raksha-ai-c5yu.onrender.com` | **Manually.** Auto-deploy is off | Sleeps after ~15 min idle; cold start is 40-50s |
+| Frontend | Vercel | Automatically, per push to `master` | |
+| Database | Supabase (Postgres + pgvector) | **Manually.** By hand in the SQL editor | Migrations in `supabase/migrations/` |
+
+**A merge is not a deploy.** Two of the three above need a human, and the first
+version of this table did not say so — which is how #18 merged and production
+ran without `trace` for a while afterwards, with everyone assuming `master` was
+live. If you have merged something that touches the backend, it is not in front
+of a user until someone clicks deploy.
 
 **Config that exists only in a dashboard.** These are not in the repo and cannot
 be inferred from it:
@@ -58,6 +64,40 @@ be inferred from it:
 `/health` every 5 minutes — see the reasoning in `.github/workflows/keep-alive.yml`
 for why it is not a GitHub Actions schedule. If a request takes ~45s, that pinger
 has stopped working.
+
+### After merging a backend change
+
+In this order. The order is the whole point: the code assumes the schema, so a
+deploy that lands before its migration fails every request that touches the new
+column. #18 was explicit about this — it wrote `scans.trace`, and deploying it
+against an unmigrated database would have failed **every scan**.
+
+1. **Migration first, if there is one.** Open the SQL file under
+   `supabase/migrations/`, run it in the Supabase SQL editor, and confirm it
+   reports success. Migrations here are additive by convention, so this is safe
+   to do before the code that uses them.
+2. **Deploy the backend.** Render dashboard → the service → **Manual Deploy** →
+   **Deploy latest commit**.
+3. **Check it came up.** `curl https://raksha-ai-c5yu.onrender.com/health`
+   should return `{"status":"ok"}`. A 40-50s response means it was asleep, not
+   broken — but see the pinger note above.
+4. **Verify the change is actually live.** `/openapi.json` is a useful
+   fingerprint when the change touches a response model: after #18, `ScanResult`
+   gained a `trace` field, which is how we confirmed the deploy rather than
+   assuming it. For changes with no API-surface effect, run the thing you
+   changed.
+
+### After changing a provider or model id
+
+Run the smoke check before assuming it works:
+
+```bash
+cd backend && python scripts/check_providers.py
+```
+
+It calls each rung once and distinguishes a dead model from a rate limit. A
+retired model id is invisible to the test suite — that is how `gemini-1.5-flash`
+sat dead in two separate files (#45, #56).
 
 ## 2. One-time machine setup
 
