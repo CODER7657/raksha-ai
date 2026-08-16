@@ -81,7 +81,25 @@ export interface RetrievalCoverage {
   skipped?: string
 }
 
+/** Whether a speaker of this language has read its detection rules (#89).
+ *
+ * Two booleans rather than one, because one would mislead in whichever
+ * direction it was set. Every language falls back to the **English** rules,
+ * which are reviewed — so a code-mixed message ("your KYC is expiring, share
+ * OTP") is caught by reviewed rules in all twelve languages. What is unreviewed
+ * in eight of them is detection of text written wholly in the language's own
+ * script. */
+export interface RuleReview {
+  status: 'in-service' | 'inherited' | 'unreviewed'
+  native_reviewed: boolean
+  code_mixed_reviewed: boolean
+  /** `mr` borrows Hindi's rules because the vocabulary genuinely overlaps.
+   * Weaker than review, stronger than nothing, and its own claim. */
+  inherited_from: string | null
+}
+
 export interface ScanTrace {
+  rule_review?: RuleReview
   offline_rules_fired?: OfflineRuleHit[]
   retrieved_patterns?: RetrievedPattern[]
   retrieval?: RetrievalCoverage

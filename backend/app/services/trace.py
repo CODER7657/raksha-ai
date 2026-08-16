@@ -27,18 +27,59 @@ from app.services.rag import (
     RetrievedPattern,
     language_is_covered,
 )
-from app.services.rule_engine import RuleHit
+from app.services.rule_engine import REVIEW_STATUS, RuleHit
+
+
+def rule_review(language: str) -> dict[str, Any]:
+    """Whether a speaker of this language has read its detection rules.
+
+    Exposed per verdict because a user is entitled to know how much to trust the
+    one in front of them, and `REVIEW_STATUS` currently reaches only the
+    benchmark payload — which no user sees.
+
+    The distinction that matters, and the reason this is not a single boolean:
+    every language falls back to the **English** rules, which are reviewed. So a
+    code-mixed message ("your KYC is expiring, share OTP") is caught by reviewed
+    rules in all twelve languages. What is unreviewed is detection of text
+    written wholly in the language's own script. Reporting that as "this
+    language is unchecked" would overstate the gap as badly as saying nothing
+    understates it.
+    """
+    status = REVIEW_STATUS.get(language, "unreviewed")
+    return {
+        "status": status,
+        # True when the native-script rules have been read by a speaker.
+        "native_reviewed": status == "in-service",
+        # Derived, not asserted. This is true *because* two separate things
+        # are currently true: the English rules are `in-service`, and
+        # `offline_rule_hits` appends them to every language. Neither is a law
+        # of nature — dropping the English fallback is the obvious lever if
+        # cross-language false positives ever become a problem.
+        #
+        # Hardcoded, this field would keep claiming reviewed code-mixed cover
+        # on the day someone removes it, and tell users something false about
+        # a verdict. The English half is derived here; the fallback half is
+        # pinned by `test_every_language_falls_back_to_the_english_rules`,
+        # because it cannot be read from this module.
+        "code_mixed_reviewed": REVIEW_STATUS.get("en") == "in-service",
+        # `inherited` is its own claim — mr borrows Hindi's rules because the
+        # vocabulary genuinely overlaps, which is weaker than review and
+        # stronger than nothing.
+        "inherited_from": "hi" if status == "inherited" else None,
+    }
 
 
 def build_trace(
     hits: list[RuleHit],
     patterns: list[RetrievedPattern],
     classification: Classification | None,
+    language: str = "en",
 ) -> dict[str, Any]:
     """The trace as the frontend consumes it. `classification` is None on the
     degraded path, where the offline rules alone produced the verdict and
     there is no model to stamp."""
     trace: dict[str, Any] = {
+        "rule_review": rule_review(language),
         "offline_rules_fired": [
             {
                 "rule_id": hit.rule_id,
@@ -104,6 +145,7 @@ def build_trace_from_cache(
     provider: str,
     model: str,
     cached_at: str | None,
+    language: str = "en",
 ) -> dict[str, Any]:
     """The trace for a verdict served from the cache (#48).
 
@@ -128,6 +170,10 @@ def build_trace_from_cache(
     current rather than replayed.
     """
     return {
+        # Reported on the cached path too. The rules still ran on this scan —
+        # only the classification was reused — so how much a speaker has checked
+        # them is exactly as relevant as on a fresh verdict.
+        "rule_review": rule_review(language),
         "offline_rules_fired": [
             {
                 "rule_id": hit.rule_id,

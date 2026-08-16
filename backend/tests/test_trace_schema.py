@@ -162,3 +162,30 @@ def test_the_schema_explains_every_optional_field():
     for name, spec in FIELDS.items():
         if not spec.get("required"):
             assert spec.get("why"), f"'{name}' is optional and the schema does not say when"
+
+
+def test_every_object_field_describes_its_shape_the_same_way():
+    """`rule_review` arrived nesting its sub-shape under `fields` while
+    `retrieval`, `model` and `audit` all used `properties` — two names for one
+    concept, inside the file whose whole job is stopping that.
+
+    Nothing caught it, because the other assertions read
+    `FIELDS["retrieval"]["properties"]` by name rather than checking the schema
+    agrees with itself. Raised on #101; added here so the next object field
+    cannot pick either.
+    """
+    objects = {
+        name: spec for name, spec in FIELDS.items() if spec.get("type") == "object"
+    }
+    assert objects, "no object-typed fields — has the schema shape changed?"
+
+    wrong = {
+        name: sorted(set(spec) & {"fields", "properties"})
+        for name, spec in objects.items()
+        if "properties" not in spec
+    }
+    assert not wrong, (
+        f"these object fields do not use `properties` to describe their shape: {wrong}. "
+        f"One name for one concept — `properties`, since it is what the rest use and "
+        f"the JSON-Schema convention the file already follows."
+    )

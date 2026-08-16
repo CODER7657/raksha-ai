@@ -130,3 +130,41 @@ def test_the_migration_forbids_an_unapproved_agent_pattern():
     # cannot change a return type, and without the drop the migration fails
     # halfway with the columns already added.
     assert "drop function if exists public.match_scam_patterns" in sql
+
+
+# --- what `code_mixed_reviewed` actually rests on (#101 review) -------------
+
+
+def test_every_language_falls_back_to_the_english_rules():
+    """`trace.rule_review.code_mixed_reviewed` is derived from the English
+    rules being reviewed. That inference also needs the English rules to
+    actually *run* for every language — which lives in `offline_rule_hits`, not
+    in `trace.py`, so deriving alone cannot catch its removal.
+
+    If the fallback is ever dropped, this fails and whoever dropped it has to
+    decide what the trace should now tell a Tamil user, rather than the payload
+    quietly continuing to promise cover that is gone.
+    """
+    from app.services.rule_engine import REVIEW_STATUS, offline_rule_hits
+
+    english_content = "Your KYC is expiring. Please share OTP or your account will be blocked."
+
+    for language in REVIEW_STATUS:
+        fired = {hit.rule_id for hit in offline_rule_hits(english_content, language)}
+        assert fired, (
+            f"English-content message fired nothing in '{language}'. The English "
+            f"fallback in offline_rule_hits has been removed or narrowed, so "
+            f"trace.rule_review.code_mixed_reviewed is now claiming cover that "
+            f"does not exist."
+        )
+
+
+def test_code_mixed_cover_is_derived_from_english_being_reviewed(monkeypatch):
+    """Not a constant. Were English ever to stop being reviewed, the claim has
+    to stop with it."""
+    from app.services import trace as trace_service
+
+    assert trace_service.rule_review("ta")["code_mixed_reviewed"] is True
+
+    monkeypatch.setitem(trace_service.REVIEW_STATUS, "en", "unreviewed")
+    assert trace_service.rule_review("ta")["code_mixed_reviewed"] is False
