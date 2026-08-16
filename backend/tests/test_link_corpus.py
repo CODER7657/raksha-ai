@@ -62,11 +62,22 @@ CORPUS = pathlib.Path(__file__).resolve().parents[2] / "testdata" / "link_corpus
 #: Raised only by a deliberate edit. See `known_gap` rows for the reasons.
 EXPECTED_KNOWN_GAPS = 3
 
-#: Recall floor. Below this something has regressed; above it, raise the floor.
+# --- these are floors, not targets ----------------------------------------
+#
+# Both sit just under the numbers measured when this corpus was written, which
+# is the correct shape for a regression guard and the wrong shape for a goal.
+# The failure mode is somebody reading 0.80 as "80% recall is what we are aiming
+# for" and stopping there. Nothing is aiming at these; they exist so a change
+# that quietly makes detection worse fails loudly.
+#
+# Raise them when the real numbers move up. Never lower them to make a change
+# pass — that is the change telling you something.
+
+#: Measured 0.864 at the time of writing.
 MIN_RECALL = 0.80
 
-#: Precision floor. Counts `weak_signal` rows against us on purpose — they are a
-#: real cost even though the signals are true.
+#: Measured 0.826. Counts `weak_signal` rows against us on purpose: those
+#: signals are true, and they still cost something.
 MIN_PRECISION = 0.75
 
 ROWS = [json.loads(line) for line in CORPUS.read_text(encoding="utf-8").splitlines() if line.strip()]
