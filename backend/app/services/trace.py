@@ -27,7 +27,12 @@ from app.services.rag import (
     RetrievedPattern,
     language_is_covered,
 )
-from app.services.rule_engine import REVIEW_STATUS, RuleHit
+from app.services.rule_engine import (
+    REVIEW_STATUS,
+    REVIEW_VIA,
+    SCRIPT_INHERITANCE,
+    RuleHit,
+)
 
 
 def rule_review(language: str) -> dict[str, Any]:
@@ -65,7 +70,24 @@ def rule_review(language: str) -> dict[str, Any]:
         # `inherited` is its own claim — mr borrows Hindi's rules because the
         # vocabulary genuinely overlaps, which is weaker than review and
         # stronger than nothing.
-        "inherited_from": "hi" if status == "inherited" else None,
+        #
+        # Read from SCRIPT_INHERITANCE rather than hardcoded: `hi` is the only
+        # parent today, and a second one would otherwise be reported as Hindi.
+        "inherited_from": SCRIPT_INHERITANCE.get(language) if status == "inherited" else None,
+        # Which language a proxy review went through, when there was one.
+        #
+        # A separate field from `inherited_from`, and the distinction is not
+        # pedantry: they answer questions about different objects. `inherited_from`
+        # says *whose rules these are*. `reviewed_via` says *who read them, and
+        # through what*. Marathi inheriting Hindi's rules involves no human at
+        # all; a Hindi speaker reading transliterated Urdu is a person making a
+        # judgement. Collapsing them would put two unrelated facts in one field
+        # and leave a reader unable to tell which they were looking at.
+        #
+        # Language code, never a reviewer's name: the name is unnecessary for
+        # the claim, and it would be personal data in a payload handed to every
+        # client. Who reviewed it lives in the PR that flipped the status.
+        "reviewed_via": REVIEW_VIA.get(language) if status == "reviewed-by-proxy" else None,
     }
 
 

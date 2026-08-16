@@ -42,6 +42,15 @@ export interface ModelStamp {
   provider: string
   model: string
   prompt_version: string
+  /** True when this verdict was served from the cache rather than judged now
+   * (#68). The backend has sent it since the cache landed and this type did not
+   * declare it, so the client could not render it — meaning two identical
+   * verdicts were indistinguishable from two independent judgements, which is
+   * exactly what stamping it was meant to prevent. */
+  cached?: boolean
+  /** When the cached verdict was originally judged. Present only on a cache
+   * hit; `null` where the stored row predates the field. */
+  first_judged_at?: string | null
 }
 
 /** Position of this verdict in the append-only, hash-chained audit log. */
@@ -90,12 +99,21 @@ export interface RetrievalCoverage {
  * in eight of them is detection of text written wholly in the language's own
  * script. */
 export interface RuleReview {
-  status: 'in-service' | 'inherited' | 'unreviewed'
+  status: 'in-service' | 'inherited' | 'reviewed-by-proxy' | 'unreviewed'
   native_reviewed: boolean
   code_mixed_reviewed: boolean
   /** `mr` borrows Hindi's rules because the vocabulary genuinely overlaps.
    * Weaker than review, stronger than nothing, and its own claim. */
   inherited_from: string | null
+  /** The language a `reviewed-by-proxy` review went through — someone read
+   * these rules via a language they do speak.
+   *
+   * Deliberately not folded into `inherited_from`: that says *whose rules
+   * these are*, this says *who read them, and through what*. Marathi
+   * inheriting Hindi's rules involves no human at all, so collapsing the two
+   * would leave a reader unable to tell a borrowed rule set from a reviewed
+   * one. A language code, never a person's name. */
+  reviewed_via: string | null
 }
 
 export interface ScanTrace {

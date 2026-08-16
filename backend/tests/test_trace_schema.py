@@ -155,6 +155,81 @@ def test_the_frontend_declares_nothing_the_backend_does_not_send():
     )
 
 
+#: Schema field -> the TypeScript interface that declares its inner shape.
+#:
+#: In the test rather than the schema so the contract file stays about the
+#: contract. `test_every_nested_shape_has_a_typescript_interface` stops it
+#: drifting in the direction that matters: a new object field with nowhere
+#: named to check it.
+NESTED_INTERFACES = {
+    "rule_review": "RuleReview",
+    "retrieval": "RetrievalCoverage",
+    "model": "ModelStamp",
+    "audit": "AuditRecord",
+    "offline_rules_fired": "OfflineRuleHit",
+    "retrieved_patterns": "RetrievedPattern",
+}
+
+
+def _nested_shape(spec: dict) -> dict | None:
+    return spec.get("properties") or spec.get("items")
+
+
+def test_every_nested_shape_has_a_typescript_interface():
+    for name, spec in FIELDS.items():
+        if _nested_shape(spec) is not None:
+            assert name in NESTED_INTERFACES, (
+                f"'{name}' has an inner shape and no TypeScript interface is "
+                f"named for it, so nothing checks the client declares it"
+            )
+
+
+def test_the_frontend_declares_every_nested_field():
+    """The direction the top-level check misses.
+
+    `ScanTrace` naming `rule_review` proves the client knows the object exists.
+    It proves nothing about the fields *inside* it — and that is where the schema
+    actually moves. `reviewed_via`, `code_mixed_reviewed` and `provenance` were
+    all added inside an object that was already declared.
+
+    Found by deleting `reviewed_via` from the TypeScript and watching this file
+    pass. A guard that only covers the outer layer reads as coverage and is not.
+    """
+    source = SCAN_RESULT_TS.read_text(encoding="utf-8")
+    problems = []
+
+    for name, interface in NESTED_INTERFACES.items():
+        described = set(_nested_shape(FIELDS[name]) or {})
+        declared = _declared_in_interface(source, interface)
+
+        for missing in sorted(described - declared):
+            problems.append(
+                f"{interface} does not declare '{missing}' — the backend sends "
+                f"it inside {name} and the client cannot render it"
+            )
+        for extra in sorted(declared - described):
+            problems.append(
+                f"{interface} declares '{extra}', which trace_schema.json does "
+                f"not describe inside {name}"
+            )
+
+    assert not problems, "\n".join(problems)
+
+
+def test_the_schema_uses_one_key_for_a_nested_shape():
+    """`properties` and `fields` both appeared for the same idea, inside the
+    file whose whole job is stopping two names for one concept."""
+    keys = {
+        key
+        for spec in FIELDS.values()
+        for key in ("properties", "fields")
+        if key in spec
+    }
+    assert keys <= {"properties"}, (
+        f"nested shapes are described under {sorted(keys)}; use 'properties'"
+    )
+
+
 def test_the_schema_explains_every_optional_field():
     """`optional` is a decision about when a legitimate verdict can lack the
     field. Left unexplained it becomes 'sometimes missing, nobody knows when',

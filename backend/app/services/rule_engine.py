@@ -254,11 +254,21 @@ SCRIPT_INHERITANCE: dict[str, str] = {
 #: exactly how nine languages shipped with no coverage at all. Recording the
 #: status makes the gap countable instead of assumed away.
 #:
-#:   in-service  — shipped, exercised by the corpus, corrected by #18
-#:   inherited   — borrows another language's rules; see SCRIPT_INHERITANCE
-#:   unreviewed  — patterns written from the concept list, NOT yet read by a
-#:                 native speaker. They fire on the corpus rows, which proves
-#:                 the plumbing, not the vocabulary.
+#:   in-service         — shipped, exercised by the corpus, corrected by #18
+#:   inherited          — borrows another language's rules; see
+#:                        SCRIPT_INHERITANCE. No human read anything; this is a
+#:                        claim about the rules, not about reviewing
+#:   reviewed-by-proxy  — read by someone who does not speak the language, via
+#:                        one they do. See REVIEW_VIA
+#:   unreviewed         — patterns written from the concept list, NOT yet read
+#:                        by a native speaker. They fire on the corpus rows,
+#:                        which proves the plumbing, not the vocabulary.
+#:
+#: **`reviewed-by-proxy` never accumulates into `in-service`.** Two proxy
+#: reviews are not a native one, and there is no path between them except an
+#: actual speaker of that language reading the rules. Stated here because it is
+#: the reasoning someone will otherwise talk themselves into when the eighth
+#: language is the last one left.
 REVIEW_STATUS: dict[str, str] = {
     "en": "in-service",
     "hi": "in-service",
@@ -273,6 +283,31 @@ REVIEW_STATUS: dict[str, str] = {
     "or": "unreviewed",
     "ur": "unreviewed",
 }
+
+#: For a `reviewed-by-proxy` language, which language the review went through.
+#:
+#: Empty today. It exists ahead of its first entry because the alternative was
+#: agreeing the fourth status in a comment thread and implementing it under
+#: time pressure when a filled sheet came back — and a returned review with
+#: nowhere honest to land is the review-that-never-happened problem in a new
+#: place.
+#:
+#: The first entry will be `ur -> hi`: `testdata/review/ur-rule-review-devanagari.md`
+#: transliterates every Urdu rule word into Devanagari so a Hindi speaker can
+#: read it. That works because Hindi and Urdu are one spoken language in two
+#: scripts, and it works *least well* exactly where they diverge — the
+#: Persian/Arabic-derived vocabulary the sheet marks with a warning.
+#:
+#: So a proxy review is strong on the shared register and weak on the divergent
+#: one. `docs/RULE-PARITY.md` §02b carries that; it is deliberately not in the
+#: trace, which should not have to explain Indo-Aryan language history to
+#: report a verdict.
+#:
+#: Separate map rather than a richer REVIEW_STATUS value, mirroring
+#: SCRIPT_INHERITANCE for the same reason it exists: the borrowing stays
+#: reviewable as a table somebody can read, instead of being encoded in a
+#: string that has to be parsed.
+REVIEW_VIA: dict[str, str] = {}
 
 
 def _resolve(language: str) -> list[Rule]:
