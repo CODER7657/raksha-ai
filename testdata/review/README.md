@@ -60,9 +60,23 @@ From that, one PR per language, as #89 asks:
 `ta`, `te`, `bn` first — largest speaker populations among the eight, so the
 same effort protects more people.
 
-`ur` wants one extra pair of eyes: it is the only right-to-left language here.
-Web rendering is verified (computed `direction: rtl`, checked in #67 and #75),
-so what is open is the vocabulary, not the layout.
+`ur` has a second sheet, `ur-rule-review-devanagari.md`, for a **Hindi
+speaker**. Hindi and Urdu are the same spoken language in two scripts, and scam
+vocabulary is mostly English loanwords and everyday verbs rather than the
+high-register words where the two diverge — so a Hindi speaker can judge most
+of it from a transliteration.
+
+Most, not all. Extracting the vocabulary showed five words that *are*
+Persian/Arabic-derived — `معطل`, `منجمد`, `توثیق`, `قرعہ اندازی` — and the sheet
+marks them, because a Hindi speaker may find them unfamiliar even when they are
+correct Urdu. On those, "unsure" is a more useful answer than a guess.
+
+That review cannot make `ur` `in-service`. It is a weaker claim than a native
+reviewer and the table should say so — #89 proposes a separate
+`reviewed-by-proxy` value recording who reviewed it and through which language.
+
+RTL rendering is separately verified (computed `direction: rtl`, checked in #67
+and #75), so what is open for `ur` is vocabulary, not layout.
 
 `mr` is deliberately absent. It is `inherited` rather than `unreviewed` — it
 borrows Hindi's rules because the vocabulary genuinely overlaps. Worth a
