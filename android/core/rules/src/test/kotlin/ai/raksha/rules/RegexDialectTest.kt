@@ -106,13 +106,62 @@ class RegexDialectTest {
     }
 
     @Test
-    fun `the gap does not cross sentence punctuation`() {
-        // Shared with the Python by construction, and the reason
-        // xfail_cross_sentence_kyc is an expected failure rather than a bug.
-        assertTrue(offlineRuleHits("Your KYC is expiring today", "en").any { it.ruleId == "kyc_expiry" })
+    fun `the strict gap does not cross sentence punctuation`() {
+        // GAP is load-bearing, and this is the case it carries. The OTP and the
+        // word "share" sit in different sentences, so a gap that could cross the
+        // boundary would fire otp_share on the single most common legitimate
+        // bank SMS there is — we would be warning about the message that tells
+        // the user not to be scammed.
+        //
+        // Measured against CPython's re on the same two strings:
+        //   "Please share your OTP now"                          -> ['otp_share']
+        //   "OTP for your login is 449281. Never share it ..."    -> []
+        //
+        // en-benign-otp-warning-001 pins the second string in the shared corpus
+        // too. This test is not redundant with it: the corpus row fails with
+        // "expected no rules, got otp_share", while this one names the constant
+        // that is responsible, so whoever widened GAP is told what they broke.
+        assertTrue(
+            offlineRuleHits("Please share your OTP now", "en").any { it.ruleId == "otp_share" },
+            "Within one sentence, otp_share must still fire — otherwise this " +
+                "test would pass with the rule simply broken.",
+        )
         assertFalse(
-            offlineRuleHits("Your KYC is pending. Please update it now.", "en")
+            offlineRuleHits("OTP for your login is 449281. Never share it with anyone. -HDFC Bank", "en")
+                .any { it.ruleId == "otp_share" },
+            "GAP must not cross '.', or the benign bank OTP warning becomes a " +
+                "false positive. Python agrees: no rules fire on this text.",
+        )
+    }
+
+    @Test
+    fun `the looser gap does cross one sentence boundary`() {
+        // The counterpart, and deliberately the opposite answer. GAP_ACROSS
+        // exists because scam copy splits across sentences constantly, and KYC
+        // notices have no benign shape that depends on the boundary the way the
+        // OTP warning does. #23 made that a per-rule judgement rather than a
+        // global setting.
+        //
+        // This assertion used to read assertFalse, with a comment claiming the
+        // strict gap was "shared with the Python by construction" and citing an
+        // xfail that #23 had already closed. It passed only because the Kotlin
+        // engine had not received #23 — it pinned the divergence rather than the
+        // specification, and #128 removing that divergence is what surfaced it.
+        //
+        // Measured against CPython's re:
+        //   "Your KYC verification is pending. Please update it now." -> ['kyc_expiry']
+        //   "Your KYC is expiring today"                              -> ['kyc_expiry']
+        assertTrue(
+            offlineRuleHits("Your KYC is expiring today", "en").any { it.ruleId == "kyc_expiry" },
+            "The within-sentence case must fire, or the cross-sentence " +
+                "assertion below proves nothing about the gap.",
+        )
+        assertTrue(
+            offlineRuleHits("Your KYC verification is pending. Please update it now.", "en")
                 .any { it.ruleId == "kyc_expiry" },
+            "kyc_expiry uses GAP_ACROSS, so it may cross one sentence boundary. " +
+                "en-kyc-cross-sentence-002 enforces this same text in the shared " +
+                "corpus; if this fails, the two engines have diverged again.",
         )
     }
 }
