@@ -8,7 +8,7 @@ from app.core.auth import get_current_user
 from app.core.config import get_settings
 from app.core.supabase_client import get_supabase
 from app.rate_limit import limiter
-from app.services import llm, rag, stt, verdict_cache
+from app.services import llm, rag, safe_actions, stt, verdict_cache
 from app.services import trace as trace_service
 from app.services.rule_engine import offline_rule_hits
 
@@ -86,6 +86,25 @@ def _append_audit_record(
         return None
 
 
+def _degraded_verdict(hits: list) -> dict:
+    """The verdict when no model answered — either the providers are down or we
+    refused what one of them said.
+
+    Its action comes from the same closed table the classifier now chooses from
+    (#113), so there is exactly one place user-facing advice is written. A second
+    copy here is how the two would eventually disagree about what we tell people.
+    """
+    action_id, action_text = safe_actions.resolve_action(safe_actions.FALLBACK_ACTION)
+    return {
+        "risk_score": 70,
+        "verdict": "suspicious",
+        "flagged_phrases": [hit.matched_text for hit in hits],
+        "explanation": "AI service unavailable — flagged by offline pattern rules as a precaution.",
+        "recommended_action_id": action_id,
+        "recommended_action": action_text,
+    }
+
+
 def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) -> dict:
     """Shared by both /scan/text and /scan/audio once we have plain text in
     hand — same RAG retrieval + LLM classification + offline fallback +
@@ -124,15 +143,27 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
     try:
         classification = llm.classify_message(text, language, context_block)
         result = classification.result
+    except safe_actions.UnsafeOutput:
+        # The model was steered into writing something we will not repeat (#113).
+        #
+        # Handled with the provider failures below rather than separately, and
+        # that is the point: an attacker who successfully injects must not
+        # thereby deny the user their warning. The offline rules already fired on
+        # this text, so the fall-through produces a real conservative verdict
+        # rather than an error page.
+        #
+        # Logged apart from a provider outage, because "both providers failed"
+        # and "someone attacked the classifier" want different responses and
+        # #45 is the standing lesson about collapsing two causes into one line.
+        logger.warning(
+            "Rejected classifier output as unsafe; falling back to offline rules",
+            exc_info=True,
+        )
+        classification = None
+        result = _degraded_verdict(hits)
     except Exception:
         if hits:
-            result = {
-                "risk_score": 70,
-                "verdict": "suspicious",
-                "flagged_phrases": [hit.matched_text for hit in hits],
-                "explanation": "AI service unavailable — flagged by offline pattern rules as a precaution.",
-                "recommended_action": "Do not share OTP/personal details. Verify with the official app/helpline before acting.",
-            }
+            result = _degraded_verdict(hits)
         else:
             raise HTTPException(status_code=503, detail="Detection service temporarily unavailable")
 
