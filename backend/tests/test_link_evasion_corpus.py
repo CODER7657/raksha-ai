@@ -65,19 +65,38 @@ def _rows() -> list[dict]:
 ROWS = _rows()
 
 
+def _evaluate(row: dict) -> list:
+    return link_signals.evaluate(row["url"], display_text=row.get("display_text"))
+
+
 def test_the_corpus_is_not_empty_and_is_well_formed():
     assert ROWS
     for row in ROWS:
         assert set(row) >= {"id", "technique", "url", "expect", "note"}
-        assert row["expect"] in {"caught", "known_gap"}
+        assert row["expect"] in {"caught", "known_gap", "benign"}
 
 
 @pytest.mark.parametrize("row", [r for r in ROWS if r["expect"] == "caught"], ids=lambda r: r["id"])
 def test_each_caught_technique_stays_caught(row):
     """A regression here means a mutation that used to be detected now walks
     through — which is a production gap, not a test failure."""
-    signals = link_signals.evaluate(row["url"])
-    assert signals, f"{row['id']} ({row['technique']}) evaded: {row['url']}"
+    assert _evaluate(row), f"{row['id']} ({row['technique']}) evaded: {row['url']}"
+
+
+@pytest.mark.parametrize("row", [r for r in ROWS if r["expect"] == "benign"], ids=lambda r: r["id"])
+def test_each_benign_pair_stays_quiet(row):
+    """The half that costs users rather than catches attackers.
+
+    A2's benign set is larger than its phishing set, and a warning on a real
+    bank during a fraud alert is us causing the harm. These rows fail if a
+    tightening makes the checks louder, which is the direction tightening
+    always goes.
+    """
+    signals = _evaluate(row)
+    assert not signals, (
+        f"{row['id']} ({row['technique']}) now fires "
+        f"{[s.name for s in signals]} on a benign pair"
+    )
 
 
 @pytest.mark.parametrize(
@@ -100,8 +119,10 @@ def test_the_number_of_accepted_gaps_does_not_drift():
 
 
 def test_the_reported_rate_matches_what_actually_happens():
-    """The docstring above claims 29 of 31. This checks the claim rather than
-    trusting it — a number in a comment rots the first time somebody edits the
-    corpus."""
-    caught = sum(1 for row in ROWS if link_signals.evaluate(row["url"]))
-    assert caught == len(ROWS) - EXPECTED_KNOWN_GAPS
+    """Checks the claim rather than trusting it — a number in a comment rots the
+    first time somebody edits the corpus. Benign rows are excluded: they are
+    supposed to produce nothing, so counting them as misses would make the rate
+    fall every time the false-positive set grows."""
+    attacks = [r for r in ROWS if r["expect"] in {"caught", "known_gap"}]
+    caught = sum(1 for row in attacks if _evaluate(row))
+    assert caught == len(attacks) - EXPECTED_KNOWN_GAPS
