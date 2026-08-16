@@ -138,7 +138,7 @@ RULES: dict[str, list[Rule]] = {
                 # bataiye/batao "tell", bhejo/bhejein "send", denge/do "give",
                 # plus the code-mixed "share karo" that is neither language.
                 r"(?:शेयर|साझा|भेज|बताइए|बताएं"
-                r"|bata\w*|bhej\w*|sha?re\s*kar\w*|send\s*kar\w*|de\s*d\w*)",
+                r"|bata[a-z]*|bhej[a-z]*|sha?re\s*kar[a-z]*|send\s*kar[a-z]*|de\s*d[a-z]*)",
             ),
         ),
         Rule(
@@ -146,7 +146,7 @@ RULES: dict[str, list[Rule]] = {
             _either_order(
                 r"(?:केवाईसी|KYC)",
                 r"(?:अपडेट|समाप्त|एक्सपायर|बंद|निलंबित"
-                r"|update\s*kar\w*|samapt|khatam|band\s*ho)",
+                r"|update\s*kar[a-z]*|samapt|khatam|band\s*ho)",
                 _GAP_ACROSS,
             ),
         ),
@@ -154,15 +154,15 @@ RULES: dict[str, list[Rule]] = {
             "account_lock",
             _either_order(
                 r"(?:खाता|खाते|अकाउंट|khata|khaata|account)",
-                r"(?:ब्लॉक|बंद|फ्रीज|निलंबित|band\s*ho\w*|block\s*ho\w*|freeze)",
+                r"(?:ब्लॉक|बंद|फ्रीज|निलंबित|band\s*ho[a-z]*|block\s*ho[a-z]*|freeze)",
             ),
         ),
-        Rule("lottery_win", r"(?:लॉटरी|इनाम|पुरस्कार|lottery|inaam|inam)|जीत|jeet\w*"),
+        Rule("lottery_win", r"(?:लॉटरी|इनाम|पुरस्कार|lottery|inaam|inam)|जीत|jeet[a-z]*"),
         Rule(
             "urgent_verify",
             _either_order(
                 r"(?:तुरंत|जल्दी|शीघ्र|turant|jaldi|abhi)",
-                r"(?:सत्यापित|वेरिफ़ाई|अपडेट|पुष्टि|verify|update\s*kar\w*)",
+                r"(?:सत्यापित|वेरिफ़ाई|अपडेट|पुष्टि|verify|update\s*kar[a-z]*)",
             ),
         ),
     ],
