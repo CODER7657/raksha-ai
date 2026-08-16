@@ -175,10 +175,24 @@
   "_adding_a_field": [
     "1. Add it here first, with a `why`. If you cannot write the why, the field",
     "   probably belongs in a log rather than in a trace a bank reads.",
-    "2. Run backend/tests/test_trace_schema.py. It should now fail in both",
-    "   directions - if it does not, the test is not checking what you think.",
+    "2. Run backend/tests/test_trace_schema.py before touching anything else,",
+    "   and check WHICH failures you get rather than that there are some.",
+    "   A required field fails on both sides: the backend does not emit it,",
+    "   caught by test_every_required_field_is_emitted and by the cached-trace",
+    "   check, and the client does not declare it, caught by",
+    "   test_the_frontend_declares_every_trace_field.",
+    "   An OPTIONAL field fails the client side ONLY - one failure, not both.",
     "3. Emit it from trace.py and declare it in scanResult.ts.",
     "4. Optional or required is a real decision, not a default. Optional means",
-    "   'a legitimate verdict can lack this', and the `why` has to say when."
+    "   'a legitimate verdict can lack this', and the `why` has to say when.",
+    "   It also costs you a check. test_every_required_field_is_emitted skips",
+    "   optional fields deliberately - the degraded path omits `model` and is",
+    "   right to - so nothing detects a schema describing an optional field",
+    "   that trace.py never sends. Make one optional and you are that check.",
+    "5. Nested fields are covered separately and are where the schema actually",
+    "   moves. A new object field needs an entry in NESTED_INTERFACES, or",
+    "   test_every_nested_shape_has_a_typescript_interface fails - which is",
+    "   the guard that exists because the top-level one read as coverage and",
+    "   was not."
   ]
 }
