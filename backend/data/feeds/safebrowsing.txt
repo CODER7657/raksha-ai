@@ -1,0 +1,2 @@
+# safebrowsing — SHA-256 digests of canonicalised known-bad URLs, one per line.
+# Empty until scripts/refresh_threat_feeds.py has run. See data/feeds/README.md.
