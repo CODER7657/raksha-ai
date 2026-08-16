@@ -24,6 +24,9 @@
     <string name="warning_summary">From %1$s</string>
     <string name="warning_summary_no_sender">From an unknown sender</string>
     <string name="warning_reason_bullet">• %1$s</string>
+    <string name="call_channel_name">Caller warnings</string>
+    <string name="call_channel_description">Warns you when someone calling has already sent you a message that looked like a scam. Calls are never blocked, silenced or recorded.</string>
+    <string name="call_warning_summary">%1$s sent you a message Raksha flagged</string>
     <string name="selected_format">Selected: %1$s · %2$s · %3$s script · %4$s</string>
     <string name="settings_stored_count">%1$d message(s) stored on this phone</string>
 </resources>

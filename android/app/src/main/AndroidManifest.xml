@@ -124,6 +124,51 @@
             </intent-filter>
         </receiver>
 
+        <!--
+          LAYER 3, and the reason it could be built before Google answers.
+
+          A call screening app needs no permission in this file at all. It holds
+          ROLE_CALL_SCREENING, which the user grants through a system dialog -
+          no restricted permission, no Play declaration, no review queue. That
+          is why #116 §4 is the one interception layer whose schedule nobody
+          else controls while RECEIVE_SMS sits in the queue from #39.
+
+          It is also the only way to see an incoming caller's number before the
+          call is answered without READ_CALL_LOG, which is itself restricted.
+          The app still declares exactly two permissions.
+
+          REACH - measured against the SDK, not assumed, because §4 reads as
+          though this ships to everyone and it does not:
+
+            CallScreeningService     API 24
+            RoleManager              API 29  <- no role, no binding, below this
+            Call.Details
+              .getContactDisplayName API 30  <- no contact guard, below this
+
+          Below 29 the only route is replacing the user's dialer, which needs
+          CALL_PHONE and a whole dialer UI, and lands back in the restricted
+          queue this layer exists to avoid. So minSdk stays 24 and the feature
+          floor is 30, enforced in RakshaCallScreeningService rather than only
+          written down: screening without being able to recognise the user's own
+          contacts is the benign-half failure that gets a feature switched off,
+          and a user below the floor is told their Android version cannot do
+          this rather than shown a switch that does nothing.
+
+          BIND_SCREENING_SERVICE is held by the system, not by us. Declaring it
+          here is what stops any other app binding this service.
+
+          Not exported to anyone else's intent: the telecom stack is the only
+          caller, and it binds by action.
+        -->
+        <service
+            android:name=".call.RakshaCallScreeningService"
+            android:exported="true"
+            android:permission="android.permission.BIND_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

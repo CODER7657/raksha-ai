@@ -1,6 +1,7 @@
 package ai.raksha.app.core
 
 import android.content.Context
+import ai.raksha.app.call.CallReputation
 import ai.raksha.app.data.ScanStore
 import ai.raksha.app.data.SqliteScanStore
 
@@ -45,10 +46,34 @@ object ServiceLocator {
         }
     }
 
+    @Volatile
+    private var reputation: CallReputation? = null
+
+    /**
+     * Layer 1's set, shared between the screening service and the UI that
+     * reports how much is in it.
+     *
+     * One instance per process rather than one per caller, because it holds the
+     * loaded set: a screening service constructing its own would re-read the
+     * store on every call. Built over the same [ScanStore] as everything else,
+     * which is what makes clearing history clear reputation.
+     */
+    fun callReputation(context: Context): CallReputation {
+        reputation?.let { return it }
+        return synchronized(this) {
+            reputation ?: CallReputation(scanStore(context)).also { reputation = it }
+        }
+    }
+
     fun preferences(context: Context): ScanPreferences = ScanPreferences(context)
 
     /** Lets a test supply a fake, and undo it afterwards. */
     fun resetForTest(replacement: ScanStore? = null) {
-        synchronized(this) { store = replacement }
+        synchronized(this) {
+            store = replacement
+            // Dropped with the store it was built over, or the next test reads a
+            // reputation set belonging to the previous one's fake.
+            reputation = null
+        }
     }
 }

@@ -57,6 +57,23 @@ object SafeLog {
     }
 
     /**
+     * A call was screened, and whether the number was already known.
+     *
+     * **A boolean, deliberately — never the number.** A phone number is user
+     * data in exactly the way a message body is, and logcat is the same open
+     * door for both. There is nothing here to put one in: the caller cannot
+     * pass an identity even by accident, which is the same guarantee the rest of
+     * this object gives for message text.
+     *
+     * The duration is what the emulator measurements in #116 §4 read, and the
+     * boolean is what makes a run interpretable — "screened, not known" and
+     * "screened, known, warned" look identical otherwise.
+     */
+    fun callScreened(known: Boolean, durationMillis: Long) {
+        Log.i(TAG, "call screened: ${if (known) "number known" else "number not known"} in ${durationMillis}ms")
+    }
+
+    /**
      * Something failed. Takes a [Throwable], not a message — an exception's own
      * text can carry content if the thrower was careless, so only the class
      * name is recorded.

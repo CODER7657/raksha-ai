@@ -83,10 +83,14 @@ class MainActivity : ComponentActivity() {
     /** When Android last force-stopped us, if the user has not dismissed it. */
     private var interruptedAt by mutableStateOf<Long?>(null)
 
+    /** A trace a caller warning asked to open, consumed once by the nav host. */
+    private var openTraceForScanId by mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         blockObscuredTouches()
         handleShare(intent)
+        handleTraceRequest(intent)
         refreshState()
         setContent {
             RakshaTheme {
@@ -96,6 +100,8 @@ class MainActivity : ComponentActivity() {
                     // exit-reason history — and hands the protection screen down
                     // as a slot. Everything else is a ViewModel behind a route.
                     RakshaNavHost(
+                        openTraceForScanId = openTraceForScanId,
+                        onTraceOpened = { openTraceForScanId = null },
                         homeScreen = {
                             HomeScreen(
                                 sharedText = sharedText,
@@ -195,12 +201,32 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShare(intent)
+        handleTraceRequest(intent)
     }
 
     private fun handleShare(intent: Intent?) {
         if (intent?.action != Intent.ACTION_SEND) return
         if (intent.type != "text/plain") return
         sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+    }
+
+    /**
+     * A caller warning asking to open the message behind it.
+     *
+     * Constraint 1 is that a user can always see their own trace, and a warning
+     * about a *person* rather than a message has more to answer for than most:
+     * the app is saying something about someone who is ringing right now. Making
+     * the evidence one tap away is what keeps that from being "trust us".
+     *
+     * Cleared from the intent once read, so returning to the app later — or a
+     * configuration change — does not re-open a trace the user has navigated
+     * away from.
+     */
+    private fun handleTraceRequest(intent: Intent?) {
+        val scanId = intent?.getLongExtra(EXTRA_SCAN_ID, NO_SCAN) ?: NO_SCAN
+        if (scanId == NO_SCAN) return
+        intent?.removeExtra(EXTRA_SCAN_ID)
+        openTraceForScanId = scanId
     }
 
     /**
@@ -224,5 +250,12 @@ class MainActivity : ComponentActivity() {
         } else {
             requestSmsPermission.launch(missing.toTypedArray())
         }
+    }
+
+    companion object {
+        /** Set by a caller warning to open the scan that put the number in the set. */
+        const val EXTRA_SCAN_ID = "ai.raksha.app.extra.SCAN_ID"
+
+        private const val NO_SCAN = -1L
     }
 }
