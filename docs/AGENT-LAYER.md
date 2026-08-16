@@ -133,17 +133,50 @@ The page is hostile text. Treat it accordingly:
 
 ### Blocking policy — tiered, never on one signal
 
-| Confidence | Signals required | Action |
+| Confidence | Required | Action |
 |---|---|---|
 | **Confirmed** | Static red flags **AND** agent verdict **AND** (known-bad list **OR** credential-harvest form detected) | Auto-block, all users |
-| **High** | Two independent signals | Block for the reporting user; queue for human review |
+| **High** | Two independent **bases** — see below | Block for the reporting user; queue for human review |
 | **Medium** | Agent verdict only | Warn, do not block |
 | **Low** | Weak static signals | Log, no user-facing action |
+
+#### "Independent" means a distinct basis, not a distinct signal
+
+This started as "two independent signals" and that phrasing was wrong in a way
+that only showed up once #120 implemented it. Signals are not independent by
+virtue of being separate checks.
+
+`pаytm.xyz` with a Cyrillic **а** fires homograph detection, brand-lookalike
+distance, and suspicious-TLD — three signals, **one observation about one
+string**. A policy counting signals reads that as three confirmations and
+auto-blocks every user on a single fact.
+
+So each signal declares a **basis**, and the tier counts distinct bases:
+
+| Basis | Signals sharing it |
+|---|---|
+| The string itself | homograph, brand distance, entropy, TLD |
+| Known-bad feeds | Safe Browsing, URLhaus, OpenPhish, PhishTank — **one basis**, because they ingest each other |
+| The domain's age | registration date |
+| The display/target pair | link text disagreeing with its destination |
+| The page, once fetched | credential-harvest form, agent verdict |
+
+Feeds share a basis for the same reason the Confirmed row spends exactly one
+slot on them: four feeds agreeing is frequently one source counted four times.
+
+The display/target pair is worth noting as genuinely independent — it is an
+observation about the *relationship* between two strings, so neither can explain
+it away. That also makes it fragile: #120 shipped with `lstrip` silently
+suppressing it, and one of the few independent bases was switched off.
 
 **Auto-blocking on an agent verdict alone is prohibited.** The failure mode —
 blocking a genuine bank domain during a fraud alert — causes the harm we exist to
 prevent. A global blocklist entry affects every user, so it needs a second
-independent signal or a human.
+independent basis or a human.
+
+**At least one basis must be deterministic**, meaning immune to page content. A
+model that has just read attacker-controlled text is the worst possible sole
+witness to its own conclusion.
 
 **Every block is appealable and reversible**, with the evidence bundle attached.
 

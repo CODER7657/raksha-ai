@@ -225,9 +225,49 @@ SDK**, where the mail is already theirs.
 - **Rendered HTML**, so display text and link target differ. `paytm.com` shown,
   `paytm-refund.info` behind it. This is a *static* check, cheap, and worth
   adding to A2 stage 1 as its own signal
-- **Sender-domain spoofing.** SPF/DKIM/DMARC alignment is deterministic and
-  needs no agent — a "bank" email failing DMARC is a strong, model-independent
-  signal, and exactly the second witness the blocking policy wants
+- **Sender-domain spoofing — and this section was wrong about it.**
+
+  SPF/DKIM/DMARC alignment is deterministic and needs no agent, and this plan
+  originally listed it as the model-independent second witness the blocking
+  policy wants. **Share-to-app cannot deliver it**, which #115 established by
+  checking rather than arguing: the manifest declares `text/plain`,
+  `handleShare` reads `EXTRA_TEXT`, SPF needs the connecting IP, DKIM needs raw
+  bytes that sharing rewrites, and `Authentication-Results` is written by the
+  receiving server into a header the body never carries.
+
+  A later line here said *"forwarded mail loses headers: report could not verify
+  sender"* as though that were the awkward case. **It is the only case.** A
+  caveat that applies to every input is the specification.
+
+  So email's second witness comes from **stage 1's link checks**, not the
+  sender. A bank-spoofing email with a clean link gets one basis and therefore a
+  warning rather than a block — the correct outcome, and better than
+  manufacturing a witness out of a header we do not have.
+
+  What survives share-to-app and is worth building:
+
+  - **`display_name_brand_mismatch`** — `"HDFC Bank" <winner12@gmail.com>`.
+    Deterministic, needs no headers, reuses `BRAND_DOMAINS` from stage 1
+  - **Reading `Authentication-Results` when it happens to be present**, naming
+    which server concluded it. We report a verdict someone else reached; saying
+    we checked SPF ourselves would be a stronger claim than the data supports
+
+  Two counting rules, both of which matter more than the checks:
+
+  - **"Cannot verify" is a caveat, never a signal.** If inability-to-verify
+    counted toward blocking, every forwarded email would carry a free witness
+    against itself — absence of evidence promoted into evidence, on this
+    feature's most common input
+  - **A DMARC pass adds nothing in either direction, and must not suppress the
+    link checks.** A pass says the message really came from the domain it
+    claims. It says nothing about whether that domain is hostile or the account
+    compromised — and "trusted sender, skip the rest" is exactly how a
+    compromised real account delivers a scam with our blessing
+
+  The route that *does* deliver the header is **"paste the original"** on web —
+  Gmail's *Show original* includes `Authentication-Results`. Clunky for a
+  frightened user, ordinary for a reviewer working a campaign, which is who it
+  is for. Build it when the reviewer surface needs it.
 - **Attachments.** Explicitly **out of scope.** Detonating attachments is a
   different product with a different risk profile, and we would be building
   malware analysis rather than fraud interception
