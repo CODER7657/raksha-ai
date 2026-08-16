@@ -32,6 +32,7 @@ drawn from its spelling.
 import pytest
 
 from app.routes import scan
+from app.services import safe_actions
 from app.services import trace as trace_service
 from app.services.link_signals import BASIS_FEED, BASIS_HOST_LABEL, BASIS_TLD, Signal
 
@@ -84,13 +85,31 @@ def test_the_floored_verdict_explains_that_it_was_the_link():
     assert "link" in result["explanation"].lower()
 
 
-def test_the_floored_action_comes_from_the_closed_set():
+def test_the_floored_action_is_about_the_link_not_about_credentials():
+    """Raised in review of #126. The action must match the explanation.
+
+    `FALLBACK_ACTION` is `do_not_share_credentials` — the most conservative
+    action, and the right one when we do not know *why* we are worried. Here we
+    know precisely why, and taking the fallback told the user "the link did not
+    look ordinary" and then "do not share your OTP, PIN or password": an
+    explanation about a link paired with advice about credentials.
+
+    #113 established one place advice is written. This is about taking the right
+    entry from it.
+    """
+    trace = {"link_signals": _block(_sig("known_bad_feed", BASIS_FEED))}
+    result, _ = scan._apply_link_floor(dict(SAFE), trace)
+
+    assert result["recommended_action_id"] == "do_not_click_link"
+    assert "link" in result["recommended_action"].lower()
+
+
+def test_the_floored_action_still_comes_from_the_closed_set():
     """#113: there is exactly one place user-facing advice is written. A floor
     that invented its own sentence would be a second."""
     trace = {"link_signals": _block(_sig("known_bad_feed", BASIS_FEED))}
     result, _ = scan._apply_link_floor(dict(SAFE), trace)
-    assert result["recommended_action_id"]
-    assert result["recommended_action"] != SAFE["recommended_action"]
+    assert result["recommended_action"] == safe_actions.SAFE_ACTIONS[result["recommended_action_id"]]
 
 
 def test_the_floored_score_is_not_the_offline_fallback_score():

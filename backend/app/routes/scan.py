@@ -256,7 +256,12 @@ def _apply_link_floor(result: dict, trace: dict) -> tuple[dict, dict]:
     if not reason or result["verdict"] != "safe":
         return result, trace
 
-    action_id, action_text = safe_actions.resolve_action(safe_actions.FALLBACK_ACTION)
+    # `do_not_click_link`, not FALLBACK_ACTION. The fallback is
+    # `do_not_share_credentials` — the most conservative action, which is right
+    # when we do not know *why* we are worried. Here we know precisely why, and
+    # pairing "the link did not look ordinary" with "do not share your OTP"
+    # gives a user an explanation about a link and advice about credentials.
+    action_id, action_text = safe_actions.resolve_action("do_not_click_link")
     raised = {
         **result,
         "verdict": "suspicious",
