@@ -1,6 +1,7 @@
 package ai.raksha.app.call
 
 import ai.raksha.app.core.SafeLog
+import ai.raksha.app.core.ScreeningOutcome
 import ai.raksha.app.core.ServiceLocator
 import android.os.Build
 import android.telecom.Call
@@ -109,8 +110,16 @@ class RakshaCallScreeningService : CallScreeningService() {
         val reputation = ServiceLocator.callReputation(applicationContext)
         if (!reputation.isReady) reputation.refresh()
 
-        val known = reputation.lookup(number)
-        SafeLog.callScreened(known != null, System.currentTimeMillis() - startedAt)
+        val identity = NumberIdentity.keyOf(number)
+        val known = identity?.let { reputation.lookup(number) }
+        SafeLog.callScreened(
+            when {
+                identity == null -> ScreeningOutcome.CALLER_UNIDENTIFIED
+                known == null -> ScreeningOutcome.NOT_KNOWN
+                else -> ScreeningOutcome.KNOWN
+            },
+            System.currentTimeMillis() - startedAt,
+        )
         if (known == null) return
 
         CallWarningNotifier(applicationContext).warn(known)

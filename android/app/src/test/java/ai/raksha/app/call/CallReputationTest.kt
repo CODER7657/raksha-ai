@@ -176,6 +176,42 @@ class CallReputationTest {
         assertTrue(reputation.isReady)
     }
 
+    // --- Staleness, found on the emulator ------------------------------------
+
+    @Test
+    fun `a set loaded before a message arrives does not answer for it`() {
+        // The defect this pins, measured on an emulator before it was fixed: the
+        // set is held in memory and was loaded once, so a number that texted the
+        // user AFTER the load was reported "not known" when it rang. That is the
+        // scam sequence this layer exists for — the message, then the call — and
+        // it failed silently, because a caller nobody warns about looks exactly
+        // like a caller nobody needed to.
+        //
+        // Asserted as the behaviour it IS rather than the behaviour we want, so
+        // the reason `invalidate` has to be called is written down next to it.
+        val store = FakeStore()
+        val reputation = CallReputation(store)
+        reputation.refresh()
+
+        store.record(1_000L, "+919876543210", "en", "Share your OTP", otpHit, "in-service")
+
+        assertNull(reputation.lookup("9876543210"), "a stale set cannot know this yet")
+    }
+
+    @Test
+    fun `invalidating makes the next lookup reload`() {
+        val store = FakeStore()
+        val reputation = CallReputation(store)
+        reputation.refresh()
+        store.record(1_000L, "+919876543210", "en", "Share your OTP", otpHit, "in-service")
+
+        reputation.invalidate()
+        assertFalse(reputation.isReady, "invalidate must make the set ask again")
+
+        reputation.refresh()
+        assertNotNull(reputation.lookup("9876543210"))
+    }
+
     // --- The evidence the warning has to carry -------------------------------
 
     @Test

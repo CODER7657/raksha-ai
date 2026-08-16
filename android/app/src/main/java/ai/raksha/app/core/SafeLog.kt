@@ -57,20 +57,20 @@ object SafeLog {
     }
 
     /**
-     * A call was screened, and whether the number was already known.
+     * A call was screened, and what came of it.
      *
-     * **A boolean, deliberately — never the number.** A phone number is user
-     * data in exactly the way a message body is, and logcat is the same open
-     * door for both. There is nothing here to put one in: the caller cannot
-     * pass an identity even by accident, which is the same guarantee the rest of
-     * this object gives for message text.
+     * **A [ScreeningOutcome], deliberately — never the number.** A phone number
+     * is user data in exactly the way a message body is, and logcat is the same
+     * open door for both. There is nothing here to put one in, which is the same
+     * guarantee the rest of this object gives for message text.
      *
-     * The duration is what the emulator measurements in #116 §4 read, and the
-     * boolean is what makes a run interpretable — "screened, not known" and
-     * "screened, known, warned" look identical otherwise.
+     * This started as a `Boolean` and the first emulator run is why it is not.
+     * "Not known" was printed for a call whose number the app had never managed
+     * to read, and those are different failures wearing the same word — one is
+     * the set answering, the other is it never being asked.
      */
-    fun callScreened(known: Boolean, durationMillis: Long) {
-        Log.i(TAG, "call screened: ${if (known) "number known" else "number not known"} in ${durationMillis}ms")
+    fun callScreened(outcome: ScreeningOutcome, durationMillis: Long) {
+        Log.i(TAG, "call screened: $outcome in ${durationMillis}ms")
     }
 
     /**

@@ -70,6 +70,25 @@ class CallReputation(private val store: ScanStore) {
     }
 
     /**
+     * Marks the set as needing rebuilding, without touching disk.
+     *
+     * **Why this exists, and it was not in the design.** The set is loaded once
+     * and held in memory so a ringing phone never waits on I/O. On the first
+     * emulator run that meant a number which sent a scam SMS *after* the set was
+     * loaded came back `NOT_KNOWN` when it rang — and message-then-call is the
+     * sequence this whole layer is for. It failed the way this project keeps
+     * finding failures: silently, because a caller nobody warns about is
+     * indistinguishable from a caller nobody needed to warn about.
+     *
+     * Called from the SMS path when a scan is recorded. Deliberately free of
+     * I/O, so it costs the receiver nothing: the reload is paid for later, by
+     * the screening path, which has already released the call by then.
+     */
+    fun invalidate() {
+        known = null
+    }
+
+    /**
      * What this phone knows about [rawNumber], or null for "no warning".
      *
      * Null covers three different situations on purpose, because the screener's

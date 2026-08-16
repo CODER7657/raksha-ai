@@ -38,7 +38,7 @@ class SafeLogContractTest {
             "partsAssembled",      // Int count
             "warningSuppressed",   // List<String> rule ids, String reason literal
             "failure",             // String stage literal, Throwable
-            "callScreened",        // Boolean, Long - reviewed in #116 §4, see below
+            "callScreened",        // ScreeningOutcome, Long - reviewed in #116 §4, see below
         )
         assertEquals(
             expected,
