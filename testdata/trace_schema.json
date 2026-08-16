@@ -33,7 +33,7 @@
       "type": "object",
       "required": true,
       "why": "Whether a speaker of this language has read its detection rules. REVIEW_STATUS existed only in the benchmark payload, which no user sees, so someone scanning in one of the eight unreviewed languages had no way to know how much to trust the verdict in front of them.",
-      "fields": {
+      "properties": {
         "status": "string — in-service | inherited | unreviewed",
         "native_reviewed": "boolean — a speaker has read the native-script rules",
         "code_mixed_reviewed": "boolean — always true. Every language falls back to the English rules, which are reviewed, so a code-mixed message is caught by reviewed rules in all twelve. Split from native_reviewed because reporting one boolean would overstate the gap as badly as reporting nothing understates it.",

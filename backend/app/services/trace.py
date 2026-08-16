@@ -50,10 +50,18 @@ def rule_review(language: str) -> dict[str, Any]:
         "status": status,
         # True when the native-script rules have been read by a speaker.
         "native_reviewed": status == "in-service",
-        # Always true: the English rules run for every language and are
-        # reviewed, so code-mixed and English-content messages are covered
-        # everywhere.
-        "code_mixed_reviewed": True,
+        # Derived, not asserted. This is true *because* two separate things
+        # are currently true: the English rules are `in-service`, and
+        # `offline_rule_hits` appends them to every language. Neither is a law
+        # of nature — dropping the English fallback is the obvious lever if
+        # cross-language false positives ever become a problem.
+        #
+        # Hardcoded, this field would keep claiming reviewed code-mixed cover
+        # on the day someone removes it, and tell users something false about
+        # a verdict. The English half is derived here; the fallback half is
+        # pinned by `test_every_language_falls_back_to_the_english_rules`,
+        # because it cannot be read from this module.
+        "code_mixed_reviewed": REVIEW_STATUS.get("en") == "in-service",
         # `inherited` is its own claim — mr borrows Hindi's rules because the
         # vocabulary genuinely overlaps, which is weaker than review and
         # stronger than nothing.
