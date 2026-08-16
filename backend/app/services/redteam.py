@@ -305,6 +305,30 @@ def detect_links(text: str, language: str) -> dict:
     The deterministic half of this pass is already committed as
     `testdata/link_evasions.jsonl` (31 techniques, 29 caught). This exists for
     the half a fixed list cannot do: mutations nobody enumerated.
+
+    ## Read a `links` run differently from a `rules` run
+
+    **The judge validates the fraud, and nothing validates the domain.** For a
+    text detector that is fine — an invented phrasing is a valid test case,
+    because the thing under test is how text reads. For a link detector it is
+    not: the thing under test is what is true about a real domain, and a domain
+    the generator made up has no truth to check.
+
+    Measured, on the first run against this detector: 5 evasions, of which
+    **3 pointed at domains that are not registered at all** — `whois` for
+    `secure-id.in` answers "available for registration". A fourth,
+    `verifynow.io`, is real and 1677 days old. So `domain_age` would have fired
+    on none of them, and the run overstates the gap.
+
+    The gap underneath is still real, and it is the useful part: a
+    generic-sounding domain that imitates no brand — `verifynow.io`,
+    `indiasecure.net` — evades every stage 1 check, because there is nothing
+    in the string to read. That is not a missing check. Without fetching the
+    page it is indistinguishable from a small legitimate business, which is
+    precisely the case stages 2-3 exist for.
+
+    **Before trusting an evasion from this detector, check the domain
+    resolves.** `scripts/refresh_domain_ages.resolve` does it in one call.
     """
     from app.services import domain_age, link_signals, threat_feeds
 

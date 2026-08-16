@@ -1,31 +1,40 @@
-{"id": "lnk-001", "technique": "baseline (must be caught)", "url": "http://paytm-refund.info/verify", "expect": "caught", "note": ""}
-{"id": "lnk-002", "technique": "shortener", "url": "http://bit.ly/3xK9pQ", "expect": "caught", "note": ""}
-{"id": "lnk-003", "technique": "shortener (branded)", "url": "https://tinyurl.com/paytm-kyc", "expect": "caught", "note": ""}
-{"id": "lnk-004", "technique": "ip host", "url": "http://203.0.113.44/paytm/verify", "expect": "caught", "note": ""}
-{"id": "lnk-005", "technique": "ip host (decimal)", "url": "http://3405803820/paytm", "expect": "caught", "note": ""}
-{"id": "lnk-006", "technique": "userinfo @ trick", "url": "http://paytm.com@evil-host.xyz/login", "expect": "caught", "note": ""}
-{"id": "lnk-007", "technique": "subdomain stuffing", "url": "http://paytm.com.secure-verify.cc/login", "expect": "caught", "note": ""}
-{"id": "lnk-008", "technique": "brand as subdomain", "url": "http://paytm.login-verify.net/", "expect": "caught", "note": ""}
-{"id": "lnk-009", "technique": "open redirect", "url": "https://www.google.com/url?q=http://paytm-refund.info", "expect": "caught", "note": ""}
-{"id": "lnk-010", "technique": "hyphen split brand", "url": "http://pay-tm.com/refund", "expect": "caught", "note": ""}
-{"id": "lnk-011", "technique": "digit substitution", "url": "http://payt0m.com/refund", "expect": "caught", "note": ""}
-{"id": "lnk-012", "technique": "digit substitution (icici)", "url": "http://1cicibank.com/login", "expect": "caught", "note": ""}
-{"id": "lnk-013", "technique": "rn for m homoglyph", "url": "http://paytrn.com/refund", "expect": "caught", "note": ""}
-{"id": "lnk-014", "technique": "vv for w homoglyph", "url": "http://vvww.hdfcbank.com.co/", "expect": "caught", "note": ""}
-{"id": "lnk-015", "technique": "benign tld", "url": "http://paytm-refund.com/verify", "expect": "caught", "note": ""}
-{"id": "lnk-016", "technique": "benign tld (.net)", "url": "http://paytm-refund.net/verify", "expect": "caught", "note": ""}
-{"id": "lnk-017", "technique": "untabled tld (.icu)", "url": "http://verify-account.icu/", "expect": "caught", "note": ""}
-{"id": "lnk-018", "technique": "untabled tld (.cc)", "url": "http://verify-account.cc/", "expect": "caught", "note": ""}
-{"id": "lnk-019", "technique": "untabled tld (.buzz)", "url": "http://paytm-kyc.buzz/", "expect": "caught", "note": ""}
-{"id": "lnk-020", "technique": "uppercase host", "url": "http://PAYTM-REFUND.INFO/verify", "expect": "caught", "note": ""}
-{"id": "lnk-021", "technique": "trailing dot host", "url": "http://paytm-refund.info./verify", "expect": "caught", "note": ""}
-{"id": "lnk-022", "technique": "explicit port", "url": "http://paytm-refund.info:8080/verify", "expect": "caught", "note": ""}
-{"id": "lnk-023", "technique": "percent-encoded host", "url": "http://%70aytm-refund.info/verify", "expect": "caught", "note": ""}
-{"id": "lnk-024", "technique": "long random subdomain", "url": "http://a8f3n2k9x7.paytm-refund.info/verify", "expect": "caught", "note": ""}
-{"id": "lnk-025", "technique": "pure cyrillic brand", "url": "http://раутм.com/login", "expect": "caught", "note": ""}
-{"id": "lnk-026", "technique": "greek omicron", "url": "http://paytοm.com/login", "expect": "caught", "note": ""}
-{"id": "lnk-027", "technique": "no scheme", "url": "paytm-refund.info/verify", "expect": "caught", "note": ""}
-{"id": "lnk-028", "technique": "scheme case", "url": "HTTP://paytm-refund.info/verify", "expect": "caught", "note": ""}
-{"id": "lnk-029", "technique": "double slash path", "url": "http://evil.xyz//paytm.com/login", "expect": "caught", "note": ""}
-{"id": "lnk-030", "technique": "brand in path only", "url": "http://secure-portal.net/paytm/login", "expect": "known_gap", "note": "Flagging a brand in a URL path would flag every news article and review site that names a bank. Belongs to the stages that read the page."}
-{"id": "lnk-031", "technique": "brand in query", "url": "http://secure-portal.net/?redir=paytm.com", "expect": "known_gap", "note": "Same false-positive surface as the path case. A bare host in a query parameter is not a destination."}
+{"id": "lnk-001", "technique": "baseline (must be caught)", "url": "http://paytm-refund.info/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-002", "technique": "shortener", "url": "http://bit.ly/3xK9pQ", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-003", "technique": "shortener (branded)", "url": "https://tinyurl.com/paytm-kyc", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-004", "technique": "ip host", "url": "http://203.0.113.44/paytm/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-005", "technique": "ip host (decimal)", "url": "http://3405803820/paytm", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-006", "technique": "userinfo @ trick", "url": "http://paytm.com@evil-host.xyz/login", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-007", "technique": "subdomain stuffing", "url": "http://paytm.com.secure-verify.cc/login", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-008", "technique": "brand as subdomain", "url": "http://paytm.login-verify.net/", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-009", "technique": "open redirect", "url": "https://www.google.com/url?q=http://paytm-refund.info", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-010", "technique": "hyphen split brand", "url": "http://pay-tm.com/refund", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-011", "technique": "digit substitution", "url": "http://payt0m.com/refund", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-012", "technique": "digit substitution (icici)", "url": "http://1cicibank.com/login", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-013", "technique": "rn for m homoglyph", "url": "http://paytrn.com/refund", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-014", "technique": "vv for w homoglyph", "url": "http://vvww.hdfcbank.com.co/", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-015", "technique": "benign tld", "url": "http://paytm-refund.com/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-016", "technique": "benign tld (.net)", "url": "http://paytm-refund.net/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-017", "technique": "untabled tld (.icu)", "url": "http://verify-account.icu/", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-018", "technique": "untabled tld (.cc)", "url": "http://verify-account.cc/", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-019", "technique": "untabled tld (.buzz)", "url": "http://paytm-kyc.buzz/", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-020", "technique": "uppercase host", "url": "http://PAYTM-REFUND.INFO/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-021", "technique": "trailing dot host", "url": "http://paytm-refund.info./verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-022", "technique": "explicit port", "url": "http://paytm-refund.info:8080/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-023", "technique": "percent-encoded host", "url": "http://%70aytm-refund.info/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-024", "technique": "long random subdomain", "url": "http://a8f3n2k9x7.paytm-refund.info/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-025", "technique": "pure cyrillic brand", "url": "http://раутм.com/login", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-026", "technique": "greek omicron", "url": "http://paytοm.com/login", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-027", "technique": "no scheme", "url": "paytm-refund.info/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-028", "technique": "scheme case", "url": "HTTP://paytm-refund.info/verify", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-029", "technique": "double slash path", "url": "http://evil.xyz//paytm.com/login", "expect": "caught", "note": "", "display_text": null}
+{"id": "lnk-030", "technique": "brand in path only", "url": "http://secure-portal.net/paytm/login", "expect": "known_gap", "note": "Flagging a brand in a URL path would flag every news article and review site that names a bank. Belongs to the stages that read the page.", "display_text": null}
+{"id": "lnk-031", "technique": "brand in query", "url": "http://secure-portal.net/?redir=paytm.com", "expect": "known_gap", "note": "Same false-positive surface as the path case. A bare host in a query parameter is not a destination.", "display_text": null}
+{"id": "lnk-032", "technique": "display/target: w-prefix typosquat", "url": "http://wpaytm.com/login", "display_text": "www.paytm.com", "expect": "caught", "note": "The shape lstrip(\"www.\") silenced: both sides stripped to paytm.com and the mismatch returned nothing. Raised in review of #120."}
+{"id": "lnk-033", "technique": "display/target: leading-letter drop", "url": "http://ellsfargo.com/login", "display_text": "www.wellsfargo.com", "expect": "caught", "note": "Second case from the same review. lstrip strips any leading run of w and dot, so both sides became ellsfargo.com."}
+{"id": "lnk-034", "technique": "display/target: unrelated host", "url": "http://evil.example/login", "display_text": "https://www.icicibank.com/login", "expect": "caught", "note": ""}
+{"id": "lnk-035", "technique": "display/target: multi-part suffix", "url": "http://hdfcbank.com.co/login", "display_text": "hdfcbank.com", "expect": "caught", "note": ""}
+{"id": "lnk-036", "technique": "display/target: hyphen swap", "url": "http://netbanking-hdfcbank.com/", "display_text": "netbanking.hdfcbank.com", "expect": "caught", "note": ""}
+{"id": "lnk-037", "technique": "benign pair: www equivalence", "url": "https://www.hdfcbank.com/", "display_text": "hdfcbank.com", "expect": "benign", "note": "The equivalence the buggy line was reaching for. Must stay suppressed."}
+{"id": "lnk-038", "technique": "benign pair: non-url link text", "url": "https://www.hdfcbank.com/", "display_text": "Click here", "expect": "benign", "note": "\"Click here\" is not a lie about where the link goes."}
+{"id": "lnk-039", "technique": "benign pair: subdomain of shown host", "url": "https://netbanking.hdfcbank.com/login", "display_text": "hdfcbank.com", "expect": "benign", "note": ""}
+{"id": "lnk-040", "technique": "benign pair: identical host", "url": "https://www.hdfcbank.com/offers", "display_text": "https://www.hdfcbank.com/offers", "expect": "benign", "note": ""}
