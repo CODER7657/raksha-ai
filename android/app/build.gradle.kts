@@ -346,6 +346,107 @@ abstract class GenerateRuleStrings : DefaultTask() {
     }
 }
 
+// --- Design tokens, generated from design/tokens.json (#116 §2) --------------
+//
+// The web has had a brand palette since the beginning and this module rendered
+// bare `MaterialTheme {}` — Material's default purple — so the two products did
+// not look like the same company. Rather than hand-copying five hex values into
+// Kotlin and letting them rot, the theme is generated from the same file the
+// web side is checked against.
+//
+// Kotlin source rather than colors.xml: the values are consumed by Compose, and
+// a generated `Color` is usable in a `@Composable` without a resource lookup.
+
+abstract class GenerateDesignTokens : DefaultTask() {
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val tokensFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    /** `#rrggbb` -> `0xFFrrggbb`, the form Compose's Color(Long) wants. */
+    private fun composeLiteral(hex: String): String {
+        val cleaned = hex.removePrefix("#")
+        require(cleaned.length == 6 && cleaned.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) {
+            "design/tokens.json has a colour that is not #rrggbb: '$hex'"
+        }
+        return "0xFF${cleaned.uppercase()}"
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    @TaskAction
+    fun generate() {
+        val file = tokensFile.get().asFile
+        require(file.isFile) {
+            "Cannot find design/tokens.json at ${file.absolutePath}. The Android theme is " +
+                "generated from it so the phone and the site cannot drift (#116 §2), which " +
+                "means `android/` builds only inside a full checkout of the repository."
+        }
+
+        val parsed = JsonSlurper().parse(file, "UTF-8") as Map<String, Any?>
+
+        fun group(name: String): Map<String, Map<String, Any?>> =
+            (parsed[name] as? Map<String, Any?> ?: emptyMap())
+                .filterKeys { !it.startsWith("$") }
+                .mapValues { (_, v) -> v as Map<String, Any?> }
+
+        val brand = group("color")
+        val verdict = group("verdict")
+        require(brand.isNotEmpty()) { "design/tokens.json has no `color` entries" }
+        require(verdict.isNotEmpty()) { "design/tokens.json has no `verdict` entries" }
+
+        // Kotlin identifiers: verdict keys are snake_case in the JSON because
+        // that is the wire format the backend uses for a verdict.
+        fun camel(key: String) = key.split("_").mapIndexed { i, part ->
+            if (i == 0) part else part.replaceFirstChar(Char::uppercase)
+        }.joinToString("")
+
+        val out = File(outputDir.get().asFile, "ai/raksha/app/ui")
+        out.mkdirs()
+
+        val text = buildString {
+            appendLine("package ai.raksha.app.ui")
+            appendLine()
+            appendLine("import androidx.compose.ui.graphics.Color")
+            appendLine()
+            appendLine("/**")
+            appendLine(" * GENERATED from design/tokens.json — do not edit.")
+            appendLine(" *")
+            appendLine(" * Regenerate with any Android build. The web side is checked against the")
+            appendLine(" * same file by frontend/scripts/check-design-tokens.mjs, so a value changed")
+            appendLine(" * in one place cannot ship in only one product (#116 §2).")
+            appendLine(" */")
+            appendLine("object DesignTokens {")
+            appendLine()
+            brand.forEach { (name, token) ->
+                val description = token["description"]?.toString()
+                if (description != null) appendLine("    /** $description */")
+                appendLine("    val ${camel(name)} = Color(${composeLiteral(token.getValue("value").toString())})")
+            }
+            appendLine()
+            appendLine("    /** Verdict semantics, identical to the web (#116 §2). */")
+            appendLine("    object Verdict {")
+            verdict.forEach { (name, token) ->
+                appendLine("        val ${camel(name)} = Color(${composeLiteral(token.getValue("value").toString())})")
+            }
+            appendLine()
+            appendLine("        /** Keyed by the backend's verdict string, so an unknown verdict is null rather than a guess. */")
+            appendLine("        val byName: Map<String, Color> = mapOf(")
+            verdict.keys.forEach { name -> appendLine("            \"$name\" to ${camel(name)},") }
+            appendLine("        )")
+            appendLine("    }")
+            appendLine("}")
+        }
+
+        File(out, "DesignTokens.kt").writeText(text, Charsets.UTF_8)
+        logger.lifecycle(
+            "Generated design tokens: ${brand.size} brand colours, ${verdict.size} verdict colours"
+        )
+    }
+}
+
 // The Variant API, not `sourceSets.res.srcDir` — AGP 9 rejects a provider there,
 // and this form carries the task dependency automatically.
 androidComponents {
@@ -361,6 +462,14 @@ androidComponents {
             allowedMissing.set(knownUntranslated)
         }
         variant.sources.res?.addGeneratedSourceDirectory(task, GenerateRuleStrings::outputDir)
+
+        val tokensTask = tasks.register<GenerateDesignTokens>(
+            "generate${variant.name.replaceFirstChar(Char::uppercase)}DesignTokens"
+        ) {
+            description = "Generates the Compose colour tokens from design/tokens.json"
+            tokensFile.set(rootProject.layout.projectDirectory.file("../design/tokens.json"))
+        }
+        variant.sources.java?.addGeneratedSourceDirectory(tokensTask, GenerateDesignTokens::outputDir)
     }
 }
 

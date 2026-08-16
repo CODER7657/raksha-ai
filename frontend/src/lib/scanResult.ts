@@ -3,10 +3,15 @@ export type Verdict = 'safe' | 'suspicious' | 'high_risk'
 /** `labelKey` points into the `verdict` i18n namespace — call t(meta.labelKey)
  * at the render site rather than storing the translated string here, since
  * this module has no access to the active language. */
+/** Colours come from the `--color-verdict-*` tokens in index.css, which are
+ * checked against design/tokens.json — the same file the Android Compose theme
+ * is generated from. They were `bg-emerald-600` / `bg-amber-500` / `bg-red-600`;
+ * the hex is unchanged, but a verdict is now painted from one shared definition
+ * rather than two independent ones (#116 §2). */
 export const VERDICT_META: Record<Verdict, { labelKey: string; badgeClass: string; barClass: string }> = {
-  safe: { labelKey: 'verdict.safe', badgeClass: 'bg-emerald-600 text-white', barClass: 'bg-emerald-600' },
-  suspicious: { labelKey: 'verdict.suspicious', badgeClass: 'bg-amber-500 text-white', barClass: 'bg-amber-500' },
-  high_risk: { labelKey: 'verdict.highRisk', badgeClass: 'bg-red-600 text-white', barClass: 'bg-red-600' },
+  safe: { labelKey: 'verdict.safe', badgeClass: 'bg-verdict-safe text-white', barClass: 'bg-verdict-safe' },
+  suspicious: { labelKey: 'verdict.suspicious', badgeClass: 'bg-verdict-suspicious text-white', barClass: 'bg-verdict-suspicious' },
+  high_risk: { labelKey: 'verdict.highRisk', badgeClass: 'bg-verdict-high-risk text-white', barClass: 'bg-verdict-high-risk' },
 }
 
 /** One known scam pattern pulled back by the RAG retrieval step, with how
