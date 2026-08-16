@@ -7,6 +7,7 @@ import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        blockObscuredTouches()
         handleShare(intent)
         refreshState()
         setContent {
@@ -109,6 +111,34 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshState() {
         protection = ProtectionState.of(this)
+    }
+
+    /**
+     * Discards touches that arrive while another app's window is drawn over
+     * ours (#82 §5).
+     *
+     * Tapjacking matters more here than in most apps. An overlay is a live
+     * technique in the very scams this app detects: the attacker draws a
+     * transparent window, the user believes they are tapping one thing and
+     * taps another. Every control on this screen is consequential — turning
+     * protection off, opening notification settings — and a warning the user
+     * cannot safely tap is worse than no warning, because they believe they
+     * acted.
+     *
+     * Set on the content root rather than per-control: `ViewGroup.dispatchTouchEvent`
+     * runs the security filter before dispatching to children, so one call
+     * covers the whole Compose tree and cannot be forgotten on a control added
+     * later. Available since API 9, so no version guard is needed at minSdk 24.
+     *
+     * The stronger option is `Window.setHideOverlayWindows(true)` on API 31+,
+     * which hides the overlay instead of merely ignoring its touches. It is not
+     * used here because it requires declaring `HIDE_OVERLAY_WINDOWS`, and the
+     * permission declaration submitted in #39 states the app holds exactly two
+     * permissions. Worth revisiting once that review clears — the trade is a
+     * third (normal, promptless) permission for a materially better defence.
+     */
+    private fun blockObscuredTouches() {
+        findViewById<View>(android.R.id.content).filterTouchesWhenObscured = true
     }
 
     private fun openNotificationSettings() {
