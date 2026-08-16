@@ -7,6 +7,7 @@ import android.os.Build
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.text.format.DateUtils
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import ai.raksha.app.core.InterruptionMonitor
 import ai.raksha.app.core.Language
 import ai.raksha.app.core.ProtectionState
 import ai.raksha.app.core.RuleLabels
@@ -75,6 +77,9 @@ class MainActivity : ComponentActivity() {
 
     private var protection by mutableStateOf(ProtectionState.OFF)
 
+    /** When Android last force-stopped us, if the user has not dismissed it. */
+    private var interruptedAt by mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         blockObscuredTouches()
@@ -86,12 +91,14 @@ class MainActivity : ComponentActivity() {
                     HomeScreen(
                         sharedText = sharedText,
                         protection = protection,
+                        interruptedAt = interruptedAt,
                         onEnableScanning = ::enableScanning,
                         onDisableScanning = {
                             ScanPreferences(this).isScanningEnabled = false
                             refreshState()
                         },
                         onOpenNotificationSettings = ::openNotificationSettings,
+                        onAcknowledgeInterruption = ::acknowledgeInterruption,
                     )
                 }
             }
@@ -111,6 +118,21 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshState() {
         protection = ProtectionState.of(this)
+        val preferences = ScanPreferences(this)
+        interruptedAt = if (InterruptionMonitor.hasUnacknowledgedInterruption(this, preferences)) {
+            InterruptionMonitor.lastForceStopMillis(this)
+        } else {
+            null
+        }
+    }
+
+    private fun acknowledgeInterruption() {
+        val preferences = ScanPreferences(this)
+        // Stamp with the interruption's own time, not now: a second
+        // force-stop after this one must still be reported.
+        preferences.acknowledgedInterruptionMillis =
+            InterruptionMonitor.lastForceStopMillis(this) ?: System.currentTimeMillis()
+        refreshState()
     }
 
     /**
@@ -198,9 +220,11 @@ class MainActivity : ComponentActivity() {
 private fun HomeScreen(
     sharedText: String?,
     protection: ProtectionState,
+    interruptedAt: Long?,
     onEnableScanning: () -> Unit,
     onDisableScanning: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
+    onAcknowledgeInterruption: () -> Unit,
 ) {
     val context = LocalContext.current
     val preferences = remember { ScanPreferences(context) }
@@ -260,6 +284,48 @@ private fun HomeScreen(
 
             // --- Scanning state ----------------------------------------------
             Text(stringResource(R.string.scanning_heading), style = MaterialTheme.typography.titleMedium)
+
+            // Shown above the status line on purpose: it qualifies whatever the
+            // status says. Android stopped the app at some point, so there is a
+            // window in which nothing was checked and the app cannot say which
+            // messages fell in it (#91 §2).
+            if (interruptedAt != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.interrupted_title),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            stringResource(R.string.interrupted_body),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        // Rendered by the platform, so it is localised and
+                        // phrased the way the rest of the system phrases times,
+                        // without another string to translate.
+                        Text(
+                            DateUtils.getRelativeTimeSpanString(
+                                interruptedAt,
+                                System.currentTimeMillis(),
+                                DateUtils.MINUTE_IN_MILLIS,
+                            ).toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        OutlinedButton(onClick = onAcknowledgeInterruption) {
+                            Text(stringResource(R.string.interrupted_dismiss))
+                        }
+                    }
+                }
+            }
 
             val scanning = protection != ProtectionState.OFF
             Text(

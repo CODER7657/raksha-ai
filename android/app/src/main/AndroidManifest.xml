@@ -81,18 +81,39 @@
           for no behaviour, on an app whose Play declaration (#39) states it holds
           exactly two permissions.
 
-          Two adjacent gaps a boot receiver would NOT close either, noted so they
-          are not confused with this one:
+          Force-stop is a separate gap a boot receiver would not close either: an
+          app the user force-stops enters the stopped state and receives no
+          broadcasts at all until it is launched again, BOOT_COMPLETED included.
+          Measured - `am force-stop`, then an SMS, produced no scan and no
+          process, with `stopped=true`. That is deliberate platform behaviour and
+          not ours to fix; what the app can do is stop claiming otherwise, which
+          is why ProtectionState now has an UNVERIFIABLE case.
 
-            - Force-stop. An app the user force-stops enters the stopped state and
-              receives no broadcasts at all until it is launched again -
-              BOOT_COMPLETED included.
-            - Direct boot. Between a restart and the first unlock, credential-
-              encrypted storage is unavailable and non-directBootAware components
-              do not run, so a message arriving in that window is missed. Closing
-              that needs android:directBootAware plus device-encrypted storage for
-              the scanning preference, not a boot receiver. NOT measured here: the
-              emulator auto-unlocks with no PIN set, so the window never occurred.
+          DIRECT BOOT - measured, and there is deliberately no
+          android:directBootAware here either.
+
+          #91 §2 asked for it, on the reasoning that a message arriving between a
+          restart and the first unlock is missed. With a PIN set, after
+          `adb reboot`, holding at the lock screen:
+
+            locked   : no scan, no process, either way
+            unlocked : scan complete: 3 rule(s) fired [account_lock, kyc_expiry,
+                       otp_share]  - arriving ~25s after unlock
+
+          The second line is the finding. The platform defers SMS_RECEIVED and
+          delivers it once the user unlocks, so the message is DELAYED, not lost.
+          A control build with android:directBootAware removed and everything
+          else identical behaved exactly the same, which rules out the attribute
+          being what rescued it.
+
+          So directBootAware buys nothing measurable: the receiver is not invoked
+          during the locked window regardless, because the broadcast is not
+          dispatched to us then. Adding it would also oblige ScanPreferences into
+          device-encrypted storage - readable earlier in boot, a weaker guarantee
+          - in exchange for nothing.
+
+          An earlier run here concluded the message was "lost outright". That was
+          wrong: it waited 8 seconds after unlocking and delivery takes about 25.
         -->
         <receiver
             android:name=".sms.SmsReceiver"

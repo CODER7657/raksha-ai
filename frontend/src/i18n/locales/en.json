@@ -214,6 +214,9 @@
     "shared_heading": "Shared message",
     "shared_clean": "No scam pattern found in this message.",
     "shared_flagged": "This message looks like a scam:",
-    "shared_hint": "Share a message to Raksha from your messaging app to check it."
+    "shared_hint": "Share a message to Raksha from your messaging app to check it.",
+    "interrupted_title": "Message checking was stopped",
+    "interrupted_body": "Android stopped Raksha, so messages that arrived after that were not checked. Checking is running again now.",
+    "interrupted_dismiss": "Got it"
   }
 }
