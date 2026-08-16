@@ -61,6 +61,32 @@ class ScanPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_LANGUAGE, value).apply()
 
     /**
+     * Whether scans are kept so the user can look at them later.
+     *
+     * **On by default, which is a deviation worth arguing about.** #29 §2 says
+     * no scored SMS is persisted by default. Constraint 1 of the project says a
+     * user can always see their own data and their own trace — and until #116
+     * §3 the phone scanned, notified and forgot, so "why did it flag that?" had
+     * no answer an hour later while the website had the full trace.
+     *
+     * Those pull in opposite directions and only one of them can be the
+     * default. On by default is the choice here because the person this is
+     * built for is a senior citizen who has just been warned and wants to
+     * understand why, and a history they must first discover and enable is a
+     * history they will not have when they need it. The risk #29 §2 guards
+     * against is addressed by the terms rather than by absence: capped at 200,
+     * clearable in one action, gone on uninstall, and structurally unable to
+     * leave the device since the app holds no `INTERNET` permission.
+     *
+     * Turning it off also clears what is already stored — see
+     * `SettingsViewModel`. An off switch that leaves the data behind is a
+     * setting that lies.
+     */
+    var isHistoryEnabled: Boolean
+        get() = prefs.getBoolean(KEY_HISTORY, true)
+        set(value) = prefs.edit().putBoolean(KEY_HISTORY, value).apply()
+
+    /**
      * When the user last acknowledged being told the app had been force-stopped,
      * so the notice appears once per interruption rather than on every launch.
      *
@@ -74,6 +100,7 @@ class ScanPreferences(context: Context) {
     private companion object {
         const val KEY_ENABLED = "scanning_enabled"
         const val KEY_LANGUAGE = "language"
+        const val KEY_HISTORY = "history_enabled"
         const val KEY_ACKNOWLEDGED_INTERRUPTION = "acknowledged_interruption_millis"
         const val DEFAULT_LANGUAGE = "en"
     }

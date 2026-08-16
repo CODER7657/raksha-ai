@@ -9,4 +9,5 @@
 <resources>
     <string name="warning_channel_name">धोखाधड़ी चेतावनी</string>
     <string name="warning_channel_description">जब कोई संदेश धोखाधड़ी जैसा लगे तो चेतावनी देता है। संदेश आपके फ़ोन पर ही जाँचे जाते हैं और कहीं नहीं भेजे जाते।</string>
+    <string name="settings_stored_count">इस फ़ोन पर %1$d संदेश संग्रहित</string>
 </resources>
