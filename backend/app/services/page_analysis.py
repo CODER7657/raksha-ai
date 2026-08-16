@@ -250,11 +250,18 @@ def validate_evidence(raw: object) -> PageEvidence:
     )
 
 
-def _read_page(page: dict) -> PageEvidence:
-    """Quarantined reader. Sees the page, has no tools, returns fixed schema.
+def _read_page(page: dict) -> dict:
+    """Quarantined reader. Sees the page, has no tools, returns raw JSON.
 
-    Wired to a model by the deployment; substituted in tests. It is a separate
-    function so the boundary is a real one rather than a comment.
+    **Returns a dict, not a `PageEvidence`, and that is load-bearing.** A model
+    returns JSON; the only way to get a `PageEvidence` is through
+    `validate_evidence`, so holding one is proof it was checked.
+
+    This was annotated `-> PageEvidence` for one commit, with `analyse` doing
+    `raw if isinstance(raw, PageEvidence) else validate_evidence(raw)`. An
+    implementer returning the declared type took the left branch and was never
+    validated — the channel stayed open behind a conditional whose whole purpose
+    was to keep the existing stubs green. Parse, do not validate.
     """
     raise InvalidEvidence("No quarantined reader is wired up")
 
@@ -350,12 +357,12 @@ def analyse(page: dict) -> list[Signal]:
     about blocking.
     """
     try:
-        # Validated here, not merely available to be validated. This ran on
-        # `_read_page`'s return directly until review, so the schema was a
-        # utility the tests called and not a boundary the path crossed — and the
-        # summary cap was enforced nowhere at all.
-        raw = _read_page(page)
-        evidence = raw if isinstance(raw, PageEvidence) else validate_evidence(raw)
+        # Unconditional. There is no branch here on purpose: a conditional that
+        # let an already-typed value through would mean the reader could decide
+        # whether it gets checked, and the reader is the component that reads
+        # attacker text. `PageEvidence` has exactly one constructor that anything
+        # on this path can reach, and it is `validate_evidence`.
+        evidence = validate_evidence(_read_page(page))
     except InvalidEvidence:
         # Discarded rather than guessed at. The URL keeps whatever the static
         # checks concluded, which is the honest fallback §02 specifies.
