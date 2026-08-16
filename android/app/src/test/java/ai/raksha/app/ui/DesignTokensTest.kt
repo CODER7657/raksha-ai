@@ -127,52 +127,66 @@ class DesignTokensTest {
         assertEquals(hexOf(DesignTokens.ink), hexOf(RakshaColorScheme.onBackground))
     }
 
+    /**
+     * Every colour role on [androidx.compose.material3.ColorScheme], found by
+     * reflection rather than listed.
+     *
+     * `Color` is a value class, so its property getters compile to
+     * name-mangled methods returning a raw `long` — `getPrimary-0d7_KjU()`.
+     * That is what is walked here; the suffix is stripped to recover the role
+     * name.
+     *
+     * Reflective on purpose. The first version of this test listed 24 roles by
+     * hand and asserted each was a brand colour, which reads as completeness
+     * and is not: a hand-written list of the thing you are checking for
+     * completeness cannot establish completeness. `ColorScheme` has more roles
+     * than that, and the ones left unset keep Material's own tonal defaults —
+     * `surfaceContainer*` among them, which is where `Card` and menu surfaces
+     * actually take their background from. A Card could have rendered lavender
+     * with the test green.
+     *
+     * Done this way, a role added by a Compose upgrade fails loudly instead of
+     * arriving purple.
+     */
+    private fun schemeRoles(): Map<String, String> {
+        val scheme = RakshaColorScheme
+        val roles = scheme.javaClass.methods
+            .filter {
+                it.parameterCount == 0 &&
+                    it.returnType == java.lang.Long.TYPE &&
+                    it.name.startsWith("get")
+            }
+            .associate { method ->
+                val raw = method.invoke(scheme) as Long
+                val name = method.name.removePrefix("get")
+                    .substringBefore('-')
+                    .replaceFirstChar(Char::lowercase)
+                // Same packing as Color.value: ARGB in the high 32 bits.
+                name to "#%06x".format((raw ushr 32) and 0xFFFFFF)
+            }
+        assertTrue(
+            roles.size >= 24,
+            "reflection found only ${roles.size} colour roles on ColorScheme, which " +
+                "is fewer than the scheme sets by hand — the walk is broken and this " +
+                "test would pass vacuously.",
+        )
+        return roles
+    }
+
     @Test
-    fun `every colour role comes from a token`() {
-        // Setting `primary` and `background` alone was the first attempt, and it
-        // left the selected FilterChip lavender because `secondaryContainer`
-        // still came from Material's tonal palette. The page was cream and one
-        // control was purple, which reads as a bug.
-        //
-        // Rather than list the roles that happened to be wrong, this asserts the
-        // whole scheme: every role the app can render must be one of the brand
-        // colours. A future control using a role nobody thought about fails here
-        // instead of shipping off-brand.
+    fun `every colour role on the scheme comes from a token`() {
         val brand = (colours("color") + colours("verdict")).values.toSet()
 
-        val scheme = RakshaColorScheme
-        val roles = mapOf(
-            "primary" to scheme.primary,
-            "onPrimary" to scheme.onPrimary,
-            "primaryContainer" to scheme.primaryContainer,
-            "onPrimaryContainer" to scheme.onPrimaryContainer,
-            "secondary" to scheme.secondary,
-            "onSecondary" to scheme.onSecondary,
-            "secondaryContainer" to scheme.secondaryContainer,
-            "onSecondaryContainer" to scheme.onSecondaryContainer,
-            "tertiary" to scheme.tertiary,
-            "onTertiary" to scheme.onTertiary,
-            "tertiaryContainer" to scheme.tertiaryContainer,
-            "onTertiaryContainer" to scheme.onTertiaryContainer,
-            "background" to scheme.background,
-            "onBackground" to scheme.onBackground,
-            "surface" to scheme.surface,
-            "onSurface" to scheme.onSurface,
-            "surfaceVariant" to scheme.surfaceVariant,
-            "onSurfaceVariant" to scheme.onSurfaceVariant,
-            "outline" to scheme.outline,
-            "outlineVariant" to scheme.outlineVariant,
-            "error" to scheme.error,
-            "onError" to scheme.onError,
-            "errorContainer" to scheme.errorContainer,
-            "onErrorContainer" to scheme.onErrorContainer,
-        )
-
-        val offBrand = roles.filterValues { hexOf(it) !in brand }.keys
+        val offBrand = schemeRoles().filterValues { it !in brand }
         assertTrue(
             offBrand.isEmpty(),
-            "these colour roles are not brand tokens and will render a Material " +
-                "default: $offBrand. Map each to a token in design/tokens.json.",
+            "these colour roles are not brand tokens, so Material's tonal default " +
+                "renders instead — a Card or menu surface can still come out " +
+                "lavender:\n" +
+                offBrand.entries.sortedBy { it.key }.joinToString("\n") {
+                    "    ${it.key} = ${it.value}"
+                } +
+                "\n  Map each to a token in design/tokens.json.",
         )
     }
 }

@@ -86,4 +86,50 @@ internal val RakshaColorScheme = lightColorScheme(
     onError = DesignTokens.accentInk,
     errorContainer = DesignTokens.Verdict.highRisk,
     onErrorContainer = DesignTokens.accentInk,
+
+    // --- The roles it is easy to forget ------------------------------------
+    //
+    // Everything below was left unset until review, and every one of them was
+    // still Material's purple: inversePrimary #d0bcff, primaryFixed #eaddff,
+    // surfaceContainer #f3edf7. `surfaceContainer*` is not decorative — Card,
+    // menus and sheets take their background from it rather than from
+    // `surface`, so a Card rendered lavender on a cream page.
+    //
+    // They are set here rather than trimmed from the test, because the test is
+    // the thing that found them.
+
+    // Elevation tiers. Compose picks one per component; paper is the page and
+    // line is the raised tier, which keeps the two-tone paper-and-ink reading.
+    surfaceBright = DesignTokens.paper,
+    surfaceDim = DesignTokens.line,
+    surfaceContainerLowest = DesignTokens.paper,
+    surfaceContainerLow = DesignTokens.paper,
+    surfaceContainer = DesignTokens.line,
+    surfaceContainerHigh = DesignTokens.line,
+    surfaceContainerHighest = DesignTokens.line,
+
+    // Inverted surfaces — snackbars, and the selection handles on text.
+    inverseSurface = DesignTokens.ink,
+    inverseOnSurface = DesignTokens.paper,
+    inversePrimary = DesignTokens.accent,
+
+    // Behind modals. Ink rather than pure black: alpha is applied at the use
+    // site, and the brand's black already is #0f0f0f.
+    scrim = DesignTokens.ink,
+
+    // The `*Fixed` family keeps one value across light and dark. There is no
+    // dark scheme yet, so they simply follow their light counterparts rather
+    // than inventing a second palette to hold fixed.
+    primaryFixed = DesignTokens.accent,
+    primaryFixedDim = DesignTokens.accent,
+    onPrimaryFixed = DesignTokens.accentInk,
+    onPrimaryFixedVariant = DesignTokens.accentInk,
+    secondaryFixed = DesignTokens.line,
+    secondaryFixedDim = DesignTokens.line,
+    onSecondaryFixed = DesignTokens.ink,
+    onSecondaryFixedVariant = DesignTokens.ink,
+    tertiaryFixed = DesignTokens.line,
+    tertiaryFixedDim = DesignTokens.line,
+    onTertiaryFixed = DesignTokens.ink,
+    onTertiaryFixedVariant = DesignTokens.ink,
 )
