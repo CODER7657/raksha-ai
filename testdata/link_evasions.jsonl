@@ -1,0 +1,31 @@
+{"id": "lnk-001", "technique": "baseline (must be caught)", "url": "http://paytm-refund.info/verify", "expect": "caught", "note": ""}
+{"id": "lnk-002", "technique": "shortener", "url": "http://bit.ly/3xK9pQ", "expect": "caught", "note": ""}
+{"id": "lnk-003", "technique": "shortener (branded)", "url": "https://tinyurl.com/paytm-kyc", "expect": "caught", "note": ""}
+{"id": "lnk-004", "technique": "ip host", "url": "http://203.0.113.44/paytm/verify", "expect": "caught", "note": ""}
+{"id": "lnk-005", "technique": "ip host (decimal)", "url": "http://3405803820/paytm", "expect": "caught", "note": ""}
+{"id": "lnk-006", "technique": "userinfo @ trick", "url": "http://paytm.com@evil-host.xyz/login", "expect": "caught", "note": ""}
+{"id": "lnk-007", "technique": "subdomain stuffing", "url": "http://paytm.com.secure-verify.cc/login", "expect": "caught", "note": ""}
+{"id": "lnk-008", "technique": "brand as subdomain", "url": "http://paytm.login-verify.net/", "expect": "caught", "note": ""}
+{"id": "lnk-009", "technique": "open redirect", "url": "https://www.google.com/url?q=http://paytm-refund.info", "expect": "caught", "note": ""}
+{"id": "lnk-010", "technique": "hyphen split brand", "url": "http://pay-tm.com/refund", "expect": "caught", "note": ""}
+{"id": "lnk-011", "technique": "digit substitution", "url": "http://payt0m.com/refund", "expect": "caught", "note": ""}
+{"id": "lnk-012", "technique": "digit substitution (icici)", "url": "http://1cicibank.com/login", "expect": "caught", "note": ""}
+{"id": "lnk-013", "technique": "rn for m homoglyph", "url": "http://paytrn.com/refund", "expect": "caught", "note": ""}
+{"id": "lnk-014", "technique": "vv for w homoglyph", "url": "http://vvww.hdfcbank.com.co/", "expect": "caught", "note": ""}
+{"id": "lnk-015", "technique": "benign tld", "url": "http://paytm-refund.com/verify", "expect": "caught", "note": ""}
+{"id": "lnk-016", "technique": "benign tld (.net)", "url": "http://paytm-refund.net/verify", "expect": "caught", "note": ""}
+{"id": "lnk-017", "technique": "untabled tld (.icu)", "url": "http://verify-account.icu/", "expect": "caught", "note": ""}
+{"id": "lnk-018", "technique": "untabled tld (.cc)", "url": "http://verify-account.cc/", "expect": "caught", "note": ""}
+{"id": "lnk-019", "technique": "untabled tld (.buzz)", "url": "http://paytm-kyc.buzz/", "expect": "caught", "note": ""}
+{"id": "lnk-020", "technique": "uppercase host", "url": "http://PAYTM-REFUND.INFO/verify", "expect": "caught", "note": ""}
+{"id": "lnk-021", "technique": "trailing dot host", "url": "http://paytm-refund.info./verify", "expect": "caught", "note": ""}
+{"id": "lnk-022", "technique": "explicit port", "url": "http://paytm-refund.info:8080/verify", "expect": "caught", "note": ""}
+{"id": "lnk-023", "technique": "percent-encoded host", "url": "http://%70aytm-refund.info/verify", "expect": "caught", "note": ""}
+{"id": "lnk-024", "technique": "long random subdomain", "url": "http://a8f3n2k9x7.paytm-refund.info/verify", "expect": "caught", "note": ""}
+{"id": "lnk-025", "technique": "pure cyrillic brand", "url": "http://раутм.com/login", "expect": "caught", "note": ""}
+{"id": "lnk-026", "technique": "greek omicron", "url": "http://paytοm.com/login", "expect": "caught", "note": ""}
+{"id": "lnk-027", "technique": "no scheme", "url": "paytm-refund.info/verify", "expect": "caught", "note": ""}
+{"id": "lnk-028", "technique": "scheme case", "url": "HTTP://paytm-refund.info/verify", "expect": "caught", "note": ""}
+{"id": "lnk-029", "technique": "double slash path", "url": "http://evil.xyz//paytm.com/login", "expect": "caught", "note": ""}
+{"id": "lnk-030", "technique": "brand in path only", "url": "http://secure-portal.net/paytm/login", "expect": "known_gap", "note": "Flagging a brand in a URL path would flag every news article and review site that names a bank. Belongs to the stages that read the page."}
+{"id": "lnk-031", "technique": "brand in query", "url": "http://secure-portal.net/?redir=paytm.com", "expect": "known_gap", "note": "Same false-positive surface as the path case. A bare host in a query parameter is not a destination."}

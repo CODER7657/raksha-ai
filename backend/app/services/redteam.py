@@ -181,6 +181,12 @@ class LoopStats:
     schema_failures: int = 0
     detected: int = 0
     evaded: int = 0
+    #: Variants this detector had nothing to say about — a `links` run against a
+    #: variant containing no link. Counted separately because folding them into
+    #: `evaded` would report a detector as broken for declining to answer a
+    #: question it was not asked, and folding them into `detected` would claim a
+    #: catch that never happened.
+    not_applicable: int = 0
     duplicates: int = 0
     model_calls: int = 0
     evasions: list[Evasion] = field(default_factory=list)
@@ -283,10 +289,54 @@ def detect_rules(text: str, language: str) -> dict:
     }
 
 
+def detect_links(text: str, language: str) -> dict:
+    """A2 stage 1 alone — the static link checks, against links in the message.
+
+    Registered so #115's "point A6 at every detector you build" is something the
+    existing loop can do rather than a second loop somebody writes. Free and
+    instant like `rules`, for the same reason: no network, no model.
+
+    **A message with no link is not an evasion.** It is a message this detector
+    has no opinion about, and scoring it as a miss would fill the queue with
+    variants that were never in scope. Those return `not_applicable`, which is
+    not in `SCAM_VERDICTS` — so the caller must filter them rather than count
+    them, and `run()` does.
+
+    The deterministic half of this pass is already committed as
+    `testdata/link_evasions.jsonl` (31 techniques, 29 caught). This exists for
+    the half a fixed list cannot do: mutations nobody enumerated.
+    """
+    from app.services import domain_age, link_signals, threat_feeds
+
+    urls = link_signals.extract_urls(text)
+    if not urls:
+        return {"verdict": "not_applicable", "risk_score": 0, "rules_fired": [], "detector": "links"}
+
+    signals = []
+    for url in urls:
+        signals.extend(link_signals.evaluate(url))
+        signals.extend(threat_feeds.signals_for(url))
+        signals.extend(domain_age.signals_for(url))
+
+    return {
+        # Stage 1 never blocks alone — §01 needs two independent witnesses, at
+        # least one deterministic. `suspicious` is the strongest thing this
+        # layer is allowed to say on its own.
+        "verdict": "suspicious" if signals else "safe",
+        "risk_score": 70 if signals else 0,
+        "rules_fired": sorted({s.name for s in signals}),
+        "detector": "links",
+    }
+
+
 #: Which layer a run attacks. `rules` is the on-device engine; `full` is what a
-#: website user gets. They answer different questions and a run should say which
-#: one it asked.
-DETECTORS = {"full": detect_full, "rules": detect_rules}
+#: website user gets; `links` is A2 stage 1. They answer different questions and
+#: a run should say which one it asked.
+DETECTORS = {"full": detect_full, "rules": detect_rules, "links": detect_links}
+
+#: Verdicts meaning "this detector had nothing to say about this variant" —
+#: distinct from "it looked and found nothing", which is a miss.
+NOT_APPLICABLE = "not_applicable"
 
 
 def estimate(seeds: list[dict], strategies: list[str], variants_per_strategy: int) -> dict:
@@ -377,6 +427,10 @@ def run(
                         # a budget it never spent.
                         stats.model_calls += 1
                     result = detect(text, seed["language"])
+                    if result["verdict"] == NOT_APPLICABLE:
+                        # Out of scope, not a miss. See LoopStats.not_applicable.
+                        stats.not_applicable += 1
+                        continue
                     if result["verdict"] in SCAM_VERDICTS:
                         stats.detected += 1
                         continue

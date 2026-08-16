@@ -4,26 +4,18 @@ Deliberately independent of the LLM — pure pattern matching, so it keeps
 working even if both LLM providers are down. Levenshtein distance against a
 small allowlist of legitimate brand domains/handles catches the common
 "paytm-refund.info" / "paytm.help.in" style scams.
+
+The Levenshtein, the brand allowlist and the TLD set now live in
+`brand_match.py`, shared with A2 stage 1 (#115). The matching loop below stays
+here rather than moving to `brand_match.nearest_brand`: this path is tuned for
+UPI handles and its behaviour is pinned by `test_upi_check.py`, while stage 1
+tightens the threshold on short tokens. Same primitives, two deliberately
+different policies, one place to add a bank.
 """
 
 import re
 
-KNOWN_BRANDS = ["paytm", "phonepe", "googlepay", "gpay", "bhim", "sbi", "hdfc", "icici", "axisbank"]
-
-SUSPICIOUS_TLDS = {".info", ".xyz", ".top", ".click", ".online", ".site"}
-
-
-def _levenshtein(a: str, b: str) -> int:
-    if len(a) < len(b):
-        a, b = b, a
-    previous = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        current = [i]
-        for j, cb in enumerate(b, 1):
-            cost = 0 if ca == cb else 1
-            current.append(min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost))
-        previous = current
-    return previous[-1]
+from app.services.brand_match import KNOWN_BRANDS, SUSPICIOUS_TLDS, levenshtein
 
 
 def check_upi_or_link(value: str) -> dict:
@@ -34,7 +26,7 @@ def check_upi_or_link(value: str) -> dict:
     for brand in KNOWN_BRANDS:
         if brand in value:
             continue  # exact brand mention is expected, not suspicious by itself
-        distance = min(_levenshtein(value.split("@")[0].split(".")[0], brand), 99)
+        distance = min(levenshtein(value.split("@")[0].split(".")[0], brand), 99)
         if 0 < distance <= 2 and len(value) > 3:
             reasons.append(f"Looks like a misspelling of '{brand}'")
 
