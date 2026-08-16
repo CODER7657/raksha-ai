@@ -16,12 +16,13 @@ incoming SMS entirely on-device.
 
 | | |
 |---|---|
-| Test suite | **394 passing** |
+| Test suite | **421 passing** — plus 4 Android unit tests that now actually run (#80) |
 | Rule corpus | 79 rows — 77 enforced, 2 known gaps (both accepted false positives) |
 | Offline engine | recall **1.000** in all twelve languages |
-| LLM path (English) | precision **0.963**, recall **1.000**, held out |
+| LLM path | English precision **0.933** / recall **1.000**; Hindi **0.923** / **1.000**. Held out, re-scored against all 79 rows (#76) |
 | Evasion queue | 3 entries, all `fixed` |
 | Provider rungs | Groq OK, Gemini OK, embeddings OK — checked live |
+| Migrations | `0001`–`0007` applied; `0008` open in a PR |
 
 **The caveat that must travel with those numbers:** nine of the twelve languages
 have two corpus cases each. Their 1.000 means the plumbing works, not that the
@@ -54,35 +55,39 @@ change touches a response model.
 
 ---
 
-## 02 · ⚠️ Immediate, before anything else
+## 02 · Nothing is immediate
 
-**1. Deploy.** The only item here that no PR can close, and the oldest. `#66`,
-`#68` and `#69` are on `master` and **not live**. #68 carries migration
-`0005_verdict_cache.sql`, which goes in **before** the deploy. Until then the
-verdict cache does nothing and the rule fixes protect nobody.
+Everything that sat here has landed. Recording what they were, because the list
+being empty is the only evidence that they were worked rather than forgotten.
 
-**2. Merge #71 with `--admin`** (Hem, one source of truth for UI strings), once
-reviewed. It cannot be merged any other way: `/frontend/src/i18n/` is owned by
-`@Hem60 @Ayush3422`, Hem is the author, and Ayush is unavailable — so no
-available person satisfies the CODEOWNERS review. This is the deadlock the
-CODEOWNERS header describes, reached by a second route: not a single owner, but
-a second owner who is not here. **Adding `@CODER7657` to that line is the fix**,
-and it is the same fix #26 applied everywhere else.
+**Deploy — done.** All of `0005`, `0006` and `0007` applied by hand, backend
+deployed, verified against the running service rather than assumed:
+`/api/agents`, `/api/agents/runs` and `/api/agents/{agent_id}/switch` are on the
+deployed `openapi.json`, `ScanResult` still carries `trace`, and all three write
+endpoints return 401 unauthenticated. An unauthenticated stop request against
+`a6_redteam` left both agents `enabled` — the switch is genuinely closed.
 
-**3. Wire `:app:test` into `android-ci.yml`.** It runs `:core:rules:test`,
-`assembleDebug` and `assembleRelease` — never `:app:test`. Four unit tests under
-`android/app/src/test/` have therefore never executed in CI, including the
-shadowing guard #71 adds, whose whole subject is the one thing the generator
-cannot see. The generator's own `GradleException` does run, so cross-locale
-coverage is genuinely enforced; the shadowing check is not. A check that cannot
-fail is worse than none, and this is four of them.
+**#71 — merged**, and the CODEOWNERS deadlock it exposed is fixed (#78).
+`/frontend/src/i18n/` now names three owners, so the next i18n PR does not need
+an admin override.
 
-The LLM benchmark re-run that used to sit here is done. It re-scored against all
-79 rows: recall stays 1.000 everywhere, precision moves to 0.933 (`en`) and
-0.923 (`hi`), and the three benign messages now warned about are named in the
-report. One of them is the cost of #66 teaching the rules that `disclose` is a
-share verb — a parcel firm asking for a delivery address reaches for that word
-too. Re-run it inside `backend/.venv`, not the system Python — see §07.
+**`:app:test` — wired in (#80).** Four unit tests had never executed in CI. They
+all pass, in 22s. Anticlimactic, and that is the good outcome: they were correct
+the whole time, and nothing would have said so if they had not been.
+
+**LLM benchmark — re-scored (#76)** against all 79 rows. Recall stays 1.000
+everywhere; precision moves to 0.933 (`en`) and 0.923 (`hi`). The three benign
+messages now warned about are named in the report, and one is the direct cost of
+#66 teaching the rules that `disclose` is a share verb — a parcel firm asking
+for a delivery address reaches for that word too. Re-run it inside
+`backend/.venv`, not the system Python — see §07.
+
+**The one thing left over:** `AGENT_OPERATOR_IDS` must be set in Render to the
+operator's Supabase UUID. Unset means nobody can flip an agent switch, including
+the lead. That is the fail-closed default working as designed, but it will read
+as a bug to whoever meets it cold.
+
+The open work is now in §06, on a person, rather than here.
 
 ---
 
@@ -212,28 +217,36 @@ wire protocol that is pure attack surface between our own agents.
 
 ## 06 · Open work
 
+**@Ayush3422 is back.** The redistribution recorded in the previous version of
+this section is over, and the Android work has gone back to him. What has not
+changed is the reasoning behind it: Android platform work does not go to a
+frontend developer, and that held while he was away rather than being an excuse
+made at the time.
+
 ### @CODER7657
 
 | # | What | Note |
 |---|---|---|
-| **#39** | Play `RECEIVE_SMS` declaration | **Submitted, awaiting Google.** The only item with an external clock. Nothing Android reaches a user until it clears |
-| #29 | Android enterprise bar | R8 done (#69). Next: tapjacking `filterTouchesWhenObscured`, signing config, instrumentation matrix |
-| #54 | Ops hygiene | Closes when #70 merges |
+| #32 | **Persist review-queue decisions** | Rescoped and moved from Hem. A/B/C/D all render; only the store is missing. Not UI work — where a decision is written, what an accepted draft *becomes* now that 0007 rejects an unapproved `agent` row, and whether a decision is reversible |
+| #83 | **Server-side half of the Android trust chain** | New, split out of #29. Bundle signing, Play Integrity verified server-side, device trace held to the backend schema. All three are places where a device-side control is only as good as something on the server |
+| #77 | `test_key_pools.py` reads the developer's real `.env` | Small, and it fails for whoever has just finished configuring their machine |
+
+### @Ayush3422
+
+| # | What | Note |
+|---|---|---|
+| **#39** | Play `RECEIVE_SMS` declaration | **Submitted, awaiting Google.** Still the only item with an external clock. Nothing Android reaches a user until it clears |
+| **#82** | **Release readiness — what blocks the first APK** | New. Finite, unlike #29. No `signingConfig` exists at all; Data Safety form; target-API deadlines untracked; plus tapjacking and surviving a reboot |
+| #29 | Android enterprise bar | A standing bar, not a task. Audited against the tree: about a third is done. R8 (#69), shared i18n (#71), the whole #38 SMS pipeline. The server-side items moved to #83 |
 
 ### @Hem60
 
-| # | What |
-|---|---|
-| #71 | UI strings, one source of truth — **open PR, needs review** |
-| #32 | Human gate — queue shipped read-only; the decision store is mine to design |
-| #41 | Agent surfaces — evasion queue shipped; run log remains |
-| #64 | Superseded by #71 once merged |
+Nothing open. #71, #75 and #79 all merged; #32, #41 and #64 are closed or moved.
 
-### @Ayush3422 — unavailable
-
-His work was redistributed. #23 and #29 came to me; #64 went to Hem. **Do not
-give Android platform work to a frontend developer** — that was the reasoning,
-and it still holds.
+Worth saying plainly: every rendering surface the human gate asked for now
+exists — review queue, benchmark dashboard both halves, evasion queue,
+provenance, operator console. The remaining pieces are schema and lifecycle
+questions, which is why they moved rather than stayed.
 
 ### Not started, worth remembering
 
