@@ -52,9 +52,42 @@ Four, under **Settings → Secrets and variables → Actions**, as repository
 | Secret | Value |
 |---|---|
 | `RAKSHA_KEYSTORE_BASE64` | `base64 -w0 raksha-upload.jks` |
-| `RAKSHA_KEYSTORE_PASSWORD` | keystore password |
+| `RAKSHA_KEYSTORE_PASSWORD` | the keystore password |
 | `RAKSHA_KEY_ALIAS` | `raksha-upload` |
-| `RAKSHA_KEY_PASSWORD` | key password |
+| `RAKSHA_KEY_PASSWORD` | **the same password again** — see below |
+
+> **There is only one password, and every guide will tell you there are two.**
+>
+> JDK 9 changed keytool's default format to PKCS12, and it stays PKCS12 even
+> when the file is named `.jks`. **PKCS12 does not support a separate key
+> password.** keytool will not prompt for one, and if you force one with
+> `-keypass` it says so and ignores you:
+>
+> ```
+> Warning: Different store and key passwords not supported for PKCS12
+> KeyStores. Ignoring user-specified -keypass value.
+> ```
+>
+> So the "re-enter password" prompt during `-genkeypair` is a confirmation, not
+> a second password. `RAKSHA_KEY_PASSWORD` takes the same value as
+> `RAKSHA_KEYSTORE_PASSWORD`.
+>
+> The Android signing config has separate `storePassword` and `keyPassword`
+> fields because the older JKS format genuinely allowed them to differ. Two
+> fields, one value.
+
+> **Check the secret names character by character.** A typo caught this on the
+> first real run: the secret had been created as `RAKSHA_KEY_PASSWORDG`, and a
+> trailing character is invisible in `gh secret list` unless you are hunting for
+> it. The workflow reports a misnamed secret and an absent one **identically** —
+> both are "missing" from its point of view:
+>
+> ```
+> ##[error]Missing repository secrets: RAKSHA_KEY_PASSWORD
+> ```
+>
+> If that appears and you are certain you set it, list the secrets and compare
+> the names rather than re-entering the value.
 
 > **The four-places trap** (#70). "Secret" means four different things on
 > GitHub: repository Secrets, repository Variables, Environment secrets, and the
@@ -162,12 +195,34 @@ set, the usual cause is a Gradle daemon still running with the old environment.
 
 ---
 
-## 07 · Known gaps in this process
+## 07 · What this process has actually been run against
+
+**The workflow has produced a signed APK.** Run `31931926615`, 16 August:
+
+```
+All four signing secrets are present.
+BUILD SUCCESSFUL in 2m 23s
+Release APK signature present: app-release.apk
+Verified using v1 scheme (JAR signing): false     <- correct, minSdk 24
+Verified using v2 scheme: true
+Verified using v3 scheme: true
+```
+
+So the keystore decodes, the password is right, the base64 survived the round
+trip, and the signature validates rather than merely existing. That is the whole
+of §01 and §03 proven end to end.
+
+Two failures on the way there, both caught by the secret check before any build
+ran, and both now documented in §01: a missing secret, and a misnamed one.
+
+## 08 · Known gaps in this process
 
 Written down rather than discovered:
 
-- **No real-device install has been done yet.** #91 §4. Everything to date is
+- **No real-device install has been done yet.** #95. Everything to date is
   emulator-verified, and §04 above asks for something that has not happened once.
+  The signed artifact now exists, so this is unblocked rather than theoretical:
+  `gh run download 31931926615 -n raksha-release-signed`.
 - **`verifyReleaseSigning` is a smoke test.** It proves a signature block is
   present, not that it validates. `apksigner verify` is the real check, which is
   why the workflow runs both and why §04 lists it separately.
