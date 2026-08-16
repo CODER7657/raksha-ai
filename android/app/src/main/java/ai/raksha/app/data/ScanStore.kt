@@ -47,6 +47,19 @@ interface ScanStore {
         ruleReviewStatus: String,
     ): ScanRecord?
 
+    /**
+     * Every sender whose message this phone flagged, newest scan first.
+     *
+     * This is what layer 1 builds its reputation set from, and the reason it is
+     * a query rather than a filter over [recent] is latency: it runs while a
+     * call screening service is cold-starting, and it must not pull two hundred
+     * message bodies through memory to answer a question about phone numbers.
+     *
+     * Senders are returned raw. Deciding which of them are even dialable belongs
+     * to `NumberIdentity`, not to SQL.
+     */
+    fun flaggedSenders(): List<FlaggedSender>
+
     /** Everything, irreversibly. */
     fun clear()
 

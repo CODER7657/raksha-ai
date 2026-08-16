@@ -57,6 +57,15 @@ class ScanStoreContractTest {
 
         override fun clear() = records.clear()
         override fun count() = records.size
+
+        override fun flaggedSenders(): List<FlaggedSender> =
+            records.filter { it.isFlagged }
+                .sortedByDescending { it.scannedAtMillis }
+                .map { scan ->
+                    FlaggedSender(
+                        scan.sender, scan.id, scan.scannedAtMillis, scan.hits.map { it.ruleId },
+                    )
+                }
     }
 
     private fun store() = InMemoryScanStore()
@@ -135,6 +144,54 @@ class ScanStoreContractTest {
         // A blank trace screen and "this is gone" are different statements, and
         // the UI can only tell them apart if the store does.
         assertNull(store().byId(404L))
+    }
+
+    @Test
+    fun `flagged senders exclude clean scans and are newest first`() {
+        // Layer 1 reads this. A clean scan leaking into it would mean a caller
+        // the app examined and cleared gets warned about when it rings.
+        val store = store()
+        store.record(1_000, "+911111111111", "en", "hello", emptyList(), "in-service")
+        store.record(
+            2_000, "+912222222222", "en", "Share your OTP",
+            listOf(RuleHitRecord("otp_share", "p", "share your OTP")), "in-service",
+        )
+        store.record(
+            3_000, "+913333333333", "en", "KYC expired",
+            listOf(RuleHitRecord("kyc_expiry", "p", "KYC expired")), "in-service",
+        )
+
+        val flagged = store.flaggedSenders()
+        assertEquals(listOf("+913333333333", "+912222222222"), flagged.map { it.sender })
+        assertEquals(listOf("kyc_expiry"), flagged.first().ruleIds)
+    }
+
+    @Test
+    fun `a flagged sender resolves back to its own scan`() {
+        // The id is the whole point: a warning about a number has to be able to
+        // show the message it came from.
+        val store = store()
+        val scan = store.add(at = 1_000, hits = listOf(RuleHitRecord("otp_share", "p", "OTP")))
+
+        val flagged = store.flaggedSenders().single()
+        assertEquals(scan.id, flagged.scanId)
+        assertNotNull(store.byId(flagged.scanId))
+    }
+
+    @Test
+    fun `a scan with several hits is one flagged sender, not several`() {
+        val store = store()
+        store.add(
+            at = 1_000,
+            hits = listOf(
+                RuleHitRecord("otp_share", "p", "share your OTP"),
+                RuleHitRecord("urgent_verify", "p", "urgent verify"),
+            ),
+        )
+
+        val flagged = store.flaggedSenders()
+        assertEquals(1, flagged.size)
+        assertEquals(listOf("otp_share", "urgent_verify"), flagged.single().ruleIds)
     }
 
     @Test
