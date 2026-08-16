@@ -52,17 +52,64 @@ def retrieve_similar_patterns(
     ]
 
 
+#: Below this cosine similarity a retrieved pattern is noise and is left out of
+#: the prompt. It is applied *here* and deliberately not in SQL — see
+#: `language_is_covered`, whose whole contract depends on the query returning
+#: top-k unfiltered.
+WEAK_MATCH_SIMILARITY = 0.35
+
+
+def language_is_covered(patterns: list[RetrievedPattern]) -> bool:
+    """Does this language have any patterns at all to retrieve from?
+
+    `match_scam_patterns` applies **no similarity floor**. It orders by distance
+    and takes top-k, however poor the distance is. So an empty result does not
+    mean "nothing was similar enough" — it means the `where language = ...`
+    filter matched no live rows, i.e. this language has nothing in the corpus.
+
+    That distinction is the difference between a verdict grounded in retrieved
+    evidence and one the model made up unaided, and today it is invisible: nine
+    of the twelve supported languages have zero patterns (#88), and their scans
+    return the same shape as a grounded English one.
+
+    The inference is only sound while the SQL stays unfiltered, so
+    `test_retrieval_has_no_similarity_floor` asserts that against the migration.
+    If someone adds a `where similarity > x`, that test fails and tells them
+    this function needs rewriting rather than letting it quietly start lying.
+    """
+    return bool(patterns)
+
+
 def format_context_block(patterns: list[RetrievedPattern]) -> str:
-    """Turn retrieved patterns into the context block injected into the LLM prompt."""
-    if not patterns:
-        return "No closely matching known scam patterns were found in the database."
+    """Turn retrieved patterns into the context block injected into the LLM prompt.
+
+    Three outcomes, not two, and the third used to be told as the second.
+
+    A language with **no patterns at all** was described to the model as "no
+    closely matching known scam patterns were found in the database" — which
+    says a corpus was consulted and came back empty. For Tamil or Odia that is
+    false, and it is false in the direction that costs us: absence of evidence
+    is offered to the model as evidence of absence, on exactly the languages
+    where we have the least right to any confidence.
+    """
+    if not language_is_covered(patterns):
+        return (
+            "There are NO reference scam patterns in the database for this "
+            "language. This is a gap in our data, not a signal about the "
+            "message. Judge the message entirely on its own merits, and do not "
+            "treat the absence of matches as evidence that it is safe."
+        )
 
     lines = [
         f'- [{p.category}] "{p.pattern_text}" (similarity: {p.similarity:.2f})'
         for p in patterns
-        if p.similarity > 0.35  # filter out weak/irrelevant matches
+        if p.similarity > WEAK_MATCH_SIMILARITY
     ]
     if not lines:
-        return "No closely matching known scam patterns were found in the database."
+        return (
+            "Known scam patterns exist for this language, but none were "
+            "similar to this message. That is a real signal: the message does "
+            "not resemble anything in the reference set."
+        )
 
     return "Known scam patterns similar to this message:\n" + "\n".join(lines)

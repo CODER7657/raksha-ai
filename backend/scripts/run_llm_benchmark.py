@@ -116,17 +116,35 @@ def main() -> int:
           f"api calls: {result['run']['api_calls']}   "
           f"cache hits: {result['run']['cache_hits']}\n")
 
-    header = f"{'lang':<6}{'cases':>7}{'scored':>8}{'leaked':>8}{'precision':>11}{'recall':>9}"
+    header = (
+        f"{'lang':<6}{'cases':>7}{'scored':>8}{'leaked':>8}"
+        f"{'grounded':>10}{'precision':>11}{'recall':>9}"
+    )
     print(header)
     print("-" * len(header))
+    ungrounded = []
     for lang in result["languages"]:
         if lang["total_cases"] == 0:
             continue
         precision = "—" if lang["precision"] is None else f"{lang['precision']:.3f}"
         recall = "—" if lang["recall"] is None else f"{lang['recall']:.3f}"
+        grounded = lang.get("grounded_cases", 0)
+        if grounded == 0:
+            ungrounded.append(lang["language"])
         print(
             f"{lang['language']:<6}{lang['total_cases']:>7}{lang['scored_cases']:>8}"
-            f"{lang['leaked_cases']:>8}{precision:>11}{recall:>9}"
+            f"{lang['leaked_cases']:>8}{grounded:>10}{precision:>11}{recall:>9}"
+        )
+
+    # Printed rather than left in the JSON, because the table above is what
+    # anyone actually reads and a 1.000 with no corpus behind it looks exactly
+    # like a 1.000 with one (#88).
+    if ungrounded:
+        print(
+            f"\n{len(ungrounded)} language(s) had NO scam patterns to retrieve from: "
+            f"{', '.join(ungrounded)}.\n"
+            "Their figures measure the model unaided, not the RAG pipeline this "
+            "benchmark is named after."
         )
 
     leakage = result["leakage"]

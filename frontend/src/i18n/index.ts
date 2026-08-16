@@ -23,6 +23,21 @@ import hi from './locales/hi.json'
 /** Languages with a real, reviewed translation bundle. */
 export const TRANSLATED_LANGUAGES = ['en', 'hi', 'gu'] as const
 
+/** Keys that exist in `en` and deliberately not yet in `hi` or `gu`.
+ *
+ * Named rather than quietly absent, for the reason in the header above: a
+ * machine translation of fraud-safety copy is worse than English, so the honest
+ * state is "missing and tracked". This is the web counterpart of the
+ * `knownUntranslated` map #71 added on the Android side, and it exists so the
+ * gap is countable instead of being discovered by a Hindi user meeting English
+ * text.
+ *
+ * `trace.noPatternsForLanguage` shipped with #88, which is the issue about
+ * nine languages having no scam patterns at all — so a string explaining that
+ * gap is itself waiting on the language review in #89. Remove entries here as
+ * a speaker supplies them, in the same PR as the translation. */
+export const KNOWN_UNTRANSLATED = ['trace.noPatternsForLanguage'] as const
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
