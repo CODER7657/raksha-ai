@@ -34,15 +34,31 @@ as it is.
 
 Seven agents, each owning one open-ended job.
 
-| # | Agent | Trigger | Autonomy | Output |
-|---|---|---|---|---|
-| A1 | **Pattern Discovery** | Scheduled, 6-hourly | Drafts only | Candidate scam patterns → human queue |
-| A2 | **Phishing Investigator** | New URL observed | Sandboxed analysis | Verdict + evidence bundle |
-| A3 | **Campaign Correlator** | Hourly | Read-only | Linked-incident clusters |
-| A4 | **Triage Conversationalist** | User message (WhatsApp) | Bounded dialogue | Follow-up questions, then hands to detection |
-| A5 | **Investigation Assistant** | Cyber-cell analyst query | Read-only | Answers over aggregate data |
-| A6 | **Red-Team Adversary** | Pre-release, scheduled | Sandboxed | Evasion attempts → benchmark cases |
-| A7 | **Content Localiser** | New pattern approved | Drafts only | Translations → native-speaker review |
+| # | Agent | Trigger | Autonomy | Output | Status |
+|---|---|---|---|---|---|
+| A1 | **Pattern Discovery** | Scheduled, 6-hourly | Drafts only | Candidate scam patterns → human queue | ⚠️ **Half** — see below |
+| A2 | **Phishing Investigator** | New URL observed | Sandboxed analysis | Verdict + evidence bundle | ❌ Not built |
+| A3 | **Campaign Correlator** | Hourly | Read-only | Linked-incident clusters | ❌ Not built |
+| A4 | **Triage Conversationalist** | User message (WhatsApp) | Bounded dialogue | Follow-up questions, then hands to detection | ❌ Not built |
+| A5 | **Investigation Assistant** | Cyber-cell analyst query | Read-only | Answers over aggregate data | ❌ Not built |
+| A6 | **Red-Team Adversary** | Pre-release, scheduled | Sandboxed | Evasion attempts → benchmark cases | ✅ **Built** — #43 |
+| A7 | **Content Localiser** | New pattern approved | Drafts only | Translations → native-speaker review | ❌ Not built |
+
+**One of seven is real.** A6 exists, runs, and has found genuine bugs (#44, #63).
+
+**A1 is exactly half.** Everything downstream of the agent is built — the review
+queue (#60), the near-duplicate check, the append-only decision store that
+promotes an accepted draft into `scam_patterns` with an approver attached (#87).
+What does not exist is the **discovery** half: `testdata/pattern_drafts.jsonl`
+holds eight hand-written rows, and nothing generates more. The gate is real; the
+thing it gates is a fixture.
+
+That ordering was deliberate — §03 is explicit that nothing enters the pattern
+database unreviewed, so the gate had to exist first — but "A1 is built" would be
+false.
+
+**What people mean by "the agent layer" today** is therefore one adversarial loop
+plus a human review surface. That is worth having and it is not seven agents.
 
 Every agent that can affect what users see (**A1, A2, A6, A7**) produces
 **drafts**, never live changes. The human approval step is the design, not an
