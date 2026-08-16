@@ -110,6 +110,7 @@
     },
     "matchedText": "Matched in your message",
     "retrievedPatterns": "Known scam patterns it was compared against",
+    "noPatternsForLanguage": "No known scam patterns exist for this language yet, so this verdict was reached without them. It was judged on the message alone.",
     "similarity": "{{percent}}% similar",
     "model": "Judged by",
     "provider": "Provider",

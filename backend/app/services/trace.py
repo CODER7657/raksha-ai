@@ -22,7 +22,11 @@ import hmac
 from typing import Any
 
 from app.services.llm import PROMPT_VERSION, Classification
-from app.services.rag import RetrievedPattern
+from app.services.rag import (
+    WEAK_MATCH_SIMILARITY,
+    RetrievedPattern,
+    language_is_covered,
+)
 from app.services.rule_engine import RuleHit
 
 
@@ -58,6 +62,31 @@ def build_trace(
             }
             for pattern in patterns
         ],
+        # Whether retrieval had anything to retrieve *from* (#88).
+        #
+        # An empty `retrieved_patterns` has meant two different things and said
+        # neither: "the corpus was searched and nothing was close" versus "this
+        # language has no corpus". The first is a weak signal about the message.
+        # The second is a statement about us — nine of the twelve supported
+        # languages have zero patterns — and it is the one that decides whether
+        # the verdict was grounded at all.
+        #
+        # In the trace rather than inferred by the reader, because the reader
+        # would have to know that `match_scam_patterns` applies no similarity
+        # floor in order to draw it, and that is not a fact a UI should have to
+        # know about a SQL function.
+        "retrieval": {
+            "language_covered": language_is_covered(patterns),
+            "patterns_retrieved": len(patterns),
+            # How many actually reached the prompt. Distinct from the count
+            # above and not derivable from it: five retrieved of which none
+            # cleared the weak-match floor is a different verdict from five
+            # retrieved and five used, and `retrieved_patterns` lists both
+            # kinds without saying which was which.
+            "patterns_used": sum(
+                1 for p in patterns if p.similarity > WEAK_MATCH_SIMILARITY
+            ),
+        },
     }
 
     if classification is not None:
@@ -84,6 +113,12 @@ def build_trace_from_cache(
     so there were no patterns. Replaying the ones stored with the original
     verdict would be inventing evidence for a step that did not run.
 
+    `retrieval.language_covered` is `None` for the same reason, and that is a
+    third state rather than a `False`. Retrieval did not run, so whether this
+    language has patterns was never established — reporting `False` would
+    assert the #88 gap on a scan that never looked, which is the same class of
+    error as replaying the patterns.
+
     `model.cached` says the verdict was reused. Without it the audit record
     would credit a model call that never happened, and two identical verdicts
     would be indistinguishable from two independent judgements — which is
@@ -102,6 +137,13 @@ def build_trace_from_cache(
             for hit in hits
         ],
         "retrieved_patterns": [],
+        "retrieval": {
+            # Not False. Retrieval never ran, so this was never established.
+            "language_covered": None,
+            "patterns_retrieved": 0,
+            "patterns_used": 0,
+            "skipped": "cache_hit",
+        },
         "model": {
             "provider": provider,
             "model": model,
@@ -190,6 +232,20 @@ def build_audit_payload(
             }
             for pattern in trace.get("retrieved_patterns", [])
         ],
+        # Whether there was a corpus to ground this verdict in at all (#88).
+        #
+        # Belongs in the chain for the same reason `agent_influenced` does. "Was
+        # this decision grounded in retrieved evidence, or did the model answer
+        # unaided?" is a question a regulator can ask about a six-month-old
+        # verdict, and by then the corpus will have grown — nine languages are
+        # empty today and the intention is that they will not stay that way.
+        # Reconstructing it later from the pattern table would give the wrong
+        # answer, confidently.
+        #
+        # None where retrieval did not run (a cache hit), preserved rather than
+        # flattened to False, because "not established" and "no corpus" are
+        # different facts about the same absent evidence.
+        "retrieval_language_covered": trace.get("retrieval", {}).get("language_covered"),
         # A single flag so the question is answerable without walking the list.
         "agent_influenced": any(
             pattern.get("provenance") == "agent"

@@ -21,6 +21,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
   const trace = result.trace ?? undefined
   const rules = trace?.offline_rules_fired ?? []
   const patterns = trace?.retrieved_patterns ?? []
+  const retrieval = trace?.retrieval
   // Counted rather than a boolean: "one of five patterns came from an agent"
   // and "all five did" are different claims about how much of the verdict
   // rests on machine-drafted evidence.
@@ -85,6 +86,24 @@ export function TraceViewer({ result }: { result: ScanResult }) {
               </>
             )}
           </TraceSection>
+
+          {/* #88. An empty pattern list used to render as nothing at all, which
+              read as "this section does not apply" rather than "this verdict was
+              not grounded in anything". For nine of the twelve supported
+              languages the corpus is empty, and a verdict there is the model
+              answering unaided — which a reader is entitled to know, because it
+              is the difference between the RAG claim holding and not.
+
+              Only when the backend actually said so. `language_covered: null`
+              means retrieval was skipped (a cache hit) and coverage was never
+              established, so nothing is claimed either way. */}
+          {retrieval?.language_covered === false && (
+            <TraceSection label={t('trace.retrievedPatterns')}>
+              <p className="border-l-2 border-amber-600 bg-amber-50 px-2 py-1.5 text-[11px] text-ink leading-relaxed">
+                {t('trace.noPatternsForLanguage')}
+              </p>
+            </TraceSection>
+          )}
 
           {patterns.length > 0 && (
             <TraceSection label={t('trace.retrievedPatterns')}>

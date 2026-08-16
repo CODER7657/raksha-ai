@@ -86,6 +86,11 @@ class LlmLanguageBenchmark:
     true_negatives: int
     precision: float | None
     recall: float | None
+    #: Cases with any scam patterns behind them (#88). Zero means this
+    #: language's figures measure the model alone, not the RAG pipeline — which
+    #: is currently true of nine of the twelve supported languages, and is not
+    #: something a reader should have to already know to interpret the row.
+    grounded_cases: int = 0
     missed_cases: list[dict] = field(default_factory=list)
     # Itemised for the same reason as missed_cases, and not an afterthought:
     # ARCHITECTURE accepts over-warning as the safer failure, but "accepted"
@@ -215,6 +220,13 @@ def classify_case(case: dict, cache: dict) -> dict:
 
     record["top_similarity"] = round(top_similarity, 4)
     record["leaked"] = top_similarity >= LEAK_SIMILARITY
+    # Was there a corpus to ground this case in at all (#88)? Free to record —
+    # retrieval already ran above — and it changes what the score means. Nine
+    # of the twelve languages have no patterns, so their figures measure the
+    # model unaided rather than the RAG pipeline this benchmark claims to
+    # score. A precision of 1.000 over two cases with an empty corpus is not
+    # the same number as 0.933 over forty-two with one.
+    record["retrieval_covered"] = rag.language_is_covered(patterns)
     return record
 
 
@@ -277,6 +289,12 @@ def score_language(language: str, results: list[tuple[dict, dict]]) -> LlmLangua
         missed_cases=missed,
         false_positive_cases=false_positives,
         leaked_case_ids=[case["id"] for case in leaked],
+        # How many of this language's cases had any corpus behind them (#88).
+        # Reported per language rather than as a global flag because that is
+        # where it changes the reading: a 1.000 with zero grounded cases is the
+        # model answering unaided, and it should not sit in the same column as
+        # a figure measured against a real reference set without saying so.
+        grounded_cases=sum(1 for _, rec in results if rec.get("retrieval_covered")),
     )
 
 

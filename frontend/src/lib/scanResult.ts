@@ -61,9 +61,30 @@ export interface AuditRecord {
  *
  * Field names here are the frontend's half of a contract that does not exist
  * yet; they need Pavan's sign-off before the backend implements them. */
+/** Whether retrieval had a corpus to search at all (#88).
+ *
+ * An empty `retrieved_patterns` meant two different things and said neither:
+ * the corpus was searched and nothing was close, or this language has no
+ * corpus. Nine of the twelve supported languages are currently the second, and
+ * a verdict there is the model answering unaided rather than a grounded one.
+ *
+ * `language_covered: null` is a third state and not a falsy second: a cached
+ * verdict skipped retrieval, so coverage was never established. Rendering that
+ * as "no patterns exist" would assert a gap on a scan that never looked. */
+export interface RetrievalCoverage {
+  language_covered: boolean | null
+  patterns_retrieved: number
+  /** How many cleared the weak-match floor and actually reached the prompt.
+   * Not derivable from the count above — five retrieved and none used is a
+   * different verdict from five retrieved and five used. */
+  patterns_used: number
+  skipped?: string
+}
+
 export interface ScanTrace {
   offline_rules_fired?: OfflineRuleHit[]
   retrieved_patterns?: RetrievedPattern[]
+  retrieval?: RetrievalCoverage
   model?: ModelStamp
   audit?: AuditRecord
 }
