@@ -37,7 +37,8 @@
         "status": "string — in-service | inherited | unreviewed",
         "native_reviewed": "boolean — a speaker has read the native-script rules",
         "code_mixed_reviewed": "boolean — always true. Every language falls back to the English rules, which are reviewed, so a code-mixed message is caught by reviewed rules in all twelve. Split from native_reviewed because reporting one boolean would overstate the gap as badly as reporting nothing understates it.",
-        "inherited_from": "string | null — mr borrows Hindi's rules because the vocabulary genuinely overlaps. Weaker than review, stronger than nothing, and its own claim."
+        "inherited_from": "string | null — mr borrows Hindi's rules because the vocabulary genuinely overlaps. Weaker than review, stronger than nothing, and its own claim.",
+        "reviewed_via": "string | null — the language a reviewed-by-proxy review went through. Separate from inherited_from because the two answer questions about different objects: inherited_from says whose rules these are, reviewed_via says who read them and through what. Marathi inheriting Hindi's rules involves no human at all. A language code, never a reviewer's name — the name is unnecessary for the claim and would be personal data in a payload handed to every client."
       }
     },
     "offline_rules_fired": {
