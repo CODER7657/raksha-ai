@@ -26,6 +26,54 @@ location. A cost control that can take detection down is worse than the cost.
 **4. Fail safe, never confidently wrong.** Over-warning is recoverable; wrongly
 clearing a real scam is not. Every new signal inherits this.
 
+**5. Real time means a budget, not an aspiration.** A warning that arrives after
+the user has replied with an OTP is worth nothing. Every item below states which
+path it is on and what it costs.
+
+---
+
+## 00b · Where the latency actually is
+
+Stating this first because "make it real time" gets spent in the wrong place
+otherwise. The detection is not the slow part.
+
+| Path | Budget | Today |
+|---|---|---|
+| **On-device SMS scan** | ~200ms | ~1ms rule sweep; ~26ms warm end to end, ~577ms cold (class loading, not matching) |
+| **Server scan, cached verdict** | < 300ms | One digest lookup, no model call, no retrieval |
+| **Server scan, live** | 1–3s | Embedding + retrieval + classification |
+| **Backend cold start** | — | **40–50 seconds** |
+
+**The single worst latency in this product is the Render free-tier cold start**,
+and no amount of detection tuning touches it. Nothing in this plan is the
+highest-value latency work; moving off the free tier or keeping the instance warm
+is. That is an operational decision rather than an engineering one, and it should
+be made deliberately rather than discovered during a demo.
+
+The on-device path is already inside budget and is the one that matters most,
+because it is the only one that runs with no network at all.
+
+### Which path each new thing is on
+
+| Work | Path | Rule |
+|---|---|---|
+| A2 stage 1 static checks | **Hot** | Must add **< 100ms**. Cache aggressively; a URL's reputation does not change per scan |
+| Threat-feed lookups | **Hot** | Local hash lists only. **No blocking network call in the scan path** |
+| Domain age / WHOIS | **Warm** | Seconds. Look up once, cache for days, serve the cached answer to the hot path |
+| A2 stages 2–3 sandbox and analysis | **Off-path, always** | Seconds to minutes. The verdict arrives *after* the scan, and the user is notified if it changes |
+| Email sender authentication | **Hot** | Header parsing, sub-millisecond |
+| A1, A3, A6 | **Off-path** | Nobody is waiting |
+
+`AGENT-LAYER.md` §00 already bans agents from the path between a user and a
+verdict they act on in seconds, and the reason is exactly this. The two-stage
+split in §01 is not only a security decision — stage 1 is fast enough to be
+synchronous and stage 2 never will be.
+
+**The consequence worth stating plainly:** a link verdict from stage 2 can arrive
+after the user has already seen the scan result. That is acceptable, and it must
+be *visible* — an updated verdict has to announce itself rather than silently
+replacing what the user already read.
+
 ---
 
 ## 01 · A2, the phishing investigator — designed properly
