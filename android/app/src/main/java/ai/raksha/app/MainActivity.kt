@@ -44,6 +44,7 @@ import ai.raksha.app.core.Language
 import ai.raksha.app.core.ProtectionState
 import ai.raksha.app.core.RuleLabels
 import ai.raksha.app.core.ScanPreferences
+import ai.raksha.app.ui.RakshaTheme
 import ai.raksha.rules.offlineRuleHits
 
 /**
@@ -86,7 +87,7 @@ class MainActivity : ComponentActivity() {
         handleShare(intent)
         refreshState()
         setContent {
-            MaterialTheme {
+            RakshaTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(
                         sharedText = sharedText,

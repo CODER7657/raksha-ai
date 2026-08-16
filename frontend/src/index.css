@@ -11,6 +11,11 @@
 @custom-variant short (@media (max-height: 700px));
 
 
+/* These values are checked against design/tokens.json by
+   scripts/check-design-tokens.mjs, which runs as prebuild. That file is the
+   source of truth and the Android Compose theme is generated from it, so
+   editing a colour here alone will fail the build rather than quietly leave the
+   phone and the site painting the same thing differently (#116 §2). */
 @theme {
   --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --font-sans: "Inter", system-ui, sans-serif;
@@ -20,6 +25,14 @@
   --color-line: #d9d7cd;
   --color-accent: #ff5a1f;
   --color-accent-ink: #ffffff;
+
+  /* Verdict semantics. Pinned hex rather than Tailwind's emerald-600 /
+     amber-500 / red-600, which is what these were: the palette is defined in
+     oklch and a Tailwind upgrade could re-tint a verdict badge without anyone
+     choosing to. Android has no Tailwind, so it needs a value it can read. */
+  --color-verdict-safe: #009966;
+  --color-verdict-suspicious: #fe9a00;
+  --color-verdict-high-risk: #e7000b;
 }
 
 html {
