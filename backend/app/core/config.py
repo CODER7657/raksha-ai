@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     groq_api_key_batch: str = ""
     gemini_api_key_batch: str = ""
 
+    # Which isolation A2 stage 2 may fetch inside. `firecracker` or `gvisor`
+    # only — a plain container is not the right trust boundary for
+    # attacker-controlled content (AGENT-LAYER.md §02).
+    #
+    # EMPTY IS THE SAFE DEFAULT AND MUST STAY ONE. Unset means `page_analysis`
+    # refuses to fetch, which is correct: fetching a URL an attacker chose, from
+    # our infrastructure, without that isolation is the drive-by target §02
+    # opens by naming. Setting this is a statement that the sandbox actually
+    # exists — it does not create one.
+    page_sandbox: str = ""
+
     # Server-held pepper for the audit log's message digest. Unset, the digest
     # is a bare SHA-256, which is reversible for a low-entropy message — a bare
     # phone number is ~10^10 guesses, a 6-digit OTP is 10^6. See

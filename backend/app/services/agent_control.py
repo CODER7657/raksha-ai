@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 #: Agents registered by migration 0006. Duplicated here so a typo in a CLI flag
 #: is caught before a round trip, and so the CLIs have something to validate
 #: against offline. `test_agent_ids_match_the_migration` keeps the two honest.
-KNOWN_AGENTS = ("a6_redteam", "llm_benchmark")
+KNOWN_AGENTS = ("a2_page_analysis", "a6_redteam", "llm_benchmark")
 
 OUTCOMES = ("ok", "failed", "blocked")
 
