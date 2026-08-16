@@ -105,7 +105,13 @@ def test_prompt_version_change_invalidates_cache(monkeypatch, tmp_path, stubbed)
     benchmark_llm.run(confirm_cost=True, cache_path=cache_path)
     assert stubbed["classify"] == 1
 
-    monkeypatch.setattr(benchmark_llm.llm, "PROMPT_VERSION", "scan-v2")
+    # Derived, not a literal. This previously said "scan-v2", which silently
+    # became a no-op the day PROMPT_VERSION was bumped to scan-v2 — the test
+    # then asserted that not changing the version invalidates the cache, and
+    # failed for a reason unrelated to what it checks.
+    monkeypatch.setattr(
+        benchmark_llm.llm, "PROMPT_VERSION", f"{llm.PROMPT_VERSION}-changed"
+    )
     benchmark_llm.run(confirm_cost=True, cache_path=cache_path)
     assert stubbed["classify"] == 2, "a new prompt version must re-score"
 

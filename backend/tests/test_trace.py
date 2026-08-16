@@ -1,5 +1,6 @@
 """What ends up in a trace, and — more importantly — what must not."""
 
+from app.services import llm
 from app.services import trace as trace_service
 from app.services.llm import Classification
 from app.services.rag import RetrievedPattern
@@ -38,7 +39,9 @@ def test_trace_stamps_the_model_and_prompt_version():
     assert trace["model"] == {
         "provider": "groq",
         "model": "llama-3.3-70b-versatile",
-        "prompt_version": "scan-v1",
+        # From the module, not a literal: a bump must not fail a test
+        # that is about the stamp existing rather than its value.
+        "prompt_version": llm.PROMPT_VERSION,
     }
 
 
