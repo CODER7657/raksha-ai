@@ -7,4 +7,5 @@
 <resources>
     <string name="warning_channel_name">છેતરપિંડી ચેતવણી</string>
     <string name="warning_channel_description">જ્યારે કોઈ સંદેશ છેતરપિંડી જેવો લાગે ત્યારે ચેતવણી આપે છે. સંદેશ તમારા ફોન પર જ તપાસાય છે અને ક્યાંય મોકલાતા નથી.</string>
+    <string name="settings_stored_count">આ ફોન પર %1$d સંદેશ સંગ્રહિત</string>
 </resources>

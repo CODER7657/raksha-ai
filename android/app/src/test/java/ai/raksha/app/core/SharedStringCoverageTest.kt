@@ -40,6 +40,10 @@ class SharedStringCoverageTest {
         "warning_summary_no_sender",
         "warning_reason_bullet",
         "selected_format",
+        // %1$d, same reason as selected_format: i18next writes {{count}} and
+        // converting between the two invites a silent mismatch in the one place
+        // a wrong format string crashes at render rather than at build (#116 §3).
+        "settings_stored_count",
     )
 
     private fun declaredIn(path: String): Set<String> =

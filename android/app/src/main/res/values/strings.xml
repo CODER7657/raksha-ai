@@ -25,4 +25,5 @@
     <string name="warning_summary_no_sender">From an unknown sender</string>
     <string name="warning_reason_bullet">• %1$s</string>
     <string name="selected_format">Selected: %1$s · %2$s · %3$s script · %4$s</string>
+    <string name="settings_stored_count">%1$d message(s) stored on this phone</string>
 </resources>

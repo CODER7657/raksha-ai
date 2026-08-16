@@ -5,8 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
 import ai.raksha.app.core.SafeLog
+import ai.raksha.app.core.ServiceLocator
 import ai.raksha.app.core.ScamNotifier
 import ai.raksha.app.core.ScanPreferences
+import ai.raksha.app.data.RuleHitRecord
+import ai.raksha.rules.REVIEW_STATUS
 import ai.raksha.rules.offlineRuleHits
 import java.util.concurrent.Executors
 
@@ -15,8 +18,16 @@ import java.util.concurrent.Executors
  * device**, and raises a notification. Zero user action — the victim does not
  * have to suspect anything, which is the entire point of V2.
  *
- * The message text does not leave the phone. It is not sent anywhere, not
- * written to disk, and not logged (see [SafeLog]).
+ * The message text does not leave the phone. It is not sent anywhere and not
+ * logged (see [SafeLog]).
+ *
+ * It **is** written to disk now, which it was not before #116 §3. The scan is
+ * recorded so the user can answer "why did it flag that?" later — constraint 1
+ * of the project, and the thing the phone could not do while the website
+ * could. The terms that storage is held to are on [ai.raksha.app.data.ScanStore]:
+ * capped, clearable, gone on uninstall, and structurally unable to leave the
+ * device because the app holds no `INTERNET` permission. The user can switch it
+ * off, and switching it off clears what is already there.
  *
  * ### Why not WorkManager
  *
@@ -95,6 +106,32 @@ class SmsReceiver : BroadcastReceiver() {
         val elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000
 
         SafeLog.scanCompleted(hits.map { it.ruleId }, elapsedMillis)
+
+        // Recorded before notifying, and recorded whether or not anything fired.
+        // A history that only holds the flagged ones cannot answer "did it even
+        // look at that message?", which is the question a user asks when they
+        // were NOT warned about something that worried them.
+        //
+        // Deliberately outside the latency measurement above: the number
+        // reported is what the rule sweep costs, and folding a disk write into
+        // it would quietly inflate the figure the ~200ms budget is checked
+        // against.
+        if (preferences.isHistoryEnabled) {
+            try {
+                ServiceLocator.scanStore(context).record(
+                    scannedAtMillis = timestamp,
+                    sender = sender,
+                    language = preferences.language,
+                    body = body,
+                    hits = hits.map { RuleHitRecord(it.ruleId, it.pattern, it.matchedText) },
+                    ruleReviewStatus = REVIEW_STATUS[preferences.language] ?: "unreviewed",
+                )
+            } catch (error: Exception) {
+                // A failed write must not cost the user their warning, which is
+                // the part that matters in the next few seconds.
+                SafeLog.failure("history write", error)
+            }
+        }
 
         if (hits.isEmpty()) return
         ScamNotifier(context).warn(sender, hits.map { it.ruleId })
