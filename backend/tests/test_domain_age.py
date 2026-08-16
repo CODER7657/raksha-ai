@@ -11,7 +11,7 @@ a WHOIS server to every scan. So most of this file pins what `signals_for` is
 forbidden from doing.
 """
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -27,9 +27,13 @@ def cache(monkeypatch):
 
 
 def _resolved(days_old: int) -> dict:
+    """UTC, matching `domain_age.signals_for`. A local-time helper against a
+    UTC implementation would make the boundary tests flap by a day depending on
+    where the machine running them is."""
+    today = datetime.now(timezone.utc).date()
     return {
         "status": "resolved",
-        "registered_on": (date.today() - timedelta(days=days_old)).isoformat(),
+        "registered_on": (today - timedelta(days=days_old)).isoformat(),
     }
 
 

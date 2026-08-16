@@ -24,7 +24,6 @@ import pytest
 
 from app.services import link_signals
 
-
 # --- the contract ---------------------------------------------------------
 
 
@@ -152,6 +151,27 @@ def test_display_text_target_mismatch_is_flagged():
         "http://evil.example/login", display_text="https://www.icicibank.com/login"
     )
     assert "display_target_mismatch" in {s.name for s in signals}
+
+
+def test_a_host_beginning_with_w_is_not_confused_with_a_www_prefix():
+    """`lstrip("www.")` strips *characters*, not a prefix — `wine.com` becomes
+    `ine.com` and `web.example` becomes `eb.example`. Two unrelated hosts could
+    therefore normalise to the same string and a real mismatch be suppressed.
+
+    Found by ruff (PLE1310), not by the tests above, which is the useful part:
+    every case they exercised happened to start with a literal `www.`."""
+    signals = link_signals.evaluate(
+        "http://ine.com/login", display_text="https://wine.com/login"
+    )
+    assert "display_target_mismatch" in {s.name for s in signals}
+
+
+def test_a_www_prefix_alone_is_still_not_a_mismatch():
+    """The behaviour the buggy line was reaching for, kept."""
+    signals = link_signals.evaluate(
+        "https://www.hdfcbank.com/", display_text="hdfcbank.com"
+    )
+    assert "display_target_mismatch" not in {s.name for s in signals}
 
 
 def test_display_text_that_is_not_a_url_is_not_a_mismatch():

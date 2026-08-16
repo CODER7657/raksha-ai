@@ -16,7 +16,6 @@ import pytest
 
 from app.services.upi_check import check_upi_or_link
 
-
 # --- UPI id recognition ---------------------------------------------------
 
 

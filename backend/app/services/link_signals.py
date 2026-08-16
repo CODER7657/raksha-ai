@@ -454,7 +454,14 @@ def _display_signals(host: str, display_text: str | None) -> list[Signal]:
     shown = _host_of(display_text)
     if not shown or shown == host:
         return []
-    if shown.lstrip("www.") == host.lstrip("www.") or shown.endswith(f".{host}") or host.endswith(f".{shown}"):
+    # `removeprefix`, never `lstrip` — lstrip takes a character SET, so
+    # `"wine.com".lstrip("www.")` is `"ine.com"` and two unrelated hosts can
+    # normalise to the same string, suppressing a real mismatch.
+    if (
+        shown.removeprefix("www.") == host.removeprefix("www.")
+        or shown.endswith(f".{host}")
+        or host.endswith(f".{shown}")
+    ):
         return []
     return [
         Signal(

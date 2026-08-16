@@ -29,7 +29,7 @@ from datetime import date, datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services import domain_age  # noqa: E402
+from app.services import domain_age
 
 WHOIS_PORT = 43
 TIMEOUT = 10.0
@@ -63,19 +63,31 @@ def _server_for(domain: str) -> str | None:
 
 
 def _parse_date(body: str) -> date | None:
+    """The registration date, whatever shape the registry wrote it in.
+
+    ISO first because most registries use it, then a small set of legacy
+    formats against the first whitespace-delimited token — trailing time zones
+    and free text after the date are common and are not worth parsing.
+    """
     match = _DATE_FIELDS.search(body)
     if not match:
         return None
     raw = match.group(1).strip()
-    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d", "%d-%b-%Y", "%Y.%m.%d", "%Y/%m/%d"):
-        try:
-            return datetime.strptime(raw[: len(datetime.now().strftime(fmt)) + 5].strip(), fmt).date()
-        except ValueError:
-            continue
+
     try:
         return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
     except ValueError:
-        return None
+        pass
+
+    token = raw.split()[0] if raw.split() else ""
+    for fmt in ("%Y-%m-%d", "%d-%b-%Y", "%Y.%m.%d", "%Y/%m/%d"):
+        try:
+            # DTZ007 is not a risk here: the result is reduced to a date
+            # immediately, so an absent time zone cannot shift anything.
+            return datetime.strptime(token, fmt).date()  # noqa: DTZ007
+        except ValueError:
+            continue
+    return None
 
 
 def resolve(domain: str) -> tuple[str, date | None]:

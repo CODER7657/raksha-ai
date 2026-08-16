@@ -30,11 +30,17 @@ short, which is the conservative direction.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 from app.core.supabase_client import get_supabase
-from app.services.link_signals import BASIS_DOMAIN_AGE, Signal, _host_of, _labels_of, _registrable_label
+from app.services.link_signals import (
+    BASIS_DOMAIN_AGE,
+    Signal,
+    _host_of,
+    _labels_of,
+    _registrable_label,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +110,10 @@ def signals_for(url: str) -> list[Signal]:
     except ValueError:
         return []
 
-    age_days = (date.today() - registered).days
+    # UTC, not local. WHOIS dates are UTC and the server's timezone is not the
+    # user's; a naive `date.today()` puts the boundary a day out for anyone east
+    # of the deploy region, which is everyone this product serves.
+    age_days = (datetime.now(timezone.utc).date() - registered).days
     if age_days >= NEW_DOMAIN_DAYS or age_days < 0:
         return []
 
