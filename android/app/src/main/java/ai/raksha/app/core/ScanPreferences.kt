@@ -7,11 +7,19 @@ import android.content.Context
  * language to score and explain in.
  *
  * Plain `SharedPreferences` is fine for exactly this content — a boolean and a
- * language code, neither sensitive. #29 §3 requires Keystore-backed encrypted
- * storage for the **session token**, which is a different thing and does not
- * live here. Nothing message-derived is stored: no scanned text, no verdicts,
- * no history. Adding any of that would need the encryption and one-tap clearing
- * described in #29 §2.
+ * language code, neither sensitive. Keystore-backed encrypted storage is for
+ * the **session token**, which is a different thing and does not live here.
+ * Nothing message-derived is stored: no scanned text, no verdicts, no history.
+ * Adding any of that would need encryption and one-tap clearing.
+ *
+ * **Deliberately credential-encrypted, not device-encrypted.** #91 §2 proposed
+ * moving this to device-encrypted storage so `SmsReceiver` could read it while
+ * the phone is locked after a reboot. That was tried and reverted: the platform
+ * does not deliver `SMS_RECEIVED` to us during that window at all, with or
+ * without `android:directBootAware`, so the receiver never runs and has nothing
+ * to read. Device-encrypted storage is readable earlier in boot and therefore a
+ * weaker guarantee, and buying nothing with it is a bad trade. The measurements
+ * are in `AndroidManifest.xml` next to the receiver.
  */
 class ScanPreferences(context: Context) {
 
@@ -32,9 +40,21 @@ class ScanPreferences(context: Context) {
         get() = prefs.getString(KEY_LANGUAGE, DEFAULT_LANGUAGE) ?: DEFAULT_LANGUAGE
         set(value) = prefs.edit().putString(KEY_LANGUAGE, value).apply()
 
+    /**
+     * When the user last acknowledged being told the app had been force-stopped,
+     * so the notice appears once per interruption rather than on every launch.
+     *
+     * A timestamp, not message-derived: it records something Android did to this
+     * app, not anything about what arrived.
+     */
+    var acknowledgedInterruptionMillis: Long
+        get() = prefs.getLong(KEY_ACKNOWLEDGED_INTERRUPTION, 0L)
+        set(value) = prefs.edit().putLong(KEY_ACKNOWLEDGED_INTERRUPTION, value).apply()
+
     private companion object {
         const val KEY_ENABLED = "scanning_enabled"
         const val KEY_LANGUAGE = "language"
+        const val KEY_ACKNOWLEDGED_INTERRUPTION = "acknowledged_interruption_millis"
         const val DEFAULT_LANGUAGE = "en"
     }
 }
