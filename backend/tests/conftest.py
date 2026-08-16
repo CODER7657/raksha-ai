@@ -17,3 +17,39 @@ import os
 
 os.environ.setdefault("SUPABASE_URL", "https://stub.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "stub-service-role-key")
+
+# Imported after the defaults above, not before: `app.core.config` constructs
+# nothing at import time, but keeping the order explicit means a future import
+# that does construct something still finds the stub values already set.
+import pytest
+
+from app.core.config import Settings, get_settings
+
+
+@pytest.fixture(autouse=True)
+def settings_ignore_dotenv(monkeypatch):
+    """No test may see the developer's real credentials (#77).
+
+    `Settings` declares `env_file=".env"`, and pydantic-settings treats the
+    dotenv file as a source in its own right — separate from the process
+    environment. `monkeypatch.delenv` removes the variable and nothing else, so
+    a field the test believes it has cleared silently falls through to whatever
+    is in `backend/.env`.
+
+    That is not hypothetical. It made three `test_key_pools.py` assertions fail
+    on any machine with keys configured while passing in CI, where no `.env`
+    exists — a test lying in exactly the environment where someone has just
+    finished setting up, and printing a real key prefix into the diff while
+    doing it.
+
+    Neutralising the source here rather than in the one file that noticed:
+    nothing else stops the next settings-dependent test from acquiring the same
+    dependency, and it would fail the same confusing way.
+
+    `setitem` rather than assignment so pytest restores the original after each
+    test, leaving the class as the application sees it.
+    """
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
