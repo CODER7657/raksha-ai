@@ -5,8 +5,10 @@ import { useKeyboardTriage } from '../lib/useKeyboardTriage'
 import { LANGUAGES } from '../lib/languages'
 import {
   REJECTION_REASONS,
+  decideDraft,
   fetchDraftContext,
   fetchDraftQueue,
+  unknownReasonCodes,
   type Decision,
   type DraftContext,
   type PatternDraft,
@@ -36,13 +38,18 @@ function languageLabel(code: string): string {
 export function ReviewQueuePage() {
   const [drafts, setDrafts] = useState<PatternDraft[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [persisted, setPersisted] = useState(true)
+  const [available, setAvailable] = useState(true)
+  const [unknownReasons, setUnknownReasons] = useState<string[]>([])
 
   useEffect(() => {
     fetchDraftQueue()
       .then((q) => {
         setDrafts(q.drafts)
-        setPersisted(q.decisions_persisted)
+        setAvailable(q.decisions_available)
+        // If the server would refuse a code this UI offers, the reviewer sees a
+        // key that does nothing. Checked rather than assumed, because the two
+        // lists live in different languages in different files (#64).
+        setUnknownReasons(unknownReasonCodes(q.rejection_reasons ?? []))
       })
       .catch((e: Error) => setError(e.message))
   }, [])
@@ -56,22 +63,32 @@ export function ReviewQueuePage() {
   }
   if (!drafts) return <p className="mx-auto max-w-3xl text-sm text-ink/60">Loading queue…</p>
 
-  return <ReviewQueue drafts={drafts} decisionsPersisted={persisted} />
+  return (
+    <ReviewQueue
+      drafts={drafts}
+      decisionsAvailable={available}
+      unknownReasons={unknownReasons}
+    />
+  )
 }
 
 /** Split from the fetch so it can be driven against captured payloads without
  * standing up auth. */
 export function ReviewQueue({
   drafts,
-  decisionsPersisted,
+  decisionsAvailable = true,
+  unknownReasons = [],
   // Injectable for the same reason BenchmarkReportView is split from its
   // fetch: the card's neighbour panel is the part most worth eyeballing, and
   // it cannot be reached in a harness that has no session.
   loadContext = fetchDraftContext,
+  persist = decideDraft,
 }: {
   drafts: PatternDraft[]
-  decisionsPersisted: boolean
+  decisionsAvailable?: boolean
+  unknownReasons?: string[]
   loadContext?: (id: string) => Promise<DraftContext>
+  persist?: typeof decideDraft
 }) {
   const [index, setIndex] = useState(0)
   const [decisions, setDecisions] = useState<Decision[]>([])
@@ -79,6 +96,15 @@ export function ReviewQueue({
   const [announcement, setAnnouncement] = useState('')
   const [context, setContext] = useState<DraftContext | null>(null)
   const [contextFor, setContextFor] = useState<string | null>(null)
+  /** Decisions the reviewer made that did NOT reach the store.
+   *
+   * The card advances optimistically, because a reviewer working hundreds
+   * cannot wait for a round trip per keystroke and #32 makes throughput a
+   * security property. Optimism is only honest if the failures are loud, so
+   * these are rendered as a standing banner rather than a toast that scrolls
+   * away — an accept the reviewer believes landed and did not is the exact
+   * failure this screen was built read-only to avoid. */
+  const [failures, setFailures] = useState<{ id: string; action: string; detail: string }[]>([])
 
   const current = drafts[index] ?? null
   const done = index >= drafts.length
@@ -110,8 +136,20 @@ export function ReviewQueue({
       setIndex((i) => i + 1)
       setChoosingReason(false)
       setAnnouncement(`${label}. ${drafts.length - index - 1} remaining.`)
+
+      // A skip is not a decision. Nothing is written, because "I did not look
+      // at this yet" is the absence of a judgement rather than one, and
+      // recording it would put a row in an append-only table that says nothing.
+      if (decision.action === 'skipped') return
+
+      persist(decision.draftId, decision.action, {
+        reason: decision.action === 'rejected' ? decision.reason : undefined,
+      }).catch((e: Error) => {
+        setFailures((f) => [...f, { id: decision.draftId, action: decision.action, detail: e.message }])
+        setAnnouncement(`${label} was NOT saved. ${e.message}`)
+      })
     },
-    [drafts.length, index],
+    [drafts.length, index, persist],
   )
 
   // Every updater below is pure. An earlier version nested `setIndex` inside
@@ -119,15 +157,40 @@ export function ReviewQueue({
   // StrictMode — so one undo rewound two cards, silently discarding a decision
   // the reviewer had already made. State updaters must not have side effects.
   const undo = useCallback(() => {
-    if (decisions.length === 0) {
+    const last = decisions[decisions.length - 1]
+    if (!last) {
       setAnnouncement('Nothing to undo.')
       return
     }
     setDecisions((d) => d.slice(0, -1))
     setIndex((i) => Math.max(0, i - 1))
     setChoosingReason(false)
-    setAnnouncement('Undid the last decision.')
-  }, [decisions.length])
+
+    // Undoing an accept is not a local rewind. The pattern is already in
+    // scam_patterns and already influencing retrieval, so taking it back means
+    // retiring it — a `revoked` decision, appended. Anything less would leave a
+    // live pattern behind a reviewer who believes they undid it.
+    if (last.action === 'accepted') {
+      setAnnouncement('Undoing — retiring the accepted pattern…')
+      persist(last.draftId, 'revoked', { note: 'Undone by the reviewer during triage' })
+        .then(() => setAnnouncement('Undone. The pattern was retired.'))
+        .catch((e: Error) => {
+          setFailures((f) => [...f, { id: last.draftId, action: 'revoked', detail: e.message }])
+          setAnnouncement(`Could not retire the pattern. It is STILL live. ${e.message}`)
+        })
+      return
+    }
+
+    // A rejection stands as a record — the store is append-only and there is no
+    // un-writing it. Nothing harmful is live, and deciding the card again
+    // supersedes it, so the honest thing is to say that rather than imply the
+    // row was removed.
+    setAnnouncement(
+      last.action === 'rejected'
+        ? 'Back to the card. The rejection stays recorded until you decide it again.'
+        : 'Undid the skip.',
+    )
+  }, [decisions, persist])
 
   useKeyboardTriage({
     enabled: !done,
@@ -151,13 +214,41 @@ export function ReviewQueue({
         </span>
       </div>
 
-      {!decisionsPersisted && (
+      {!decisionsAvailable && (
         <p className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3 mb-4 text-[11px] text-ink leading-relaxed">
-          <strong>Decisions are not saved yet.</strong> Triage works and the tally below is real,
-          but there is nowhere to write an accept to until the draft store lands. Nothing here
-          reaches the pattern database. Said plainly rather than implied, because a reviewer who
-          believes their accept landed when it did not is the one failure this screen must not have.
+          <strong>Cannot read what has already been decided.</strong> The decision store did not
+          answer, so every draft below is shown as the file has it. Some may already be accepted or
+          rejected. New decisions will still be written — this is about reading, not writing — but
+          you may be looking at work that is already done.
         </p>
+      )}
+
+      {unknownReasons.length > 0 && (
+        <p className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3 mb-4 text-[11px] text-ink leading-relaxed">
+          <strong>This screen offers a reason the server does not accept:</strong>{' '}
+          {unknownReasons.join(', ')}. Rejecting with it will fail. The two lists have drifted and
+          one of them needs updating.
+        </p>
+      )}
+
+      {failures.length > 0 && (
+        <div
+          role="alert"
+          className="border-l-4 border-red-600 bg-red-50 px-4 py-3 mb-4 text-[11px] text-ink leading-relaxed"
+        >
+          <strong>
+            {failures.length} decision{failures.length === 1 ? '' : 's'} did not save.
+          </strong>{' '}
+          The card advanced but the store did not accept it, so this work is not recorded. Decide
+          these again once the store is reachable.
+          <ul className="mt-2 space-y-1">
+            {failures.map((f, i) => (
+              <li key={`${f.id}-${i}`} className="font-mono">
+                {f.id} — {f.action}: {f.detail}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* Screen readers get the outcome of a keystroke; sighted users get the

@@ -1,16 +1,25 @@
 """Reviewer-facing draft queue (#32 A).
 
-Read-only for now. Decisions are not persisted here yet: writing them needs a
-store and a lifecycle agreed with the A1 work (see the shape discussion on
-#32), and shipping a half-written persistence layer would mean a reviewer
-believes their accept landed when it did not — which is the one failure this
-screen cannot have.
+Decisions are persisted now. They were not, for a reason worth keeping in view:
+writing them needed a store and a lifecycle, and shipping a half-written
+persistence layer would have meant a reviewer believing their accept landed
+when it did not — the one failure this screen cannot have. So the queue shipped
+read-only and said so, rather than guessing.
 
-So the queue renders and triages, and the client holds decisions until there is
-somewhere honest to put them. The UI says so rather than implying otherwise.
+What settled it is that an accept and its promotion into `scam_patterns` happen
+in **one transaction** (migration 0009). The decision cannot exist without the
+pattern it created, and the pattern cannot appear without the decision that
+approved it — which is also how the 0007 constraint is satisfied by
+construction rather than by remembering to fill three columns in.
+
+Decisions are append-only. Reversing an accept appends a `revoked` row and
+retires the pattern; nothing is ever edited, because the record of who approved
+a pattern has to outlive the pattern itself. An attacker who gets one approved
+is the poisoning path AGENT-LAYER §03 exists to prevent.
 """
 
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -30,8 +39,16 @@ def list_drafts(_user_id: str = Depends(get_current_user)) -> dict:
     Neighbours are deliberately not computed here. Each one costs an embedding
     call, and a reviewer opening a queue of fifty would spend fifty calls on
     cards they may never reach. The client fetches them per card instead.
+
+    The file supplies the drafts; the decision store supplies their state. When
+    the store cannot be read the drafts are returned as the file has them and
+    `decisions_available` says so — an operator seeing a full queue must be able
+    to tell "nothing decided yet" from "cannot see what was decided", because
+    working the second as though it were the first means re-deciding drafts that
+    are already done.
     """
-    drafts = pattern_review.load_drafts()
+    decisions = pattern_review.latest_decisions()
+    drafts = pattern_review.with_decisions(pattern_review.load_drafts(), decisions)
     queue = pattern_review.pending(drafts)
 
     return {
@@ -42,10 +59,67 @@ def list_drafts(_user_id: str = Depends(get_current_user)) -> dict:
             "rejected": sum(1 for d in drafts if d.get("status") == "rejected"),
             "total": len(drafts),
         },
-        # Stated in the payload rather than assumed by the client, so the UI
-        # cannot quietly imply decisions are being saved.
-        "decisions_persisted": False,
+        # Both stated in the payload rather than assumed by the client. The
+        # first is now true (#32); the second is about this request, not the
+        # capability, and they are different questions.
+        "decisions_persisted": True,
+        "decisions_available": decisions is not None,
+        "rejection_reasons": list(pattern_review.REJECTION_REASONS),
     }
+
+
+class DraftDecision(BaseModel):
+    decision: Literal["accepted", "rejected", "revoked"]
+    #: Required for a rejection, forbidden otherwise — enforced in the service
+    #: and again by a check constraint in 0009.
+    reason: str | None = None
+    #: The escape hatch beside the closed list. Bounded because it is free text
+    #: written by a human in a hurry, not because anything downstream needs it
+    #: short.
+    note: str | None = Field(default=None, max_length=1000)
+
+
+@router.post("/review/drafts/{draft_id}/decision")
+def decide_draft(
+    draft_id: str,
+    payload: DraftDecision,
+    user_id: str = Depends(get_current_user),
+) -> dict:
+    """Accept, reject or revoke one draft.
+
+    An accept promotes the draft into `scam_patterns` in the same transaction
+    that records the decision, so the two cannot disagree. That matters more
+    than it sounds: a reviewer told their accept landed while the pattern
+    database is unchanged is the single failure this endpoint exists to remove,
+    and it is why the queue shipped read-only rather than guessing at a store.
+
+    Errors surface. Nothing here is best-effort.
+    """
+    draft = next((d for d in pattern_review.load_drafts() if d["id"] == draft_id), None)
+    if draft is None:
+        raise HTTPException(status_code=404, detail="No such draft")
+
+    try:
+        record = pattern_review.record_decision(
+            draft,
+            payload.decision,
+            actor=user_id,
+            reason=payload.reason,
+            note=payload.note,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Failed to record a %s decision for %s", payload.decision, draft_id)
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Could not record the decision for '{draft_id}'. It has NOT been "
+                f"{payload.decision} — nothing was written."
+            ),
+        ) from exc
+
+    return {"decision": record}
 
 
 @router.get("/review/drafts/{draft_id}/context")
