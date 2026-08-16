@@ -46,11 +46,35 @@ call/SMS      imperson.    urgency       OTP/PIN      money moves
 
 | # | Layer | What it does | Status |
 |---|---|---|---|
-| 1 | **Number reputation** | Check incoming call against community-reported fraud numbers before answer. Cheapest signal, weakest evidence — numbers are disposable. | Next |
-| 2 | **SMS auto-scan** | Android reads incoming SMS, scores on-device, raises a notification. **Zero user action.** Highest-value quick win: phishing SMS is the most common vector. | Next |
-| 3 | **Call screening** | `CallScreeningService` evaluates unknown numbers pre-answer. Native Android, no recording. | Later |
-| 4 | **Live call analysis** | Streaming transcription during the call, detecting authority claims, urgency and OTP requests, with a persistent warning. Highest impact, hardest to build; Android restricts third-party call audio and recording-consent law varies by state. | Later |
-| 5 | **Payment interrupt** | Accessibility service watches UPI apps. Payment about to leave for a flagged VPA → full-screen interrupt. | **Critical path** |
+| 1 | **Number reputation** | Check incoming call against community-reported fraud numbers before answer. Cheapest signal, weakest evidence — numbers are disposable. | ❌ Not built |
+| 2 | **SMS auto-scan** | Android reads incoming SMS, scores on-device, raises a notification. **Zero user action.** Highest-value quick win: phishing SMS is the most common vector. | ✅ **Built** — #38, hardened #86/#93 |
+| 3 | **Call screening** | `CallScreeningService` evaluates unknown numbers pre-answer. Native Android, no recording. | ❌ Not built |
+| 4 | **Live call analysis** | Streaming transcription during the call, detecting authority claims, urgency and OTP requests, with a persistent warning. Highest impact, hardest to build; Android restricts third-party call audio and recording-consent law varies by state. | ❌ Not built |
+| 5 | **Payment interrupt** | Accessibility service watches UPI apps. Payment about to leave for a flagged VPA → full-screen interrupt. | ❌ **Not built** — and the thesis rests on it |
+
+### What the phone can actually do today
+
+**One layer of five, and the detector on it is the weakest one we have.**
+
+The Android client declares exactly two permissions — `RECEIVE_SMS` and
+`POST_NOTIFICATIONS` — and **no `INTERNET`**. It has no HTTP library. So the
+device cannot reach the backend at all, which means on-device detection is the
+regex rule engine and nothing else: no retrieval, no model, no cloud escalation.
+
+The "On-device model" box in the diagram below is `RuleEngine.kt`, six rule
+concepts, pattern matching. **There is no model on the device.** That is a
+deliberate consequence of the privacy posture rather than an oversight — nothing
+leaves the phone because nothing can — but it is not what the box says.
+
+Everything else a user can do (text scan, voice scan, UPI check, chat, practice)
+lives on the **website** and requires them to already suspect something. That is
+the pull model §00 says V2 stops waiting on. Today the website is still the
+product and the phone is one layer of it.
+
+Stated plainly because the gap is easy to miss from the diagrams, and because
+the honest version is still strong: one interception layer working end to end
+on-device with no message leaving the phone is a real thing. Claiming five is
+what would cost us.
 
 **Design principle.** A scam does not fail when it is detected. It fails when the
 money stops. Layers 1–4 are advisory; only layer 5 is terminal. Build it assuming
