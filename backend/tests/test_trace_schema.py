@@ -168,6 +168,8 @@ NESTED_INTERFACES = {
     "audit": "AuditRecord",
     "offline_rules_fired": "OfflineRuleHit",
     "retrieved_patterns": "RetrievedPattern",
+    "link_signals": "LinkSignals",
+    "sender": "SenderCheck",
 }
 
 
