@@ -625,3 +625,43 @@ tasks.register("verifyReleaseSigning") {
         logger.lifecycle("Release APK signature present: ${apks.joinToString { it.name }}")
     }
 }
+
+// --- Files the unit tests read that Gradle could not see --------------------
+//
+// #125. Three tests in this module read files directly from disk, and none of
+// them was a declared input, so the cache key never covered them. A test task
+// can then be served from cache across a change to the very thing it checks —
+// reporting success without executing an assertion, which is worse than having
+// no check because people believe it.
+//
+// This is the same defect that let the rule-engine parity gate pass for months
+// while the Kotlin engine diverged from the corpus on 13 cases. It is fixed on
+// :core:rules:test in the same commit; these are the rest of it.
+//
+//   SharedStringCoverageTest  src/main/res/values*/strings.xml  (#71, #80)
+//                             ../../frontend/src/i18n/locales   (#64, #99)
+//   DesignTokensTest          design/tokens.json                (#116 §2, #118)
+//
+// The second and third read outside the Gradle root, which is correct in this
+// monorepo: both exist precisely to stop the web and the phone drifting, so the
+// file they compare against necessarily lives on the other side of the seam.
+//
+// Severity differs and is worth recording rather than flattening. The i18n keys
+// have a second enforcer — GenerateRuleStrings throws inside assembleDebug on a
+// missing key — so a cached test there hid less. The shadowing guard #80 turned
+// on has no backstop at all, and neither does the token check, whose whole
+// subject is a generated file being stale: a cached pass is exactly the failure
+// it was written to catch.
+tasks.withType<Test>().configureEach {
+    inputs.dir(layout.projectDirectory.dir("src/main/res"))
+        .withPropertyName("androidResources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+
+    inputs.dir(rootProject.file("../frontend/src/i18n/locales"))
+        .withPropertyName("webLocaleBundles")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+
+    inputs.file(rootProject.file("../design/tokens.json"))
+        .withPropertyName("designTokens")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
