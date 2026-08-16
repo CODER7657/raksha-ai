@@ -8,7 +8,17 @@ from app.core.auth import get_current_user
 from app.core.config import get_settings
 from app.core.supabase_client import get_supabase
 from app.rate_limit import limiter
-from app.services import llm, rag, safe_actions, stt, verdict_cache
+from app.services import (
+    domain_age,
+    email_signals,
+    link_signals,
+    llm,
+    rag,
+    safe_actions,
+    stt,
+    threat_feeds,
+    verdict_cache,
+)
 from app.services import trace as trace_service
 from app.services.rule_engine import offline_rule_hits
 
@@ -26,6 +36,15 @@ ALLOWED_AUDIO_CONTENT_TYPES = {
 
 class ScanTextRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
+    language: LanguageCode = "en"
+
+
+class ScanEmailRequest(BaseModel):
+    # Five times the SMS cap. An email carries quoted history, a signature block
+    # and a client's forwarded header block on top of the message itself, and
+    # 4000 characters would truncate ordinary mail — cutting the body is how the
+    # link that matters gets dropped before anything looks at it.
+    text: str = Field(min_length=1, max_length=20000)
     language: LanguageCode = "en"
 
 
@@ -105,7 +124,36 @@ def _degraded_verdict(hits: list) -> dict:
     }
 
 
-def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) -> dict:
+def _link_signals_for(text: str) -> list:
+    """A2 stage 1 over every link in the message.
+
+    Deterministic, local, and measured at well under a millisecond per URL
+    (`test_link_signals_latency.py`), so it runs on both the cached and the live
+    path rather than only where a model call was already being made.
+
+    Failure is swallowed on purpose. These signals add evidence to a verdict;
+    they are not the verdict, and a user in front of a live scam must not lose
+    their warning because a link check raised.
+    """
+    try:
+        signals = []
+        for url in link_signals.extract_urls(text):
+            signals.extend(link_signals.evaluate(url))
+            signals.extend(threat_feeds.signals_for(url))
+            signals.extend(domain_age.signals_for(url))
+        return signals
+    except Exception:
+        logger.warning("Link signal evaluation failed; verdict unaffected", exc_info=True)
+        return []
+
+
+def _run_scan_pipeline(
+    text: str,
+    language: str,
+    input_type: str,
+    user_id: str,
+    extra_trace: dict | None = None,
+) -> dict:
     """Shared by both /scan/text and /scan/audio once we have plain text in
     hand — same RAG retrieval + LLM classification + offline fallback +
     persistence for either input type."""
@@ -120,6 +168,17 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
     # Retrieval is skipped on a hit as well. It is the cheaper call, but it is
     # still a call, and the patterns are only ever used to build the prompt for
     # the classification we are not making.
+    # Computed before the cache branch so a cached verdict carries the same
+    # evidence as a fresh one. The verdict is cached; the link checks are not,
+    # and they are cheap enough to redo — a domain's reputation can change
+    # between two scans of one viral message, and serving week-old link evidence
+    # under a cached verdict would be the same class of error as replaying
+    # retrieval (#48).
+    addenda: dict = dict(extra_trace or {})
+    link_block = trace_service.link_signal_block(_link_signals_for(text))
+    if link_block:
+        addenda["link_signals"] = link_block
+
     cached = verdict_cache.lookup(digest, language)
     if cached is not None:
         result = cached["result"]
@@ -132,7 +191,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
             input_type=input_type,
             user_id=user_id,
             result=result,
-            trace=trace,
+            trace={**trace, **addenda},
             hits=hits,
         )
 
@@ -176,7 +235,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
         input_type=input_type,
         user_id=user_id,
         result=result,
-        trace=trace,
+        trace={**trace, **addenda},
         hits=hits,
     )
 
@@ -257,6 +316,47 @@ def scan_text(
     user_id: str = Depends(get_current_user),
 ) -> ScanResult:
     result = _run_scan_pipeline(payload.text, payload.language, "text", user_id)
+    return ScanResult(**result)
+
+
+@router.post("/scan/email", response_model=ScanResult)
+@limiter.limit(get_settings().scan_rate_limit)
+def scan_email(
+    request: Request,
+    payload: ScanEmailRequest,
+    user_id: str = Depends(get_current_user),
+) -> ScanResult:
+    """A shared email. #115 §2, plan §01b.
+
+    Email is mostly a **delivery** question rather than a detection one — the
+    dangerous part is the link, and A2 stage 1 already reads links. What this
+    route adds is a sender, and the honest handling of one.
+
+    The body is classified rather than the whole paste. A mail client's quoted
+    header block is metadata, and leaving it in would run the scam rules over
+    `Date:` and `To:` lines and report them to a user as content.
+
+    **The sender is almost never verifiable here**, and the response says so
+    rather than staying quiet about it. Share-to-app delivers `text/plain`; SPF
+    needs the connecting IP and DKIM needs raw bytes that sharing rewrites. That
+    caveat reaches the user through `trace.sender` and never reaches the signal
+    count — being unable to check a sender is not evidence against them, and
+    treating it as evidence would bias every forwarded email toward a block.
+    """
+    parsed = email_signals.parse(payload.text)
+    assessment = email_signals.evaluate(payload.text)
+
+    result = _run_scan_pipeline(
+        parsed.body or payload.text,
+        payload.language,
+        "email",
+        user_id,
+        extra_trace={
+            "sender": trace_service.sender_block(
+                assessment.sender_verification, assessment.caveats
+            )
+        },
+    )
     return ScanResult(**result)
 
 

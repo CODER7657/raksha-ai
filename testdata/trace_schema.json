@@ -34,7 +34,7 @@
       "required": true,
       "why": "Whether a speaker of this language has read its detection rules. REVIEW_STATUS existed only in the benchmark payload, which no user sees, so someone scanning in one of the eight unreviewed languages had no way to know how much to trust the verdict in front of them.",
       "properties": {
-        "status": "string — in-service | inherited | unreviewed",
+        "status": "string — in-service | inherited | reviewed-by-proxy | unreviewed",
         "native_reviewed": "boolean — a speaker has read the native-script rules",
         "code_mixed_reviewed": "boolean — always true. Every language falls back to the English rules, which are reviewed, so a code-mixed message is caught by reviewed rules in all twelve. Split from native_reviewed because reporting one boolean would overstate the gap as badly as reporting nothing understates it.",
         "inherited_from": "string | null — mr borrows Hindi's rules because the vocabulary genuinely overlaps. Weaker than review, stronger than nothing, and its own claim.",
@@ -108,6 +108,46 @@
         "first_judged_at": {
           "type": "string | null",
           "required": false
+        }
+      }
+    },
+    "link_signals": {
+      "type": "object",
+      "required": false,
+      "why": "Absent when the message contained no link — most SMS does not, and an empty object would read as 'the links were checked and were fine'. A2 stage 1's named signals, carried into the trace because §01 blocks on two independent signals with at least one deterministic, and the person a block affects has to be able to see which two and why either counted. A blended score here would make an appeal unanswerable.",
+      "properties": {
+        "signals": {
+          "type": "array",
+          "why": "One entry per named check that fired. Never a total: the policy counts signals, and a sum cannot be taken apart again into which ones agreed."
+        },
+        "independent_witnesses": {
+          "type": "number",
+          "why": "Distinct bases, NEVER the length of `signals`. Three checks reading one host label are one witness — homograph, lookalike and suspicious-TLD all fire on a single Cyrillic-spelled domain, and counting those as three would auto-block every user on one observation about one string."
+        },
+        "deterministic_witness": {
+          "type": "boolean",
+          "why": "Whether at least one signal is immune to page content. The Confirmed tier requires it, and a model that has just read attacker-controlled text cannot be the sole witness to its own conclusion."
+        }
+      },
+      "items": {
+        "name": "string",
+        "basis": "string — which observation it derives from; two signals sharing one are one witness",
+        "deterministic": "boolean",
+        "detail": "string — the finding in words a user can act on"
+      }
+    },
+    "sender": {
+      "type": "object",
+      "required": false,
+      "why": "Email only. Absent for SMS and pasted text, which have no sender to check, and absent rather than a null verification because 'this channel has no sender' and 'this sender could not be checked' are different statements.",
+      "properties": {
+        "verification": {
+          "type": "string",
+          "why": "pass | fail | unverifiable. `unverifiable` is the NORMAL case, not the exception: share-to-app delivers text/plain, and SPF needs the connecting IP while DKIM needs raw bytes that sharing rewrites. A `pass` adds no evidence in either direction — it says the message really came from the domain it claims, never that the domain is trustworthy, and compromised-account phishing authenticates perfectly."
+        },
+        "caveats": {
+          "type": "array",
+          "why": "User-facing statements that are NEVER counted as evidence. 'We could not verify the sender' has to reach the user and must not reach the blocking policy — if it did, every forwarded email would carry a free witness toward being blocked, which is absence of evidence promoted into evidence on this feature's most common input."
         }
       }
     },

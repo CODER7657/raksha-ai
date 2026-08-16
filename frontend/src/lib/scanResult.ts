@@ -121,12 +121,56 @@ export interface RuleReview {
   reviewed_via: string | null
 }
 
+/** One named finding from A2 stage 1's static link checks. */
+export interface LinkSignal {
+  name: string
+  /**
+   * Which observation this derives from. Two signals sharing a basis are ONE
+   * witness — do not count signals to decide how much agrees.
+   */
+  basis: string
+  /** False only for a signal that attacker-controlled page content could move. */
+  deterministic: boolean
+  detail: string
+}
+
+export interface LinkSignals {
+  signals: LinkSignal[]
+  /**
+   * Distinct bases, already computed. Never render `signals.length` as the
+   * amount of agreement: a single lookalike domain fires three checks that are
+   * all one observation about one string.
+   */
+  independent_witnesses: number
+  /** Whether at least one signal is immune to page content. */
+  deterministic_witness: boolean
+}
+
+/**
+ * Email only, and absent entirely for SMS or pasted text — those have no sender
+ * to check, which is a different statement from a sender that could not be
+ * checked.
+ */
+export interface SenderCheck {
+  /**
+   * `unverifiable` is the normal case, not an error: a shared or forwarded
+   * message does not carry what SPF and DKIM need. A `pass` says the mail
+   * really came from the domain it claims and nothing about whether that
+   * domain is trustworthy — never render it as "safe sender".
+   */
+  verification: 'pass' | 'fail' | 'unverifiable'
+  /** Show these. They are never evidence and must not be counted as signals. */
+  caveats: string[]
+}
+
 export interface ScanTrace {
   rule_review?: RuleReview
   offline_rules_fired?: OfflineRuleHit[]
   retrieved_patterns?: RetrievedPattern[]
   retrieval?: RetrievalCoverage
   model?: ModelStamp
+  link_signals?: LinkSignals
+  sender?: SenderCheck
   audit?: AuditRecord
 }
 

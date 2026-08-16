@@ -162,6 +162,49 @@ def build_trace(
     return trace
 
 
+def link_signal_block(signals: list) -> dict[str, Any] | None:
+    """A2 stage 1's findings, shaped for the trace. `None` when nothing fired.
+
+    `None` rather than an empty block on purpose: most SMS carries no link, and
+    an empty object in the trace reads as "the links were checked and were
+    fine" — a claim about the message rather than the absence of one to make.
+
+    `independent_witnesses` is carried rather than left for the reader to
+    derive, because deriving it means knowing that `basis` exists and that
+    counting signals is wrong. A UI should not have to know that to avoid
+    saying "three checks agree" about one observation.
+    """
+    if not signals:
+        return None
+    return {
+        "signals": [
+            {
+                "name": signal.name,
+                "basis": signal.basis,
+                "deterministic": signal.deterministic,
+                "detail": signal.detail,
+            }
+            for signal in signals
+        ],
+        "independent_witnesses": len({signal.basis for signal in signals}),
+        "deterministic_witness": any(signal.deterministic for signal in signals),
+    }
+
+
+def sender_block(verification: str, caveats: list[str]) -> dict[str, Any]:
+    """What could be established about who sent an email, and what could not.
+
+    Email only — `scan.py` omits this entirely for SMS and pasted text, because
+    "this channel has no sender" and "this sender could not be checked" are
+    different statements and a null would blur them.
+
+    `caveats` sit here rather than among the signals because they must reach the
+    user without reaching the blocking policy. See `email_signals` for why that
+    separation is load-bearing.
+    """
+    return {"verification": verification, "caveats": list(caveats)}
+
+
 def build_trace_from_cache(
     hits: list[RuleHit],
     provider: str,
