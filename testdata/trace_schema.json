@@ -1,0 +1,118 @@
+{
+  "_comment": [
+    "The verdict trace, as a specification rather than as whatever the backend",
+    "happened to emit this week.",
+    "",
+    "This exists for the reason testdata/rule_corpus.jsonl exists, and it is",
+    "deliberately in the same place. Two implementations of one shape drift, and",
+    "nobody finds out until a reader is shown a field that is not there. The",
+    "trace already has two implementations - backend/app/services/trace.py",
+    "produces it and frontend/src/lib/scanResult.ts consumes it - and nothing",
+    "has been holding them together.",
+    "",
+    "It has moved three times already: model.cached and first_judged_at in #68,",
+    "provenance in #79, retrieval in #94. Each of those needed a matching edit",
+    "in the TypeScript, and each of them got one because the same person made",
+    "both. That is not a mechanism.",
+    "",
+    "A third implementation is coming. #83 wants the Android client to produce a",
+    "trace mirroring this one so support can compare what the phone decided",
+    "against what the server would have said. Writing the contract before that",
+    "exists is the cheap moment; rule parity had to be retrofitted after the",
+    "second engine already disagreed.",
+    "",
+    "CHECKED BY: backend/tests/test_trace_schema.py, which asserts both that the",
+    "backend emits what is described here and that the TypeScript declares it.",
+    "Neither direction is optional - a field the backend sends and the client",
+    "does not know about is invisible evidence, and a field the client renders",
+    "and the backend never sends is a permanently empty panel."
+  ],
+
+  "version": 1,
+
+  "fields": {
+    "offline_rules_fired": {
+      "type": "array",
+      "required": true,
+      "why": "Always present, empty when nothing fired. An absent key and an empty list would be read as the same thing by a UI and they are not: 'no rule matched' is a statement about the message.",
+      "items": {
+        "rule_id": "string",
+        "pattern": "string",
+        "matched_text": "string"
+      }
+    },
+
+    "retrieved_patterns": {
+      "type": "array",
+      "required": true,
+      "why": "Always present. Empty means either that this language has no corpus or that nothing was close, which is exactly why `retrieval` below exists - the list alone cannot say which.",
+      "items": {
+        "pattern_text": "string",
+        "category": "string",
+        "similarity": "number",
+        "provenance": "string | null",
+        "drafted_by": "string | null"
+      }
+    },
+
+    "retrieval": {
+      "type": "object",
+      "required": true,
+      "why": "Whether there was a corpus to ground the verdict in at all (#88). Nine of twelve languages have none, and without this a verdict there is indistinguishable from a grounded one.",
+      "properties": {
+        "language_covered": {
+          "type": "boolean | null",
+          "why": "null is a third state, not a falsy second. A cache hit skips retrieval, so coverage was never established - reporting false would assert a gap on a scan that did not look."
+        },
+        "patterns_retrieved": { "type": "number" },
+        "patterns_used": {
+          "type": "number",
+          "why": "How many cleared the weak-match floor and reached the prompt. Not derivable from patterns_retrieved: five retrieved with none used is a different verdict from five used."
+        },
+        "skipped": {
+          "type": "string",
+          "required": false,
+          "why": "Present only when retrieval did not run, naming the reason. Today the only value is 'cache_hit'."
+        }
+      }
+    },
+
+    "model": {
+      "type": "object",
+      "required": false,
+      "why": "Absent on the degraded path, where both providers were down and the offline rules alone produced the verdict. There is no model to stamp, and inventing one would credit a call that never happened.",
+      "properties": {
+        "provider": { "type": "string" },
+        "model": { "type": "string" },
+        "prompt_version": { "type": "string" },
+        "cached": {
+          "type": "boolean",
+          "required": false,
+          "why": "Present only on a cache hit. Without it the audit record credits a model call that did not happen, and two identical verdicts cannot be told apart from two independent judgements."
+        },
+        "first_judged_at": { "type": "string | null", "required": false }
+      }
+    },
+
+    "audit": {
+      "type": "object",
+      "required": false,
+      "why": "Absent when the audit write failed. That is deliberate and load-bearing: a user mid-scam gets their warning even when the compliance record cannot be written, and the response says so by omitting this rather than by faking a record. See ARCHITECTURE.md #05.",
+      "properties": {
+        "record_id": { "type": "string" },
+        "hash": { "type": "string" },
+        "prev_hash": { "type": "string | null" }
+      }
+    }
+  },
+
+  "_adding_a_field": [
+    "1. Add it here first, with a `why`. If you cannot write the why, the field",
+    "   probably belongs in a log rather than in a trace a bank reads.",
+    "2. Run backend/tests/test_trace_schema.py. It should now fail in both",
+    "   directions - if it does not, the test is not checking what you think.",
+    "3. Emit it from trace.py and declare it in scanResult.ts.",
+    "4. Optional or required is a real decision, not a default. Optional means",
+    "   'a legitimate verdict can lack this', and the `why` has to say when."
+  ]
+}
