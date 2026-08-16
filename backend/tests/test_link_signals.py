@@ -135,6 +135,18 @@ def test_the_real_brand_domain_is_not_a_lookalike():
     assert link_signals.evaluate("https://www.paytm.com/offers") == []
 
 
+def test_a_brands_own_domain_is_never_a_lookalike_of_another_brand():
+    """`pay.google.com` is Google Pay's real domain, and `pay` is one edit from
+    `gpay` — which short brands measure at distance 1. Without checking the
+    registrable domain first, Google Pay's own address is reported as an
+    imitation of Google Pay.
+
+    Found by the link corpus rather than by these tests, and it is exactly the
+    shape that costs users: a warning on a real payment site during a fraud
+    alert is us causing the harm the product exists to prevent."""
+    assert link_signals.evaluate("https://pay.google.com/") == []
+
+
 def test_suspicious_tld_is_flagged():
     signals = link_signals.evaluate("http://verify-account.xyz/")
     assert "suspicious_tld" in {s.name for s in signals}

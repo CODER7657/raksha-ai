@@ -282,6 +282,16 @@ def _homograph_signals(labels: list[str]) -> list[Signal]:
 
 
 def _lookalike_signals(labels: list[str]) -> list[Signal]:
+    # A brand's own domain contains no typosquat of anything. Without this,
+    # `pay.google.com` fires as a lookalike of `gpay` — `pay` is one edit away,
+    # and short brands use a distance-1 threshold — so Google Pay's real domain
+    # is reported as an imitation of Google Pay. Found by the link corpus, and
+    # it is precisely the shape that costs users: a warning on a real payment
+    # site during a fraud alert.
+    domain = _registrable_domain(labels)
+    if any(domain in domains for domains in BRAND_DOMAINS.values()):
+        return []
+
     for label in labels:
         if label in IGNORED_LABELS:
             continue
