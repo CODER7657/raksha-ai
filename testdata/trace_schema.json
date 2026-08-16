@@ -127,6 +127,10 @@
         "deterministic_witness": {
           "type": "boolean",
           "why": "Whether at least one signal is immune to page content. The Confirmed tier requires it, and a model that has just read attacker-controlled text cannot be the sole witness to its own conclusion."
+        },
+        "verdict_floor_applied": {
+          "type": "boolean",
+          "why": "Whether the link evidence stopped a `safe` verdict standing. Link signals are evidence rather than the verdict, so they never override it — but a `safe` verdict displayed above independent bases saying the link is phishing is confidently wrong, and the user reads the verdict rather than reconciling it against the trace. A floor only ever raises caution: `suspicious` and `high_risk` are untouched, and it applies on the cached path too so a domain blocklisted since the message was first judged can only make a stale verdict more cautious."
         }
       },
       "items": {
