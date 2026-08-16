@@ -188,3 +188,159 @@ def test_unparseable_input_returns_no_signals_rather_than_raising(value):
     """This runs on the hot path against text a scammer wrote. An exception here
     is a 500 on a scan, which fails unsafe."""
     assert link_signals.evaluate(value) == []
+
+
+# --- A6 findings ----------------------------------------------------------
+# #115: "Point A6 at every detector you build. If it can mutate past your
+# checks, that is a benchmark case before it is a production gap."
+#
+# A deterministic sweep of 31 known URL-evasion techniques against the first
+# version of this module caught 20 and was evaded by 11. Each test below is one
+# of those evasions. They are grouped by what the evasion revealed, because
+# several of them are one bug wearing different hats.
+
+
+def test_a_bare_host_with_a_path_is_parsed():
+    """SMS does not contain `http://`. People send `paytm-refund.info/verify`,
+    and the first version parsed a bare host only when it had no path — so the
+    single most common real-world shape went unchecked."""
+    signals = link_signals.evaluate("paytm-refund.info/verify")
+    assert "brand_impersonation" in {s.name for s in signals}
+
+
+def test_a_bare_ip_host_is_flagged():
+    """No bank serves from a bare IP. Cheap to check and it defeats every
+    host-name check at once — there is no name to compare."""
+    signals = link_signals.evaluate("http://203.0.113.44/paytm/verify")
+    assert "ip_address_host" in {s.name for s in signals}
+
+
+def test_an_integer_encoded_ip_host_is_flagged():
+    """`3405803820` is `203.0.113.44` written as a single integer, which most
+    browsers still resolve and most naive parsers do not recognise as an IP."""
+    signals = link_signals.evaluate("http://3405803820/paytm")
+    assert "ip_address_host" in {s.name for s in signals}
+
+
+def test_a_url_shortener_is_flagged():
+    """A shortener hides the destination completely — every static check has
+    nothing left to read.
+
+    Stage 1 cannot resolve it without fetching, which is stage 2 by definition.
+    So the honest signal is not "this is malicious" but "the destination is
+    hidden", which is a fact, is deterministic, and is what makes the case worth
+    escalating to a stage that may fetch."""
+    signals = link_signals.evaluate("http://bit.ly/3xK9pQ")
+    assert "hidden_destination" in {s.name for s in signals}
+
+
+def test_a_url_embedded_in_a_query_parameter_is_evaluated_too():
+    """The open-redirect shape. The host is `google.com` and entirely genuine;
+    the payload is in `?q=`. Reading only the outer host means a legitimate
+    domain launders the whole check."""
+    signals = link_signals.evaluate(
+        "https://www.google.com/url?q=http://paytm-refund.info/verify"
+    )
+    assert "brand_impersonation" in {s.name for s in signals}
+
+
+def test_an_embedded_url_does_not_recurse_without_bound():
+    """A nested chain is a cheap way to make one scan do arbitrary work."""
+    nested = "http://a.example/?q=http://b.example/?q=http://c.example/?q=http://paytm-refund.info/"
+    link_signals.evaluate(nested)  # must return, not hang
+
+
+def test_a_brand_under_a_multi_part_suffix_is_an_impersonation():
+    """The finding that disproved a claim in this module's own docstring.
+
+    `hdfcbank.com.co` and `hdfcbank.com` produce an *identical* registrable
+    label, so comparing the label to the brand cannot tell them apart — and the
+    first version therefore treated `hdfcbank.com.co` as HDFC's own domain and
+    skipped the check entirely.
+
+    `_registrable_label` claimed that where it was wrong it erred towards
+    treating a subdomain as registrable, "which produces a warning rather than a
+    missed detection". This is the case where it errs the other way and the
+    result is a missed detection. The fix compares the full registrable domain
+    against the brand's known domains rather than comparing labels."""
+    signals = link_signals.evaluate("http://vvww.hdfcbank.com.co/")
+    assert "brand_impersonation" in {s.name for s in signals}
+
+
+def test_the_real_bank_domain_still_is_not_an_impersonation():
+    """The other half of the previous test, and the one that costs users if it
+    breaks."""
+    assert link_signals.evaluate("https://www.hdfcbank.com/") == []
+    assert link_signals.evaluate("https://netbanking.hdfcbank.com/login") == []
+
+
+@pytest.mark.parametrize("tld", [".icu", ".cc", ".buzz", ".win", ".rest", ".quest"])
+def test_known_abuse_tlds_are_flagged(tld):
+    """Whack-a-mole by nature, which is exactly why `suspicious_tld` is a weak
+    named signal rather than a verdict — the blocking policy needs two
+    independent witnesses and this can only ever be one of them."""
+    signals = link_signals.evaluate(f"http://verify-account{tld}/")
+    assert "suspicious_tld" in {s.name for s in signals}
+
+
+# --- finding links in a message -------------------------------------------
+# The entry point A6 exposed by not existing: stage 1 could evaluate a URL and
+# nothing could get a URL out of an SMS.
+
+
+def test_a_bare_link_is_found_in_ordinary_sms_text():
+    """The shape people actually receive — no scheme, mid-sentence."""
+    found = link_signals.extract_urls(
+        "Your KYC expires today. Verify at paytm-refund.info/verify or account blocked."
+    )
+    assert found == ["paytm-refund.info/verify"]
+
+
+def test_trailing_sentence_punctuation_is_not_part_of_the_link():
+    assert link_signals.extract_urls("Visit www.hdfcbank.com.") == ["www.hdfcbank.com"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Call 1800.123.4567 before 12.30pm.",
+        "Amount Rs.5000 pending.",
+        "no links here at all, version 1.2.3 released",
+        "mail me at ravi@paytm.com please",
+    ],
+)
+def test_prose_that_merely_contains_dots_is_not_a_link(text):
+    """The false-positive half. Matching prose would run brand comparisons
+    against arbitrary words on the hot path, and an email address is not a link
+    — treating one as a host would flag every message naming a real bank."""
+    assert link_signals.extract_urls(text) == []
+
+
+def test_the_number_of_links_taken_from_one_message_is_bounded():
+    """A message stuffed with links is itself adversarial input, and this runs
+    on the hot path."""
+    text = " ".join(f"site{i}.example/p" for i in range(50))
+    assert len(link_signals.extract_urls(text)) == 10
+
+
+def test_the_same_link_twice_is_evaluated_once():
+    found = link_signals.extract_urls("go to a.example/x and again A.EXAMPLE/x now")
+    assert len(found) == 1
+
+
+# --- A6 findings deliberately NOT fixed -----------------------------------
+
+
+def test_a_brand_name_in_the_path_is_not_flagged():
+    """Recorded as a benchmark case rather than fixed, and the reasoning
+    matters more than the case.
+
+    `secure-portal.net/paytm/login` does evade every check here. Flagging a
+    brand name in a *path* would also flag every news article, every review
+    site and every legitimate aggregator that mentions a bank — an enormous
+    false-positive surface for a weak signal.
+
+    A2's benign half is larger than its phishing half. This one belongs to the
+    stages that read the page, where "the page is a Paytm login form on a
+    domain that is not Paytm" is a strong signal instead of a guess."""
+    assert link_signals.evaluate("http://secure-portal.net/paytm/login") == []

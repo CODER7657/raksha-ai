@@ -31,7 +31,52 @@ KNOWN_BRANDS = [
 #: Cheap generic TLDs. Not evidence on their own — plenty of legitimate sites
 #: use them — which is why this reports a named signal that the blocking policy
 #: is free to weigh, rather than a verdict.
-SUSPICIOUS_TLDS = {".info", ".xyz", ".top", ".click", ".online", ".site"}
+#:
+#: Extending this is whack-a-mole and always will be; a registry opens a cheap
+#: TLD faster than anyone updates a list. That is an argument for the signal
+#: being weak and named, not for the list being complete. The additions past the
+#: original six came from an A6 sweep that walked straight through `.icu` and
+#: `.cc`.
+SUSPICIOUS_TLDS = {
+    ".info", ".xyz", ".top", ".click", ".online", ".site",
+    ".icu", ".cc", ".buzz", ".win", ".rest", ".quest", ".cfd", ".sbs",
+}
+
+#: A brand's real registrable domains. Membership is the *only* thing that
+#: makes a domain that brand's own.
+#:
+#: Comparing the registrable *label* to the brand name cannot do this job, and
+#: A6 proved it: `hdfcbank.com.co` and `hdfcbank.com` produce an identical label
+#: (`hdfcbank`), so a label comparison reads the impersonation as the genuine
+#: article and skips the check. `com.co` is a real public suffix, so
+#: `hdfcbank.com.co` is a registration anybody can buy.
+BRAND_DOMAINS: dict[str, set[str]] = {
+    "paytm": {"paytm.com", "paytm.in"},
+    "phonepe": {"phonepe.com"},
+    "googlepay": {"pay.google.com", "google.com"},
+    "gpay": {"pay.google.com", "google.com"},
+    "bhim": {"bhimupi.org.in", "npci.org.in"},
+    "sbi": {"sbi.co.in", "onlinesbi.sbi", "onlinesbi.com"},
+    "onlinesbi": {"onlinesbi.sbi", "onlinesbi.com", "sbi.co.in"},
+    "hdfc": {"hdfcbank.com", "hdfc.com"},
+    "hdfcbank": {"hdfcbank.com"},
+    "icici": {"icicibank.com", "icici.com"},
+    "icicibank": {"icicibank.com"},
+    "axisbank": {"axisbank.com"},
+    "kotak": {"kotak.com"},
+    "bankofbaroda": {"bankofbaroda.in", "bankofbaroda.co.in"},
+    "canarabank": {"canarabank.com", "canarabank.in"},
+    "unionbank": {"unionbankofindia.co.in", "unionbankonline.co.in"},
+}
+
+#: Hosts whose entire purpose is to hide where a link goes. Not malicious — most
+#: traffic through them is ordinary — but a shortener means every static check
+#: has nothing left to read, which is itself a fact worth reporting.
+URL_SHORTENERS = {
+    "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "buff.ly",
+    "rebrand.ly", "cutt.ly", "shorturl.at", "rb.gy", "tiny.cc", "bl.ink",
+    "short.io", "t.ly", "shrtco.de", "clck.ru", "surl.li", "1u.ms",
+}
 
 #: Subdomain labels that carry no brand claim, skipped before lookalike
 #: matching so `www` is not measured against a bank name.

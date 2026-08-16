@@ -30,15 +30,19 @@ the conservative one.
 """
 
 import codecs
+import ipaddress
+import re
 import unicodedata
 from dataclasses import dataclass, field
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from app.services.brand_match import (
+    BRAND_DOMAINS,
     IGNORED_LABELS,
     KNOWN_BRANDS,
     KNOWN_LEGITIMATE,
     SUSPICIOUS_TLDS,
+    URL_SHORTENERS,
     looks_machine_generated,
     nearest_brand,
 )
@@ -171,38 +175,89 @@ def _host_of(value: str) -> str | None:
         return None
     try:
         parts = urlsplit(value)
-        if parts.scheme and parts.scheme not in ("http", "https"):
+        if parts.scheme and parts.scheme.lower() not in ("http", "https"):
             return None  # javascript:, data:, mailto: are not links to analyse
         host = parts.hostname
-        if not host and not parts.scheme and "/" not in value and " " not in value:
-            host = urlsplit(f"http://{value}").hostname  # bare host, e.g. link text
-        if not host or "." not in host:
+        if not host and not parts.scheme and " " not in value:
+            # A bare host, with or without a path. SMS does not contain
+            # `http://` — `paytm-refund.info/verify` is the shape people
+            # actually send, and requiring a scheme meant the most common
+            # real-world case was never checked at all (A6).
+            host = urlsplit(f"http://{value}").hostname
+        if not host:
             return None
-        return host.lower().rstrip(".")
+        host = host.lower().rstrip(".")
+        return host if ("." in host or _as_ip(host)) else None
     except ValueError:
         return None
+
+
+def _as_ip(host: str) -> str | None:
+    """The host as an IP address, or None.
+
+    Handles the dotted form and the integer form — `3405803820` is `203.0.113.44`
+    written as one number, which browsers still resolve and naive parsers read as
+    a hostname.
+    """
+    try:
+        return str(ipaddress.ip_address(host))
+    except ValueError:
+        pass
+    if host.isdigit():
+        try:
+            return str(ipaddress.ip_address(int(host)))
+        except (ValueError, ipaddress.AddressValueError):
+            return None
+    return None
 
 
 def _labels_of(host: str) -> list[str]:
     return [_decode_label(label) for label in host.split(".") if label]
 
 
+def _suffix_length(labels: list[str]) -> int:
+    """How many trailing labels form the public suffix. 1 or 2, approximated.
+
+    The exact answer needs the Public Suffix List, a data file with a refresh
+    job. `data/feeds/` now exists and the refresh job has somewhere to put one,
+    which makes replacing this cheap when someone wants to.
+    """
+    if len(labels) >= 3 and len(labels[-1]) <= 3 and len(labels[-2]) <= 3:
+        return 2  # co.in, co.uk, com.co, org.in and friends
+    return 1
+
+
 def _registrable_label(labels: list[str]) -> str:
     """The label immediately before the public suffix.
 
-    An approximation — the exact answer needs the Public Suffix List, which is a
-    data file with a refresh job. It is right for `paytm.com` and for
-    `paytm.help.in`, and where it is wrong it is wrong towards treating a
-    subdomain as registrable, which produces a *warning* rather than a missed
-    detection. Worth replacing with the real list when the feed refresh job
-    lands, since that job already has somewhere to put data files.
+    **Not sufficient to decide whether a domain belongs to a brand**, and A6
+    found the case that proves it: `hdfcbank.com.co` and `hdfcbank.com` both
+    reduce to `hdfcbank` here. An earlier version of this docstring claimed that
+    where the approximation is wrong it errs towards treating a subdomain as
+    registrable, producing a warning rather than a missed detection. That was
+    wrong in both directions — `com.co` is a real public suffix, so the error ran
+    the other way and produced a *missed detection* on a domain anybody can buy.
+
+    Ownership is decided by `_registrable_domain` against `BRAND_DOMAINS`. This
+    stays only for the checks that genuinely are about one label.
     """
     meaningful = [label for label in labels if label]
     if len(meaningful) < 2:
         return meaningful[0] if meaningful else ""
-    if len(meaningful) >= 3 and len(meaningful[-1]) == 2 and len(meaningful[-2]) <= 3:
-        return meaningful[-3]  # co.in, co.uk and friends
-    return meaningful[-2]
+    return meaningful[-(_suffix_length(meaningful) + 1)]
+
+
+def _registrable_domain(labels: list[str]) -> str:
+    """The whole registration — label plus public suffix, e.g. `hdfcbank.com.co`.
+
+    This is the unit a brand can be said to own. Comparing it against
+    `BRAND_DOMAINS` is what separates HDFC's domain from one that merely ends up
+    with the same label.
+    """
+    meaningful = [label for label in labels if label]
+    if len(meaningful) < 2:
+        return meaningful[0] if meaningful else ""
+    return ".".join(meaningful[-(_suffix_length(meaningful) + 1) :])
 
 
 # --- the checks -----------------------------------------------------------
@@ -254,28 +309,105 @@ def _impersonation_signals(labels: list[str]) -> list[Signal]:
     imitation. Matching on hyphen-separated parts rather than substrings keeps
     `hdfcbank` from being read as an impersonation of `hdfc`.
     """
-    registrable = _registrable_label(labels)
-    if not registrable or registrable in KNOWN_BRANDS:
+    domain = _registrable_domain(labels)
+    if not domain:
         return []
 
     for label in labels:
         if label in IGNORED_LABELS:
             continue
         for part in label.split("-"):
-            if part in KNOWN_BRANDS and part not in KNOWN_LEGITIMATE:
-                return [
-                    Signal(
-                        name="brand_impersonation",
-                        basis=BASIS_HOST_LABEL,
-                        deterministic=True,
-                        detail=(
-                            f"Uses the name '{part}' but the domain is "
-                            f"'{registrable}', which is not owned by them."
-                        ),
-                        evidence={"brand": part, "registrable_label": registrable},
-                    )
-                ]
+            if part not in KNOWN_BRANDS or part in KNOWN_LEGITIMATE:
+                continue
+            # Ownership is membership of the brand's real domains, never a
+            # label comparison — `hdfcbank.com.co` has the same label as
+            # `hdfcbank.com` and is not HDFC (A6).
+            if domain in BRAND_DOMAINS.get(part, set()):
+                return []
+            return [
+                Signal(
+                    name="brand_impersonation",
+                    basis=BASIS_HOST_LABEL,
+                    deterministic=True,
+                    detail=(
+                        f"Uses the name '{part}' but the domain is "
+                        f"'{domain}', which is not owned by them."
+                    ),
+                    evidence={"brand": part, "registrable_domain": domain},
+                )
+            ]
     return []
+
+
+def _ip_signals(host: str) -> list[Signal]:
+    """A bare IP where a name should be.
+
+    No bank serves from one, and it defeats every host-name check at once —
+    there is no name left to compare against anything (A6).
+    """
+    address = _as_ip(host)
+    if not address:
+        return []
+    return [
+        Signal(
+            name="ip_address_host",
+            basis=BASIS_HOST_LABEL,
+            deterministic=True,
+            detail=f"Goes to a raw IP address ({address}) instead of a website name.",
+            evidence={"host": host, "ip": address},
+        )
+    ]
+
+
+def _shortener_signals(host: str) -> list[Signal]:
+    """A shortener is not evidence of fraud. It is evidence of *not knowing*.
+
+    Stage 1 cannot resolve one without fetching, which is stage 2 by
+    definition. So the honest signal is "the destination is hidden" — a fact,
+    deterministic, and precisely the thing that makes a link worth escalating to
+    a stage allowed to fetch it (A6).
+    """
+    if host not in URL_SHORTENERS:
+        return []
+    return [
+        Signal(
+            name="hidden_destination",
+            basis=BASIS_HOST_LABEL,
+            deterministic=True,
+            detail=f"'{host}' is a link shortener, so where this really goes cannot be seen.",
+            evidence={"shortener": host},
+        )
+    ]
+
+
+#: Embedded URLs are followed one level. A nested chain is otherwise a cheap way
+#: to make one scan do arbitrary work, on the hot path, from attacker-controlled
+#: text.
+_MAX_EMBED_DEPTH = 1
+
+_EMBEDDED_URL = re.compile(r"https?://[^\s&]+", re.IGNORECASE)
+
+
+def _embedded_urls(url: str) -> list[str]:
+    """URLs carried inside another URL's query — the open-redirect shape.
+
+    `google.com/url?q=http://paytm-refund.info` has a completely genuine host,
+    and reading only the outer one lets a legitimate domain launder the whole
+    check (A6).
+    """
+    try:
+        query = urlsplit(url).query
+    except ValueError:
+        return []
+    if not query:
+        return []
+
+    found = []
+    for _, value in parse_qsl(query, keep_blank_values=False):
+        candidate = unquote(value).strip()
+        if _EMBEDDED_URL.match(candidate):
+            found.append(candidate)
+    return found
 
 
 def _tld_signals(host: str) -> list[Signal]:
@@ -335,14 +467,69 @@ def _display_signals(host: str, display_text: str | None) -> list[Signal]:
     ]
 
 
-def evaluate(url: str, *, display_text: str | None = None) -> list[Signal]:
+#: Links as they appear in an SMS. Two shapes, because people send both and the
+#: bare one is far more common — an SMS almost never contains `http://`.
+#:
+#: The bare-host branch requires a plausible alphabetic TLD, which is what keeps
+#: it from matching `Rs.500`, `12.30pm`, a version number or a sentence that
+#: happens to lack a space after a full stop. Being slightly conservative here is
+#: the right direction: a missed link costs one unchecked signal, while matching
+#: prose would run brand comparisons against arbitrary words on the hot path.
+_URL_IN_TEXT = re.compile(
+    r"""(?xi)
+    (?:
+        https?://[^\s<>"']+                       # explicit scheme
+      | (?<![@\w.])                               # not an email or a longer host
+        (?:[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?\.)+   # one or more labels
+        [a-z]{2,24}\b                             # a plausible TLD
+        (?:/[^\s<>"']*)?                          # optional path
+    )
+    """
+)
+
+
+def extract_urls(text: str, *, limit: int = 10) -> list[str]:
+    """Links found in a message, in order, de-duplicated.
+
+    `limit` bounds the work one message can cause on the hot path — a message
+    stuffed with hundreds of links is itself adversarial input, and the first
+    few carry the fraud.
+    """
+    if not text:
+        return []
+
+    seen: set[str] = set()
+    found: list[str] = []
+    for match in _URL_IN_TEXT.finditer(text):
+        candidate = match.group(0).rstrip(".,;:!?)’\"'")
+        if not _host_of(candidate):
+            continue
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        found.append(candidate)
+        if len(found) >= limit:
+            break
+    return found
+
+
+def evaluate(
+    url: str, *, display_text: str | None = None, _depth: int = 0
+) -> list[Signal]:
     """Every stage 1 signal for one URL. Never fetches, never raises."""
     host = _host_of(url)
     if not host:
         return []
 
+    if _as_ip(host):
+        # No labels to read — every name-based check has nothing to work with,
+        # which is the whole point of using one.
+        return [*_ip_signals(host), *_display_signals(host, display_text)]
+
     labels = _labels_of(host)
-    return [
+    signals = [
+        *_shortener_signals(host),
         *_homograph_signals(labels),
         *_lookalike_signals(labels),
         *_impersonation_signals(labels),
@@ -350,3 +537,9 @@ def evaluate(url: str, *, display_text: str | None = None) -> list[Signal]:
         *_tld_signals(host),
         *_display_signals(host, display_text),
     ]
+
+    if _depth < _MAX_EMBED_DEPTH:
+        for embedded in _embedded_urls(url):
+            signals.extend(evaluate(embedded, _depth=_depth + 1))
+
+    return signals
