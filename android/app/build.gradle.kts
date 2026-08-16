@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -19,13 +20,73 @@ android {
         // a higher floor would exclude exactly the people most targeted by
         // these scams.
         minSdk = 24
+        // TARGET API DEADLINE (#82 §4).
+        //
+        // Play enforces a rolling minimum targetSdk: an app must target within
+        // one year of the latest major Android release, or new uploads and
+        // updates are rejected. Existing installs keep working, so the failure
+        // arrives as a blocked release rather than a broken app - which is why
+        // it is worth a calendar entry rather than a surprise.
+        //
+        // The rule is stable; the dates are not, and they are not written here
+        // because a wrong date is worse than none. Confirm the current one in
+        // Play Console -> Policy -> App content, or
+        // developer.android.com/google/play/requirements/target-sdk, and put it
+        // in the release checklist (#82 §7) so it is discovered on a date rather
+        // than on a rejection.
+        //
+        // 37 is comfortably current today. The version that will force a bump is
+        // whichever Android ships next, roughly a year ahead of the deadline.
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
     }
 
+    // Release signing, read from the environment — never from a file in the
+    // repo (#82 §1). `.gitignore` already covers *.jks and *.keystore, so this
+    // is about there being no config that could tempt someone to add one.
+    //
+    // All four values must be present or the signing config is not created at
+    // all, and `assembleRelease` produces an unsigned APK exactly as it does
+    // today. That is deliberate: a half-configured signing setup that silently
+    // signs with the wrong key is worse than one that obviously did not sign.
+    // `verifyReleaseSigning` below turns "not signed" into a loud failure when
+    // signing was actually intended.
+    //
+    // The #70 trap applies here — a secret is named in four places (GitHub
+    // secret, workflow env block, this file, and the docs) and getting three
+    // right fails in a way that looks like a keystore problem.
+    val keystorePath = providers.environmentVariable("RAKSHA_KEYSTORE_PATH").orNull
+    val keystorePassword = providers.environmentVariable("RAKSHA_KEYSTORE_PASSWORD").orNull
+    val keyAlias = providers.environmentVariable("RAKSHA_KEY_ALIAS").orNull
+    val keyPassword = providers.environmentVariable("RAKSHA_KEY_PASSWORD").orNull
+    val hasSigningConfig =
+        !keystorePath.isNullOrBlank() && !keystorePassword.isNullOrBlank() &&
+            !keyAlias.isNullOrBlank() && !keyPassword.isNullOrBlank()
+
+    if (hasSigningConfig) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystorePath!!)
+                storePassword = keystorePassword
+                this.keyAlias = keyAlias
+                this.keyPassword = keyPassword
+                // v1 (JAR signing) is off: it is only needed below API 24 and
+                // minSdk is 24. Leaving it on is not free — it emitted a
+                // META-INF/CERT.RSA that `apksigner verify` then reported as
+                // "v1 scheme: false", i.e. a signature file present and not
+                // valid, which is the most confusing possible state to debug.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = if (hasSigningConfig) signingConfigs.getByName("release") else null
+
             // R8 on. It was off through the shell phase, which was fine while
             // nothing shipped — but the release APK is what a pilot user
             // installs, and an unminified build hands anyone who pulls it a
@@ -300,5 +361,89 @@ androidComponents {
             allowedMissing.set(knownUntranslated)
         }
         variant.sources.res?.addGeneratedSourceDirectory(task, GenerateRuleStrings::outputDir)
+    }
+}
+
+// --- Release signing verification (#82 §1) ----------------------------------
+//
+// `assembleRelease` succeeds whether or not signing was configured, which is
+// how an unsigned APK reaches an upload attempt and fails there instead of
+// here. This task makes the intent explicit: run it and an unsigned release is
+// a build failure with a sentence explaining which variable is missing.
+//
+// Not wired into `assembleRelease` itself, because CI builds release
+// deliberately unsigned to prove R8 does not break the build (#69) and that
+// job has no secrets.
+tasks.register("verifyReleaseSigning") {
+    group = "verification"
+    description = "Fails unless the release APK is signed (see #82 §1)"
+
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release")
+    val required = listOf(
+        "RAKSHA_KEYSTORE_PATH",
+        "RAKSHA_KEYSTORE_PASSWORD",
+        "RAKSHA_KEY_ALIAS",
+        "RAKSHA_KEY_PASSWORD",
+    )
+    val present = required.associateWith { providers.environmentVariable(it).orNull }
+
+    doLast {
+        val missing = present.filterValues { it.isNullOrBlank() }.keys
+        if (missing.isNotEmpty()) {
+            throw GradleException(
+                "Release signing is not configured: ${missing.joinToString(", ")} " +
+                    "${if (missing.size == 1) "is" else "are"} unset.\n" +
+                    "An unsigned APK cannot be uploaded to Play. Set all four, or " +
+                    "build debug if you did not mean to produce a release artifact.\n" +
+                    "Setup is in #82 §1. (docs/RELEASE.md is #82 §7 and not written yet.)"
+            )
+        }
+
+        val apks = apkDir.get().asFile.listFiles { f -> f.extension == "apk" }.orEmpty()
+        if (apks.isEmpty()) {
+            throw GradleException(
+                "No release APK found in ${apkDir.get().asFile}. Run assembleRelease first."
+            )
+        }
+        // Looks for the APK Signing Block (v2/v3), not META-INF/*.RSA.
+        //
+        // The META-INF check was the first attempt and it is wrong in both
+        // directions: v1 is disabled at minSdk 24, so a correctly signed APK
+        // has no .RSA entry and would be reported unsigned; and a stale .RSA
+        // can survive from an earlier config while the signature does not
+        // actually verify. The signing block's magic string is what v2 and v3
+        // both write, and it is absent from an unsigned APK.
+        //
+        // This is a smoke test, not verification. `apksigner verify` is the
+        // real check and needs build-tools on PATH:
+        //   apksigner verify --verbose app-release.apk
+        // That belongs in the release checklist (#82 §7, @CODER7657).
+        apks.forEach { apk ->
+            val signed = apk.readBytes().let { bytes ->
+                val magic = "APK Sig Block 42".toByteArray(Charsets.UTF_8)
+                // Scan the tail: the block sits just before the central
+                // directory, never near the start.
+                val from = maxOf(0, bytes.size - 64 * 1024)
+                (from..bytes.size - magic.size).any { offset ->
+                    magic.indices.all { bytes[offset + it] == magic[it] }
+                }
+            }
+            if (!signed) {
+                throw GradleException(
+                    "${apk.name} has no signature block, even though all four " +
+                        "signing variables are set.\n" +
+                        "Two causes, in order of likelihood:\n" +
+                        "  1. A stale artifact from an earlier unsigned build is " +
+                        "still in outputs/apk/release. `assembleRelease` reports " +
+                        "UP-TO-DATE and never re-signs it. Run `clean` first - a " +
+                        "leftover *-unsigned.apk sitting next to a signed one is " +
+                        "also exactly the file someone uploads by mistake.\n" +
+                        "  2. The variables reached the shell but not the Gradle " +
+                        "process - check the daemon was not already running with " +
+                        "the old environment (`--no-daemon` to rule it out)."
+                )
+            }
+        }
+        logger.lifecycle("Release APK signature present: ${apks.joinToString { it.name }}")
     }
 }

@@ -66,6 +66,34 @@
             </intent-filter>
         </activity>
 
+        <!--
+          There is deliberately no BOOT_COMPLETED receiver, and #82 §6 asked for
+          one on the premise that "protection silently stops after a restart".
+          Measured on an Android 16 emulator, that premise does not hold:
+
+            10:03:03  Start proc 3031 for broadcast {ai.raksha.app/.sms.SmsReceiver}
+            10:03:10  scan complete: 2 rule(s) fired [account_lock, otp_share]
+
+          after `adb reboot`, with the app never opened. The platform restores a
+          manifest-declared receiver across a reboot and cold-starts the process
+          to deliver the broadcast, so a BOOT_COMPLETED receiver would have
+          nothing to do. Adding one would mean requesting RECEIVE_BOOT_COMPLETED
+          for no behaviour, on an app whose Play declaration (#39) states it holds
+          exactly two permissions.
+
+          Two adjacent gaps a boot receiver would NOT close either, noted so they
+          are not confused with this one:
+
+            - Force-stop. An app the user force-stops enters the stopped state and
+              receives no broadcasts at all until it is launched again -
+              BOOT_COMPLETED included.
+            - Direct boot. Between a restart and the first unlock, credential-
+              encrypted storage is unavailable and non-directBootAware components
+              do not run, so a message arriving in that window is missed. Closing
+              that needs android:directBootAware plus device-encrypted storage for
+              the scanning preference, not a boot receiver. NOT measured here: the
+              emulator auto-unlocks with no PIN set, so the window never occurred.
+        -->
         <receiver
             android:name=".sms.SmsReceiver"
             android:exported="true"
