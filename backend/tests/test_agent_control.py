@@ -38,14 +38,52 @@ def test_the_control_plane_cannot_reach_the_detection_path():
         assert "agent_control" not in src, f"{module} is on the detection path and must stay clear"
 
 
-def test_agent_ids_match_the_migration():
-    """KNOWN_AGENTS is duplicated from migration 0006 so a CLI typo fails
-    before a round trip. This is what keeps the duplicate honest."""
-    migration = (
-        pathlib.Path(__file__).resolve().parents[2] / "supabase/migrations/0006_agent_control.sql"
-    ).read_text(encoding="utf-8")
+def test_agent_ids_match_the_migrations():
+    """KNOWN_AGENTS is duplicated from the migrations so a CLI typo fails before
+    a round trip. This is what keeps the duplicate honest.
+
+    Scans every migration rather than only 0006: agents are registered as they
+    are built, and `a2_page_analysis` arrives in 0012. Pinning this to one file
+    would mean a new agent could be in the tuple, absent from the database, and
+    fail only at `may_run` — which fails closed, so the symptom would be an
+    agent that silently never runs.
+    """
+    migrations = (pathlib.Path(__file__).resolve().parents[2] / "supabase/migrations")
+    registered = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(migrations.glob("*.sql"))
+    )
     for agent_id in agent_control.KNOWN_AGENTS:
-        assert f"'{agent_id}'" in migration, f"{agent_id} is not registered by the migration"
+        assert f"'{agent_id}'" in registered, (
+            f"{agent_id} is in KNOWN_AGENTS and no migration registers it"
+        )
+
+
+def test_pulling_a2s_kill_switch_stops_it(monkeypatch):
+    """#115: every agent under "a kill switch that has been **pulled and
+    observed**". Present is not the same as working, so this pulls it.
+
+    A2 is the agent this matters most for. The other two spend money when they
+    misbehave; A2 fetches a URL an attacker chose, from our infrastructure. The
+    switch is the thing that stops that inside one UPDATE, and a switch nobody
+    has tried is a switch nobody knows the state of.
+    """
+    # Enabled first, so the refusal below is demonstrably the switch and not the
+    # fail-closed path — an unreachable control plane refuses too, and a test
+    # that cannot tell them apart proves nothing.
+    _stub(monkeypatch, {"enabled": True, "spend_cap_calls": 100})
+    assert agent_control.may_run("a2_page_analysis", 1).allowed
+
+    _stub(monkeypatch, {"enabled": False, "disabled_reason": "pulled in a test"})
+    decision = agent_control.may_run("a2_page_analysis", 1)
+
+    assert not decision.allowed
+    assert "pulled in a test" in (decision.reason or "")
+
+
+def test_a2_is_registered_before_it_can_run():
+    """`may_run` refuses an unknown agent, so an unregistered A2 cannot spend
+    even if someone wires the sandbox up first."""
+    assert "a2_page_analysis" in agent_control.KNOWN_AGENTS
 
 
 # --- the switch fails closed ------------------------------------------------

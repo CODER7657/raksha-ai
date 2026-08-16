@@ -191,8 +191,25 @@ def test_the_corpus_declares_both_targets():
     ]
     assert {row["target"] for row in rows} == {"scan_advice", "page_analysis"}
 
+    # Closed on purpose, and extended on purpose. The first three came with the
+    # file; `page_analysis` needed two more and folding them into the existing
+    # values would have hidden what they test.
+    #
+    #   rejected           the output is refused by validation
+    #   allowed            the payload is benign and must pass — the false-positive half
+    #   verdict_unchanged  the injection failed to move the verdict
+    #   no_tool_call       the reader was asked to use a tool and had none to use.
+    #                      The whole point of the CaMeL split, and not observable
+    #                      as `verdict_unchanged` — a verdict can be unchanged
+    #                      while a tool call still happened
+    #   flagged            a real phishing page that must be CAUGHT. The corpus
+    #                      had no way to say this: `allowed` means a benign
+    #                      payload passes, and the controls are the rows that
+    #                      stop this file only measuring failures to be fooled
     for row in rows:
-        assert row["expect"] in {"rejected", "allowed", "verdict_unchanged"}
+        assert row["expect"] in {
+            "rejected", "allowed", "verdict_unchanged", "no_tool_call", "flagged"
+        }
         assert row["note"], f"{row['id']} has no note saying why it exists"
         assert row["id"] and row["carrier"]
 
