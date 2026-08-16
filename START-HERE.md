@@ -326,5 +326,10 @@ docs/ARCHITECTURE.md   read before writing code
 2. [`CONTRIBUTING.md`](CONTRIBUTING.md) — full workflow and review rules
 3. [`README.md`](README.md) — product overview
 
+When you come to ship the Android app rather than deploy the web one, that is a
+different process and it has its own document:
+[`docs/RELEASE.md`](docs/RELEASE.md). §1b above is a deploy; a release has a
+store review in the middle of it and a signing key that cannot be lost.
+
 Ask in the group before guessing. A five-minute question is cheaper than a
 rejected PR.
