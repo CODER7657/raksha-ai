@@ -1,0 +1,162 @@
+name: Android release build
+
+# Produces a SIGNED release APK, and refuses to hand you an unsigned one.
+#
+# WHY THIS IS SEPARATE FROM android-ci.yml. That workflow builds
+# `assembleRelease` on every PR touching android/, deliberately unsigned: there
+# is no keystore on a PR runner and there should not be one, because a PR from
+# any branch would then be able to sign with the production key. What it proves
+# is that R8 does not break the build. What it cannot prove is that the artifact
+# is uploadable.
+#
+# So `verifyReleaseSigning` lives here instead of there. It would fail every CI
+# run by design, and a check that always fails gets muted exactly like one that
+# can never fail - see #22, and #80 where four unit tests turned out never to
+# have run at all.
+#
+# COST. workflow_dispatch only, so it bills nothing until someone asks for a
+# build. A release is a deliberate act; there is no schedule and no push trigger
+# (see keep-alive.yml for why this repo counts Actions minutes).
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'What is this build for? (goes in the run name)'
+        required: true
+        default: 'Release candidate'
+
+run-name: 'Release build — ${{ inputs.reason }}'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Fail before building rather than after, so a missing secret costs
+      # seconds instead of a full Android build. The four names are the trap
+      # #70 documented: a secret exists in the GitHub secret, the env block
+      # below, build.gradle.kts and the docs, and getting three right fails in a
+      # way that looks like a keystore problem rather than a naming one.
+      - name: Check the signing secrets are present
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RAKSHA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.RAKSHA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RAKSHA_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RAKSHA_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$KEYSTORE_BASE64" ]   && missing="$missing RAKSHA_KEYSTORE_BASE64"
+          [ -z "$KEYSTORE_PASSWORD" ] && missing="$missing RAKSHA_KEYSTORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ]         && missing="$missing RAKSHA_KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ]      && missing="$missing RAKSHA_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing"
+            echo "Set them under Settings -> Secrets and variables -> Actions."
+            echo "See docs/RELEASE.md. Note these are repo-level Secrets, not"
+            echo "Variables and not Environment secrets - four different places."
+            exit 1
+          fi
+          echo "All four signing secrets are present."
+
+      # The keystore is a binary and lives in a secret base64-encoded. Written
+      # to the runner's temp directory rather than the workspace, so it cannot
+      # be picked up by a later step that archives the checkout.
+      - name: Restore the keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RAKSHA_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/raksha-release.jks"
+          # No `ls -l` and no checksum echoed: both are fingerprints of a signing
+          # key in a public-by-default log.
+          test -s "$RUNNER_TEMP/raksha-release.jks" || {
+            echo "::error::Keystore decoded to an empty file - the secret is probably not valid base64."
+            exit 1
+          }
+
+      # Clean first, and not out of superstition. `assembleRelease` reports
+      # UP-TO-DATE and does not re-sign, so a stale unsigned APK from an earlier
+      # run survives next to a signed one - and that is exactly the file someone
+      # uploads by mistake. #86 hit this.
+      - name: Build the signed release APK
+        working-directory: android
+        env:
+          RAKSHA_KEYSTORE_PATH: ${{ runner.temp }}/raksha-release.jks
+          RAKSHA_KEYSTORE_PASSWORD: ${{ secrets.RAKSHA_KEYSTORE_PASSWORD }}
+          RAKSHA_KEY_ALIAS: ${{ secrets.RAKSHA_KEY_ALIAS }}
+          RAKSHA_KEY_PASSWORD: ${{ secrets.RAKSHA_KEY_PASSWORD }}
+        run: ./gradlew clean assembleRelease --stacktrace
+
+      # The smoke test: is a signature block present at all? Locates it via the
+      # central directory offset in the EOCD, so it does not degrade as the APK
+      # grows (the previous 64 KB window would have started reporting a signed
+      # APK as unsigned somewhere past ~2,000 entries).
+      - name: Verify the APK is signed
+        working-directory: android
+        env:
+          RAKSHA_KEYSTORE_PATH: ${{ runner.temp }}/raksha-release.jks
+          RAKSHA_KEYSTORE_PASSWORD: ${{ secrets.RAKSHA_KEYSTORE_PASSWORD }}
+          RAKSHA_KEY_ALIAS: ${{ secrets.RAKSHA_KEY_ALIAS }}
+          RAKSHA_KEY_PASSWORD: ${{ secrets.RAKSHA_KEY_PASSWORD }}
+        run: ./gradlew verifyReleaseSigning --stacktrace
+
+      # The real check. The step above proves a block exists; this proves the
+      # signature validates and reports which schemes signed it. apksigner ships
+      # with build-tools, which the runner image already has.
+      - name: apksigner verify
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found under $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          echo "Verifying $APK with $APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+      # `minSdk` is 24, so v1 is deliberately off (#86). Asserting it rather
+      # than trusting the config: a v1 signature that is present and invalid
+      # reports as `v1 scheme: false`, which is the confusing state #86 spent a
+      # cycle on, and it would be silently reintroduced by anyone flipping
+      # enableV1Signing back on.
+      - name: Assert the expected signature schemes
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          OUT=$("$APKSIGNER" verify --verbose "$APK")
+          echo "$OUT"
+          echo "$OUT" | grep -q "Verified using v2 scheme.*true" || {
+            echo "::error::v2 signature missing - the APK will not install on modern Android"; exit 1; }
+          echo "$OUT" | grep -q "Verified using v3 scheme.*true" || {
+            echo "::error::v3 signature missing"; exit 1; }
+
+      - name: Upload the signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: raksha-release-signed
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          # Longer than the debug APK's 14 days: a release candidate may sit
+          # through a Play review, and #39 has already been waiting on one.
+          retention-days: 60
+
+      # Runs even if a step above failed, because a failed run leaves the
+      # decoded keystore on disk and the runner is not guaranteed to be
+      # discarded immediately.
+      - name: Shred the keystore
+        if: always()
+        run: shred -u "$RUNNER_TEMP/raksha-release.jks" 2>/dev/null || rm -f "$RUNNER_TEMP/raksha-release.jks"

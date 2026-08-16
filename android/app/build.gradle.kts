@@ -374,6 +374,79 @@ androidComponents {
 // Not wired into `assembleRelease` itself, because CI builds release
 // deliberately unsigned to prove R8 does not break the build (#69) and that
 // job has no secrets.
+/**
+ * Is the APK Signing Block (v2/v3) present?
+ *
+ * Located deterministically rather than by scanning a window off the end. The
+ * first version of this check looked in the last 64 KB, on the reasoning that
+ * the block "sits just before the central directory" — true, and the reason the
+ * window is the wrong tool. The block's distance from EOF is the whole central
+ * directory plus the EOCD, and a central directory grows with entry count. Once
+ * it passes 64 KB a correctly signed APK reports as unsigned, which fails
+ * loudly and safely but does it in the middle of cutting a release.
+ *
+ * The generated per-language string resources grow with every language added,
+ * so entry count is going up, not down.
+ *
+ * Instead: find the EOCD, read the central directory's offset out of it, and
+ * look at the sixteen bytes immediately before that offset. The magic sits at
+ * the very end of the signing block, so it ends exactly where the central
+ * directory begins. No window, no guess.
+ *
+ * Scanning backwards for the EOCD *is* bounded, and legitimately: the ZIP spec
+ * caps the trailing comment at 0xFFFF bytes, so the record cannot be further
+ * than 22 + 65535 from the end. That is a bound the format guarantees, unlike
+ * the one this replaces.
+ *
+ * Still a smoke test, not verification. `apksigner verify --verbose` is the real
+ * check and is in docs/RELEASE.md, because it needs build-tools on PATH and
+ * confirms the signature validates rather than merely exists.
+ *
+ * Top-level rather than inlined: it is a pure function of the bytes and reads
+ * better named. Note that a script-level function referenced from a task action
+ * captures the script instance, which the configuration cache cannot serialise —
+ * that cache is not enabled here (`gradle.properties`), and turning it on would
+ * want this moved inside `doLast` as a local function.
+ */
+fun hasApkSigningBlock(bytes: ByteArray): Boolean {
+    val magic = "APK Sig Block 42".toByteArray(Charsets.UTF_8)
+    val eocdSignature = byteArrayOf(0x50, 0x4b, 0x05, 0x06)
+    val eocdMinSize = 22
+
+    if (bytes.size < eocdMinSize) return false
+
+    // Backwards, because a ZIP can legally contain the EOCD signature inside an
+    // entry; the last occurrence is the real one.
+    val searchFloor = maxOf(0, bytes.size - (eocdMinSize + 0xFFFF))
+    var eocd = -1
+    for (i in bytes.size - eocdMinSize downTo searchFloor) {
+        if (eocdSignature.indices.all { bytes[i + it] == eocdSignature[it] }) {
+            eocd = i
+            break
+        }
+    }
+    if (eocd < 0) return false
+
+    // Central directory offset: 4 bytes, little-endian, at EOCD + 16.
+    val cdOffset = (0..3).fold(0L) { acc, i ->
+        acc or ((bytes[eocd + 16 + i].toLong() and 0xFF) shl (8 * i))
+    }
+
+    // 0xFFFFFFFF means the real offset lives in a ZIP64 record. Not handled,
+    // and saying so beats reporting "unsigned" for a reason unrelated to
+    // signing — an APK that large is not a situation this project has.
+    if (cdOffset == 0xFFFFFFFFL) {
+        throw GradleException(
+            "This APK uses ZIP64, which this check does not read. Verify it with " +
+                "`apksigner verify --verbose` instead - see docs/RELEASE.md."
+        )
+    }
+    if (cdOffset < magic.size || cdOffset > bytes.size) return false
+
+    val magicStart = (cdOffset - magic.size).toInt()
+    return magic.indices.all { bytes[magicStart + it] == magic[it] }
+}
+
 tasks.register("verifyReleaseSigning") {
     group = "verification"
     description = "Fails unless the release APK is signed (see #82 §1)"
@@ -395,7 +468,7 @@ tasks.register("verifyReleaseSigning") {
                     "${if (missing.size == 1) "is" else "are"} unset.\n" +
                     "An unsigned APK cannot be uploaded to Play. Set all four, or " +
                     "build debug if you did not mean to produce a release artifact.\n" +
-                    "Setup is in #82 §1. (docs/RELEASE.md is #82 §7 and not written yet.)"
+                    "Setup and the full release path are in docs/RELEASE.md."
             )
         }
 
@@ -419,15 +492,7 @@ tasks.register("verifyReleaseSigning") {
         //   apksigner verify --verbose app-release.apk
         // That belongs in the release checklist (#82 §7, @CODER7657).
         apks.forEach { apk ->
-            val signed = apk.readBytes().let { bytes ->
-                val magic = "APK Sig Block 42".toByteArray(Charsets.UTF_8)
-                // Scan the tail: the block sits just before the central
-                // directory, never near the start.
-                val from = maxOf(0, bytes.size - 64 * 1024)
-                (from..bytes.size - magic.size).any { offset ->
-                    magic.indices.all { bytes[offset + it] == magic[it] }
-                }
-            }
+            val signed = apk.readBytes().let { bytes -> hasApkSigningBlock(bytes) }
             if (!signed) {
                 throw GradleException(
                     "${apk.name} has no signature block, even though all four " +
