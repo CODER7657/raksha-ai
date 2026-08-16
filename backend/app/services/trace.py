@@ -188,7 +188,45 @@ def link_signal_block(signals: list) -> dict[str, Any] | None:
         ],
         "independent_witnesses": len({signal.basis for signal in signals}),
         "deterministic_witness": any(signal.deterministic for signal in signals),
+        "verdict_floor_applied": False,
     }
+
+
+#: A feed listing is a statement about *this exact URL*, made by someone who
+#: looked at it — not an inference drawn from its spelling. One is enough to
+#: stop us calling it safe, even though feeds share a basis and therefore count
+#: as a single witness.
+FEED_SIGNAL = "known_bad_feed"
+
+#: Otherwise, two independent bases with at least one deterministic — §01's
+#: "High" tier, the point at which the policy is already willing to block for
+#: the reporting user. Anything less stays a warning: one weak signal is a `.xyz`
+#: domain, and a floor at one would make every cheap TLD non-safe.
+MIN_WITNESSES_TO_FLOOR = 2
+
+
+def link_floor_reason(block: dict | None) -> str | None:
+    """Why a `safe` verdict cannot stand, or None if it can.
+
+    A floor, never an override. It can only make a verdict more cautious, never
+    less, and it never touches `suspicious` or `high_risk` — the link checks are
+    evidence, not the verdict, and this exists solely so evidence and verdict
+    cannot point in opposite directions in the same response.
+
+    The failure it prevents is not abstract. `addenda` reaches `trace` and never
+    reached `result`, so a user could be shown `verdict: safe` above three
+    independent bases saying the link is phishing. They read the verdict; they
+    do not open the trace and reconcile it. Constraint 4 is *fail safe, never
+    confidently wrong*, and a `safe` verdict over a known-bad link is exactly
+    confidently wrong.
+    """
+    if not block:
+        return None
+    if any(signal["name"] == FEED_SIGNAL for signal in block["signals"]):
+        return "known_bad_feed"
+    if block["independent_witnesses"] >= MIN_WITNESSES_TO_FLOOR and block["deterministic_witness"]:
+        return "independent_deterministic_signals"
+    return None
 
 
 def sender_block(verification: str, caveats: list[str]) -> dict[str, Any]:

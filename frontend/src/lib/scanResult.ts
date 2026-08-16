@@ -144,6 +144,13 @@ export interface LinkSignals {
   independent_witnesses: number
   /** Whether at least one signal is immune to page content. */
   deterministic_witness: boolean
+  /**
+   * True when this evidence stopped the verdict being `safe`. The verdict shown
+   * is already the floored one — do not raise it again here. Worth surfacing in
+   * the explanation, because the message text looked ordinary and the link did
+   * not, and that is a different story from "this message is a scam".
+   */
+  verdict_floor_applied: boolean
 }
 
 /**

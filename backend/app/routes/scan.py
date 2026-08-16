@@ -240,6 +240,46 @@ def _run_scan_pipeline(
     )
 
 
+def _apply_link_floor(result: dict, trace: dict) -> tuple[dict, dict]:
+    """Stop a `safe` verdict sitting on top of evidence that says otherwise.
+
+    A floor, not an override — see `trace.link_floor_reason`. It only ever
+    raises caution, never lowers it, and it leaves `suspicious` and `high_risk`
+    untouched.
+
+    Applied on the cached path as readily as the live one, which is what makes
+    fresh link evidence under a stale verdict safe rather than contradictory: a
+    domain blocklisted since the message was first judged can now only make that
+    verdict more cautious.
+    """
+    reason = trace_service.link_floor_reason(trace.get("link_signals"))
+    if not reason or result["verdict"] != "safe":
+        return result, trace
+
+    action_id, action_text = safe_actions.resolve_action(safe_actions.FALLBACK_ACTION)
+    raised = {
+        **result,
+        "verdict": "suspicious",
+        # Not 70. The offline-rule fallback uses 70 for "a rule fired and no
+        # model answered"; this is "a model answered safe and the link says
+        # otherwise", which is a weaker claim and should not read as the same
+        # confidence.
+        "risk_score": max(result.get("risk_score", 0), 60),
+        "explanation": (
+            "The message text looked ordinary, but the link in it did not — "
+            "see the link checks below."
+        ),
+        "recommended_action_id": action_id,
+        "recommended_action": action_text,
+    }
+    floored_trace = {
+        **trace,
+        "link_signals": {**trace["link_signals"], "verdict_floor_applied": True},
+    }
+    logger.info("Link evidence floored a safe verdict (%s)", reason)
+    return raised, floored_trace
+
+
 def _persist_and_respond(
     *,
     text: str,
@@ -258,6 +298,12 @@ def _persist_and_respond(
     an audit record for the cheap path - which is the one that will run most
     often once a campaign is circulating.
     """
+    # Before persistence and before the audit record, so what is stored and what
+    # is signed are the verdict the user was actually shown. Flooring after the
+    # audit append would put a different verdict in the compliance log than in
+    # the response, which is the one place they must not differ.
+    result, trace = _apply_link_floor(result, trace)
+
     community_count = _report_to_community_radar(text, language)
 
     supabase = get_supabase()
