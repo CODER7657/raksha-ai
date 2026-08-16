@@ -105,7 +105,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
     if cached is not None:
         result = cached["result"]
         trace = trace_service.build_trace_from_cache(
-            hits, cached["provider"], cached["model"], cached["cached_at"]
+            hits, cached["provider"], cached["model"], cached["cached_at"], language
         )
         return _persist_and_respond(
             text=text,
@@ -136,7 +136,7 @@ def _run_scan_pipeline(text: str, language: str, input_type: str, user_id: str) 
         else:
             raise HTTPException(status_code=503, detail="Detection service temporarily unavailable")
 
-    trace = trace_service.build_trace(hits, patterns, classification)
+    trace = trace_service.build_trace(hits, patterns, classification, language)
     verdict_cache.store(digest, language, result, classification)
 
     return _persist_and_respond(

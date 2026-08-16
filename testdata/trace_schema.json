@@ -27,10 +27,19 @@
     "does not know about is invisible evidence, and a field the client renders",
     "and the backend never sends is a permanently empty panel."
   ],
-
   "version": 1,
-
   "fields": {
+    "rule_review": {
+      "type": "object",
+      "required": true,
+      "why": "Whether a speaker of this language has read its detection rules. REVIEW_STATUS existed only in the benchmark payload, which no user sees, so someone scanning in one of the eight unreviewed languages had no way to know how much to trust the verdict in front of them.",
+      "fields": {
+        "status": "string — in-service | inherited | unreviewed",
+        "native_reviewed": "boolean — a speaker has read the native-script rules",
+        "code_mixed_reviewed": "boolean — always true. Every language falls back to the English rules, which are reviewed, so a code-mixed message is caught by reviewed rules in all twelve. Split from native_reviewed because reporting one boolean would overstate the gap as badly as reporting nothing understates it.",
+        "inherited_from": "string | null — mr borrows Hindi's rules because the vocabulary genuinely overlaps. Weaker than review, stronger than nothing, and its own claim."
+      }
+    },
     "offline_rules_fired": {
       "type": "array",
       "required": true,
@@ -41,7 +50,6 @@
         "matched_text": "string"
       }
     },
-
     "retrieved_patterns": {
       "type": "array",
       "required": true,
@@ -54,7 +62,6 @@
         "drafted_by": "string | null"
       }
     },
-
     "retrieval": {
       "type": "object",
       "required": true,
@@ -64,7 +71,9 @@
           "type": "boolean | null",
           "why": "null is a third state, not a falsy second. A cache hit skips retrieval, so coverage was never established - reporting false would assert a gap on a scan that did not look."
         },
-        "patterns_retrieved": { "type": "number" },
+        "patterns_retrieved": {
+          "type": "number"
+        },
         "patterns_used": {
           "type": "number",
           "why": "How many cleared the weak-match floor and reached the prompt. Not derivable from patterns_retrieved: five retrieved with none used is a different verdict from five used."
@@ -76,36 +85,48 @@
         }
       }
     },
-
     "model": {
       "type": "object",
       "required": false,
       "why": "Absent on the degraded path, where both providers were down and the offline rules alone produced the verdict. There is no model to stamp, and inventing one would credit a call that never happened.",
       "properties": {
-        "provider": { "type": "string" },
-        "model": { "type": "string" },
-        "prompt_version": { "type": "string" },
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "prompt_version": {
+          "type": "string"
+        },
         "cached": {
           "type": "boolean",
           "required": false,
           "why": "Present only on a cache hit. Without it the audit record credits a model call that did not happen, and two identical verdicts cannot be told apart from two independent judgements."
         },
-        "first_judged_at": { "type": "string | null", "required": false }
+        "first_judged_at": {
+          "type": "string | null",
+          "required": false
+        }
       }
     },
-
     "audit": {
       "type": "object",
       "required": false,
       "why": "Absent when the audit write failed. That is deliberate and load-bearing: a user mid-scam gets their warning even when the compliance record cannot be written, and the response says so by omitting this rather than by faking a record. See ARCHITECTURE.md #05.",
       "properties": {
-        "record_id": { "type": "string" },
-        "hash": { "type": "string" },
-        "prev_hash": { "type": "string | null" }
+        "record_id": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "prev_hash": {
+          "type": "string | null"
+        }
       }
     }
   },
-
   "_adding_a_field": [
     "1. Add it here first, with a `why`. If you cannot write the why, the field",
     "   probably belongs in a log rather than in a trace a bank reads.",

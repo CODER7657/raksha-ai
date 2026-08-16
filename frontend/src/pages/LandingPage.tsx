@@ -9,8 +9,13 @@ const FEATURES = [
     body: 'Every message is checked against a real vector database of known scam patterns before the AI judges it — not a raw guess.',
   },
   {
+    // "12 Indian languages" flat was an overclaim, and the benchmark said so:
+    // eight of the twelve have detection rules no speaker of that language has
+    // read. Stating the shape of the coverage is both more honest and a
+    // stronger claim than a bare number — because the part that *is* reviewed
+    // is the part most Indian scam SMS actually uses.
     title: '12 Indian languages',
-    body: 'English, Hindi, Gujarati, Marathi, Bengali, Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Urdu.',
+    body: 'English, Hindi, Gujarati, Marathi, Bengali, Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Urdu. English and mixed-script messages are checked everywhere; the word lists for three are speaker-reviewed, and the rest are being read now.',
   },
   {
     title: 'Voice & text scans',

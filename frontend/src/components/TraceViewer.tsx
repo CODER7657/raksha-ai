@@ -26,6 +26,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
   // and "all five did" are different claims about how much of the verdict
   // rests on machine-drafted evidence.
   const agentDrafted = patterns.filter((p) => p.provenance === 'agent').length
+  const review = trace?.rule_review
 
   // The backend returns a bare count today and the itemised list later; prefer
   // the list when it is there, fall back to the count so the section is never
@@ -53,6 +54,20 @@ export function TraceViewer({ result }: { result: ScanResult }) {
       {open && (
         <div id={panelId} className="mt-4 space-y-5">
           <p className="text-[11px] text-ink/50 leading-relaxed">{t('trace.intro')}</p>
+
+          {review && !review.native_reviewed && (
+            /* Deliberately inside the collapsed panel, next to the rules it
+               qualifies — not a banner on the verdict.
+               A caveat on every scan in eight languages would train people to
+               dismiss the warning that is correct, which costs more than the
+               uncertainty it discloses. It sits where someone asking "how much
+               should I trust this?" will find it. */
+            <p className="border-l-2 border-amber-600 bg-amber-50 px-2 py-1.5 text-[11px] text-ink leading-relaxed">
+              {review.inherited_from
+                ? t('trace.rulesInherited')
+                : t('trace.rulesUnreviewed')}
+            </p>
+          )}
 
           <TraceSection label={t('trace.offlineRules')}>
             {ruleCount === 0 ? (

@@ -99,6 +99,8 @@
     "offlineRulesCount_one": "{{count}} offline rule matched, before any AI was involved.",
     "offlineRulesCount_other": "{{count}} offline rules matched, before any AI was involved.",
     "offlineRulesNone": "No offline rule matched — this verdict came from the AI check.",
+    "rulesUnreviewed": "The word list used to spot scams in this language has not yet been checked by someone who speaks it. Messages written in English, or mixing English words in, are still checked against the reviewed English rules.",
+    "rulesInherited": "This language uses Hindi's word list, because the wording of these scams largely overlaps. A speaker has not confirmed that for this language specifically.",
     "ruleUnknown": "Pattern rule: {{pattern}}",
     "rules": {
       "otp_share": "Asks you to share an OTP",
