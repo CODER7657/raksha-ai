@@ -267,35 +267,59 @@ Judged against: does it close a real gap, and can three people run it.
 
 ## 03 · Ownership
 
-### @Hem60 — the agent layer
+**This is the last build phase.** Everything below is what the project consists
+of when it is finished, and §06 is the definition of done. Nothing is deferred
+to a phase after this one, because there is not one.
 
-The agents are backend and reviewer-surface work, and Hem has built every
-reviewer surface we have. A2 is the flagship.
+### @Hem60 — the entire agent layer
 
-Order: **A2 stage 1** (static + feeds, no sandbox) → **email share-to-app**
-(reuses stage 1) → **A2 stages 2–3** (sandbox + dual-LLM) → **A1 discovery**
-(the half that does not exist) → **A3 correlator**.
+Every agent, plus the language work. Hem has built every reviewer surface we
+have, and the agents are backend and review work end to end.
 
-A2 stage 1 first because it ships value with no new attack surface, and because
-stages 2 and 3 are much easier to review once the static half is real. Email
-next because it is a new channel for real users built almost entirely out of
-stage 1, and A1 after both because it improves an internal loop rather than
-reaching a user.
+| Order | What | Issue |
+|---|---|---|
+| 1 | A2 stage 1 — static checks and feeds, no fetching | #104 |
+| 2 | Email phishing — share-to-app, reuses stage 1 | #105 |
+| 3 | A2 stages 2–3 — sandbox, dual-LLM, blocking policy | #106 |
+| 4 | A1 discovery — the missing half, and the loop it closes | #111 |
+| 5 | A3 correlator, then A5 investigation assistant | #112 |
+| — | A4 and A7 — **blocked**, not scheduled | #112 |
+| ∥ | Eight languages, as a speaker | #89 |
 
-### @Ayush3422 — Android, design system, monorepo
+A2 stage 1 first because it ships value with no new attack surface, and stages
+2–3 are far easier to review once the static half is real. Email next because it
+is a new channel built almost entirely out of stage 1. A1 after both because it
+improves an internal loop rather than reaching a user.
 
-Order: **finish the release** (#98) → **design tokens generated from one source**
-→ **layer 3 call screening** → **layer 5 payment interrupt**.
+### @Ayush3422 — the entire Android client, design system and monorepo
 
-The monorepo and token work sits before the new layers deliberately: two
-platforms already drift on strings (#71 fixed that once, #99 found the web side
-had no equivalent guard), and adding two more surfaces before the mechanism
-exists means fixing it three times.
+Everything that runs on a phone, plus the mechanism that stops the two platforms
+drifting.
+
+| Order | What | Issue |
+|---|---|---|
+| 1 | Finish the release — install, Data Safety, Macrobenchmark, instrumentation, RTL | #98 |
+| 2 | Design tokens from one source, and the monorepo seam | #107 |
+| 3 | Layer 3 + layer 1 — call screening with local number reputation | #108 |
+| 4 | Layer 5 — the payment interrupt. **Declaration submitted first** | #109 |
+
+Tokens before the new layers is deliberate: two platforms already drift on
+strings (#71 fixed it once, #99 found the web side had no equivalent guard), and
+adding two more surfaces first means fixing it three times.
+
+Layer 5's declaration goes in **before** its code. #39 taught what discovering
+that clock late costs, and repeating it knowingly would be worse than the first
+time.
 
 ### @CODER7657 — testing, benchmarking, and the gate
 
-Everything below in §04. You are the person who says whether any of the above
-actually works, and that role does not delegate.
+Not a stage at the end. **Every item above passes through here before it counts
+as done**, and the gate is #110.
+
+Neither Hem nor Ayush marks their own work complete. The question of whether
+something *works* — measured, on stated hardware, with its false positives named
+— lands here, and it is the role every accuracy claim in front of a jury or a
+bank rests on. It does not delegate and it does not run last.
 
 ---
 
@@ -350,3 +374,69 @@ code is written, not after. Discovering the review clock at the end is the
 mistake #39 already taught us, and repeating it would be inexcusable.
 
 Everything else can proceed in parallel because it is server-side or unrestricted.
+
+---
+
+## 06 · Definition of done — the project, not the phase
+
+There is no phase after this one. So "done" is not "the issues are closed", it
+is a state the whole system is in, and it is worth writing before we are tired
+and want it to be true.
+
+### The product
+
+- [ ] **Three interception layers live on the device** — SMS (done), call
+      screening, payment interrupt — each degrading honestly when it cannot run
+- [ ] **Links checked** on every channel that carries them: SMS, email, web
+- [ ] **Email accepted** through share-to-app, with its coverage limit stated in
+      the UI rather than implied
+- [ ] **A signed APK on Play**, installed on real hardware, scanning a real
+      message with nothing leaving the phone
+
+### The agents
+
+- [ ] **A1, A2, A3, A5, A6 running**, each registered in `agent_state`, each
+      under a kill switch that has been **pulled and observed**, each inside a
+      budget cap
+- [ ] **A4 and A7 recorded as blocked** with the reason, not listed as pending
+- [ ] **Nothing agent-generated reaching a user unreviewed.** The gate is the
+      design, and the loop improves at *proposing* rather than at *deciding*
+
+### The evidence
+
+Every one of these is a number someone can be asked for:
+
+- [ ] **Per-language** precision and recall for the offline engine and the
+      RAG+LLM path, with case counts, **never aggregated**
+- [ ] **A2 scored against a labelled set** where the benign half is larger,
+      reported per-source
+- [ ] **Latency measured on stated hardware** against each budget in §00b — and
+      a decision recorded about the 40–50s cold start
+- [ ] **False positives named**, not merely counted
+- [ ] **A6 pointed at every detector**, with its findings either fixed or
+      recorded as accepted
+
+### The honesty
+
+The part that is hardest to check and easiest to lose:
+
+- [ ] **No document claims more than the code does.** This PR fixed that once;
+      it will drift again
+- [ ] **`REVIEW_STATUS` reflects languages a speaker has actually read**, and
+      the eight unreviewed are either reviewed or still visibly unreviewed —
+      never quietly flipped
+- [ ] **Every user can see their own data and their own trace**, in their own
+      language, with no field the backend sends that the client cannot render
+- [ ] **Known gaps written down** where a reader will find them, not where they
+      are least embarrassing
+
+### What "we are the testers" means
+
+@CODER7657 signs off each box. Not the person who built it.
+
+That is not distrust — it is that the author of a thing is the worst-placed
+person to notice what it does not do. Every serious finding this project has had
+came from someone measuring instead of assuming, and three of them corrected the
+person who wrote the instruction.
+
+**A box ticked without a number behind it is not ticked.**
