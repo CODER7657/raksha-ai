@@ -317,6 +317,32 @@ Written in #55, and it held:
   impact (#32), and the honest scope of a reflection-based test (#61). All four
   left the reasoning in the code.
 
+### Two rules that predict where to look
+
+Both came out of review during the agent-layer work, and both earn their place
+by pointing at bugs rather than by describing ones already found.
+
+**An accommodation made to keep an existing test green is a place the tests were
+already wrong.** (#130.) A conditional was added to `analyse` so nine existing
+stubs would keep passing; the stubs were what hid the bug, and the conditional
+reopened the hole in the same commit that was fixing an instance of it. When a
+change requires an exception to keep the suite green, the exception is the
+finding.
+
+**`value or default` on an optional argument is where *unknown* silently becomes
+*a value*.** (#135.) `pattern_counts or {}` turned "nobody supplied counts" into
+"every language has zero patterns", which reported English — with forty — as
+having no coverage at all. This project has decided the same distinction twice
+elsewhere and written down why: `acceptance_rate` returns `None` rather than
+`0.0` because zero and unknown are different claims, and `trace_schema.json`
+calls `language_covered: null` "a third state, not a falsy second". Keep whether
+a thing was *supplied* separate from what it *contains*.
+
+The second one has a corollary worth stating on its own: **writing a principle
+in a docstring is not the same as holding it**, and the gap between the two is
+invisible to whoever wrote both. Both of these were violated within four lines
+of the comment arguing for them.
+
 ---
 
 ## 09 · The line to keep
