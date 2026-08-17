@@ -1,9 +1,11 @@
 # Phase 2 — the plan
 
 > Read [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`AGENT-LAYER.md`](AGENT-LAYER.md)
-> first. Both now carry status columns, and the honest position is: **one
-> interception layer of five, one agent of seven.** This plan is what closes
-> that, in an order that can survive a jury asking hard questions.
+> first. Both now carry status columns, and the honest position is: **three
+> interception layers of five, one agent of seven** — layers 1 and 3 landed with
+> #133, and `ARCHITECTURE.md` §01 records what each of them does not reach. This
+> plan is what closes the rest, in an order that can survive a jury asking hard
+> questions.
 
 ---
 
