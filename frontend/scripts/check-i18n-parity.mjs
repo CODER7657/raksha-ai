@@ -51,7 +51,7 @@ const KNOWN_GAPS = {
   'android.call_screening_enable': 'No translation yet — #116 §4, tracked in #52.',
   'android.call_screening_explainer': 'No translation yet — #116 §4, tracked in #52.',
   'android.call_screening_unsupported': 'No translation yet — #116 §4, tracked in #52.',
-  'android.call_screening_nothing_known': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_limitation': 'No translation yet — #116 §6, tracked in #52.',
 }
 
 const flatten = (obj, prefix = '') =>

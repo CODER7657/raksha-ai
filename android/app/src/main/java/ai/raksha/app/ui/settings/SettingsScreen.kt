@@ -293,10 +293,19 @@ private fun CallScreeningSection(state: SettingsUiState, onGranted: () -> Unit) 
         return
     }
 
-    if (state.knownNumberCount == 0) {
-        Text(
-            stringResource(R.string.call_screening_nothing_known),
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
+    // Unconditional, and that is the whole point.
+    //
+    // This was `if (state.knownNumberCount == 0)`, which made an empty-state
+    // message do the job of a permanent limitation notice: the caveat was shown
+    // to the person with no protection yet and hidden from the person with some
+    // — disappearing exactly when the user starts to trust the feature.
+    //
+    // The limit is true at zero known numbers and true at fifty, so it is stated
+    // at zero and at fifty. #116 §6 also requires that nothing here implies the
+    // app hears the call, which is why the sentence says so outright rather than
+    // leaving it to be inferred from what is absent.
+    Text(
+        stringResource(R.string.call_screening_limitation),
+        style = MaterialTheme.typography.bodySmall,
+    )
 }
