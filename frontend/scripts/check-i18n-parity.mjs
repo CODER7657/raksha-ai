@@ -63,11 +63,11 @@ const load = (locale) =>
   new Map(flatten(JSON.parse(readFileSync(join(localesDir, `${locale}.json`), 'utf8'))))
 
 const english = load('en')
+const bundles = new Map(SHIPPED.map((locale) => [locale, load(locale)]))
 const problems = []
+const staleGaps = []
 
-for (const locale of SHIPPED) {
-  const bundle = load(locale)
-
+for (const [locale, bundle] of bundles) {
   for (const key of english.keys()) {
     if (!bundle.has(key) && !(key in KNOWN_GAPS)) {
       problems.push(`  ${locale}: missing ${key}`)
@@ -80,6 +80,28 @@ for (const locale of SHIPPED) {
   }
 }
 
+// Every named gap must still BE a gap.
+//
+// Without this the list is a permission rather than a statement, and it decays
+// in the one direction that matters. An entry whose translation has since
+// landed is never revisited, so if that translation is later deleted the key is
+// still allowed to be missing — a closed gap reopening in exactly the silence
+// the list exists to prevent. The printed "(N known gaps)" quietly overcounts
+// too, which is how a list nobody rereads stays plausible.
+//
+// Same shape as the schema test that makes every optional field explain itself:
+// the allowlist has to justify each of its own entries on every run.
+for (const key of Object.keys(KNOWN_GAPS)) {
+  if (!english.has(key)) {
+    staleGaps.push(`  ${key} — en does not have this key at all`)
+    continue
+  }
+  const missingSomewhere = [...bundles.values()].some((bundle) => !bundle.has(key))
+  if (!missingSomewhere) {
+    staleGaps.push(`  ${key} — every shipped locale has it now`)
+  }
+}
+
 if (problems.length > 0) {
   console.error(
     `\ni18n parity check failed:\n\n${problems.join('\n')}\n\n` +
@@ -88,6 +110,18 @@ if (problems.length > 0) {
       `Add the translation, or list it in KNOWN_GAPS in this script with the issue\n` +
       `tracking it. Do not paste in a machine translation of the English: a\n` +
       `mistranslated safety instruction is worse than an English one.\n`,
+  )
+  process.exit(1)
+}
+
+if (staleGaps.length > 0) {
+  console.error(
+    `\ni18n parity check failed — KNOWN_GAPS is out of date:\n\n${staleGaps.join('\n')}\n\n` +
+      `A gap that is no longer a gap is not harmless. It makes the count above a\n` +
+      `lie, and it leaves the key permitted to go missing again — so a translation\n` +
+      `someone did could be deleted later and nothing would say so.\n\n` +
+      `Delete the entry from KNOWN_GAPS. If the Android build lists the same key\n` +
+      `in knownUntranslated (app/build.gradle.kts), delete it there too.\n`,
   )
   process.exit(1)
 }

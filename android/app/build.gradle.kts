@@ -275,6 +275,7 @@ abstract class GenerateRuleStrings : DefaultTask() {
 
         val ids = ruleIds.get()
         val missing = mutableListOf<String>()
+        val stale = mutableListOf<String>()
         val englishSharedKeys = mutableListOf<String>()
 
         // English first, always. The other locales are checked against the key
@@ -319,6 +320,24 @@ abstract class GenerateRuleStrings : DefaultTask() {
                 englishSharedKeys.addAll(shared.keys.map { it.toString() })
             } else {
                 val excused = allowedMissing.get()[locale].orEmpty()
+
+                // A named gap must still BE a gap (#133 review).
+                //
+                // knownUntranslated is an allowlist, and an allowlist that never
+                // rechecks its own entries decays in one direction: a key whose
+                // translation has since landed stays permitted to go missing, so
+                // deleting that translation later would pass silently — the
+                // closed gap reopening in exactly the silence the list exists to
+                // prevent. The count logged below quietly overcounts too.
+                //
+                // This is also the only thing holding this list and the web's
+                // KNOWN_GAPS together. They are two mechanisms for one concern,
+                // which is what #116 §2 is about; until they are one, both sides
+                // failing on a stale entry means a translation landing forces
+                // both to be edited.
+                excused.forEach { key ->
+                    if (shared[key] != null) stale += "$locale/android.$key"
+                }
                 englishSharedKeys.forEach { key ->
                     if (shared[key] == null && key !in excused) missing += "$locale/android.$key"
                 }
@@ -354,6 +373,19 @@ abstract class GenerateRuleStrings : DefaultTask() {
                     "Every rule id the engine can emit needs a trace.rules.<id> entry in every " +
                     "locale, or the app would show a raw pattern to a user. Add them to " +
                     "frontend/src/i18n/locales/ first - the web app needs them too."
+            )
+        }
+
+        if (stale.isNotEmpty()) {
+            throw GradleException(
+                "knownUntranslated names ${stale.size} key(s) that are translated now: " +
+                    "${stale.joinToString(", ")}.\n" +
+                    "A gap that is no longer a gap leaves the key permitted to go missing " +
+                    "again, so the translation could later be deleted and nothing would " +
+                    "say so - and the count this build logs becomes wrong.\n" +
+                    "Remove them from knownUntranslated in app/build.gradle.kts, and from " +
+                    "KNOWN_GAPS in frontend/scripts/check-i18n-parity.mjs, which lists the " +
+                    "same keys."
             )
         }
 

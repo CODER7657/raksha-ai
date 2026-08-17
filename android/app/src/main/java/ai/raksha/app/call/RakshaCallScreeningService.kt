@@ -13,8 +13,9 @@ import java.util.concurrent.Executors
  * Layer 3. Sees an incoming call before it is answered, and never interferes
  * with it.
  *
- * **It always allows the call.** `setRejectCall`, `setSilenceCall` and
- * `setSkipCallLog` are the four lines a future contributor will reach for, and
+ * **It always allows the call.** `setRejectCall`, `setSilenceCall`,
+ * `setSkipCallLog` and `setSkipNotification` are the four lines a future
+ * contributor will reach for, and
  * none of them is called anywhere in this file. ARCHITECTURE §01 is explicit
  * that layers 1–4 are advisory and only the payment interrupt is terminal, and
  * constraint 4 says over-warning is recoverable while being confidently wrong is
@@ -125,7 +126,11 @@ class RakshaCallScreeningService : CallScreeningService() {
         if (!reputation.isReady) reputation.refresh()
 
         val identity = NumberIdentity.keyOf(number)
-        val known = identity?.let { reputation.lookup(number) }
+        // `lookup` normalises the raw number itself, so `identity` is computed
+        // here only to tell "no dialable number" apart from "not in the set" for
+        // the log below. Written long-hand rather than with `?.let`, which would
+        // ignore its own parameter and read like a bug.
+        val known = if (identity != null) reputation.lookup(number) else null
         SafeLog.callScreened(
             when {
                 identity == null -> ScreeningOutcome.CALLER_UNIDENTIFIED
