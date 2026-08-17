@@ -251,6 +251,14 @@
     "settings_clear_confirm_body": "This removes every checked message from this phone. It cannot be undone, and you will no longer be able to look back at why something was flagged.",
     "settings_clear_confirm_action": "Delete",
     "settings_clear_cancel": "Cancel",
-    "settings_storage_note": "Stored only on this phone, removed when you uninstall the app. The app cannot send them anywhere — it has no internet permission."
+    "settings_storage_note": "Stored only on this phone, removed when you uninstall the app. The app cannot send them anywhere — it has no internet permission.",
+    "call_warning_title": "You were warned about this number before",
+    "call_screening_heading": "Call checking",
+    "call_screening_on": "On — callers are checked against messages you were warned about",
+    "call_screening_off": "Off — incoming calls are not checked",
+    "call_screening_enable": "Turn on call checking",
+    "call_screening_explainer": "If someone calls from a number that already sent you a message Raksha warned you about, you get a notice while the phone rings. Calls are never blocked, silenced or recorded, and nothing is sent anywhere.",
+    "call_screening_unsupported": "This phone's version of Android cannot check calls. Message checking still works.",
+    "call_screening_nothing_known": "No numbers are known yet. A number is only remembered after it sends you a message that looks like a scam, so this protects you from the second contact rather than the first."
   }
 }

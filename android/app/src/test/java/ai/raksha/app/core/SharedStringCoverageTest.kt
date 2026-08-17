@@ -44,6 +44,18 @@ class SharedStringCoverageTest {
         // converting between the two invites a silent mismatch in the one place
         // a wrong format string crashes at render rather than at build (#116 §3).
         "settings_stored_count",
+        // Layer 3's notification channel (#116 §4). Same reason as
+        // warning_channel_*: a channel is an Android concept rendered by system
+        // settings, and the web has no surface that shows either of these.
+        // A separate channel from the message warnings because they interrupt
+        // differently, and a channel is the only granularity Android gives a
+        // user to want one and not the other.
+        "call_channel_name",
+        "call_channel_description",
+        // %1$s, the same formatting-primitive reason as warning_summary. The
+        // sentence a user reads about the caller is call_warning_title, which
+        // lives in the web bundle where it belongs.
+        "call_warning_summary",
     )
 
     private fun declaredIn(path: String): Set<String> =

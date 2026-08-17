@@ -193,9 +193,30 @@ val sharedStringAliases = mapOf(
 // the honest state is "missing and named", not "filled in by whoever was here".
 //
 // Anything NOT on this list that goes missing fails the build.
+// The eight call_* keys arrive untranslated with #116 §4, and that is a gap
+// being *named* rather than one being accepted. A Hindi or Gujarati speaker on
+// this build sees the call-screening feature entirely in English, which for the
+// senior citizen THREAT-LANDSCAPE §02 designs for is close to not having it.
+//
+// They are not machine-translated, for the reason i18n/index.ts gives and #52
+// records: a machine translation of a scam warning is worse than an English one,
+// because it reads as authoritative while being wrong about the one sentence
+// that has to be right. @Ayush3422 owns language and supplies these before the
+// feature is claimed as shipped in any locale but English.
+val callScreeningUntranslated = setOf(
+    "call_warning_title",
+    "call_screening_heading",
+    "call_screening_on",
+    "call_screening_off",
+    "call_screening_enable",
+    "call_screening_explainer",
+    "call_screening_unsupported",
+    "call_screening_nothing_known",
+)
+
 val knownUntranslated = mapOf(
-    "hi" to setOf("rule_generic_warning"),
-    "gu" to setOf("rule_generic_warning"),
+    "hi" to setOf("rule_generic_warning") + callScreeningUntranslated,
+    "gu" to setOf("rule_generic_warning") + callScreeningUntranslated,
 )
 
 abstract class GenerateRuleStrings : DefaultTask() {
@@ -254,6 +275,7 @@ abstract class GenerateRuleStrings : DefaultTask() {
 
         val ids = ruleIds.get()
         val missing = mutableListOf<String>()
+        val stale = mutableListOf<String>()
         val englishSharedKeys = mutableListOf<String>()
 
         // English first, always. The other locales are checked against the key
@@ -298,6 +320,24 @@ abstract class GenerateRuleStrings : DefaultTask() {
                 englishSharedKeys.addAll(shared.keys.map { it.toString() })
             } else {
                 val excused = allowedMissing.get()[locale].orEmpty()
+
+                // A named gap must still BE a gap (#133 review).
+                //
+                // knownUntranslated is an allowlist, and an allowlist that never
+                // rechecks its own entries decays in one direction: a key whose
+                // translation has since landed stays permitted to go missing, so
+                // deleting that translation later would pass silently — the
+                // closed gap reopening in exactly the silence the list exists to
+                // prevent. The count logged below quietly overcounts too.
+                //
+                // This is also the only thing holding this list and the web's
+                // KNOWN_GAPS together. They are two mechanisms for one concern,
+                // which is what #116 §2 is about; until they are one, both sides
+                // failing on a stale entry means a translation landing forces
+                // both to be edited.
+                excused.forEach { key ->
+                    if (shared[key] != null) stale += "$locale/android.$key"
+                }
                 englishSharedKeys.forEach { key ->
                     if (shared[key] == null && key !in excused) missing += "$locale/android.$key"
                 }
@@ -333,6 +373,19 @@ abstract class GenerateRuleStrings : DefaultTask() {
                     "Every rule id the engine can emit needs a trace.rules.<id> entry in every " +
                     "locale, or the app would show a raw pattern to a user. Add them to " +
                     "frontend/src/i18n/locales/ first - the web app needs them too."
+            )
+        }
+
+        if (stale.isNotEmpty()) {
+            throw GradleException(
+                "knownUntranslated names ${stale.size} key(s) that are translated now: " +
+                    "${stale.joinToString(", ")}.\n" +
+                    "A gap that is no longer a gap leaves the key permitted to go missing " +
+                    "again, so the translation could later be deleted and nothing would " +
+                    "say so - and the count this build logs becomes wrong.\n" +
+                    "Remove them from knownUntranslated in app/build.gradle.kts, and from " +
+                    "KNOWN_GAPS in frontend/scripts/check-i18n-parity.mjs, which lists the " +
+                    "same keys."
             )
         }
 

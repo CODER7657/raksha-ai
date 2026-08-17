@@ -126,6 +126,16 @@ class SmsReceiver : BroadcastReceiver() {
                     hits = hits.map { RuleHitRecord(it.ruleId, it.pattern, it.matchedText) },
                     ruleReviewStatus = REVIEW_STATUS[preferences.language] ?: "unreviewed",
                 )
+                // Layer 1 reads its set from this store and caches it in memory,
+                // so a scan recorded now is invisible to a call arriving in a
+                // moment unless the set is told to reload. Message-then-call is
+                // the sequence layer 3 exists for, and on the first emulator run
+                // it came back NOT_KNOWN.
+                //
+                // No I/O here: the rebuild is paid for by the screening path,
+                // which has already released the call before it looks anything
+                // up.
+                ServiceLocator.callReputation(context).invalidate()
             } catch (error: Exception) {
                 // A failed write must not cost the user their warning, which is
                 // the part that matters in the next few seconds.

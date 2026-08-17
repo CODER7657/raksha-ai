@@ -38,6 +38,7 @@ class SafeLogContractTest {
             "partsAssembled",      // Int count
             "warningSuppressed",   // List<String> rule ids, String reason literal
             "failure",             // String stage literal, Throwable
+            "callScreened",        // ScreeningOutcome, Long - reviewed in #116 §4, see below
         )
         assertEquals(
             expected,
@@ -68,6 +69,22 @@ class SafeLogContractTest {
             failure.parameterTypes.any { Throwable::class.java.isAssignableFrom(it) },
             "failure() must take the Throwable so only its class name is logged — " +
                 "an exception's own message can echo the input that caused it",
+        )
+    }
+
+    @Test
+    fun `callScreened cannot be handed a phone number`() {
+        // The review this test forced, recorded as an assertion rather than a
+        // promise. A phone number is user data in the way a message body is, and
+        // logcat is the same open door for both — so the call-screening path got
+        // a method with nowhere to put one. No String parameter at all, which is
+        // stricter than the rest of this surface and is the point: every other
+        // String here is a reviewed literal, and a caller identity never could
+        // be one.
+        val method = methods.single { it.name == "callScreened" }
+        assertTrue(
+            method.parameterTypes.none { CharSequence::class.java.isAssignableFrom(it) },
+            "callScreened must take no text at all, or a number can reach logcat",
         )
     }
 

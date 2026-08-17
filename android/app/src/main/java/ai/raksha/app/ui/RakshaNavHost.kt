@@ -15,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -54,8 +55,20 @@ object Routes {
 @Composable
 fun RakshaNavHost(
     homeScreen: @Composable () -> Unit,
+    openTraceForScanId: Long? = null,
+    onTraceOpened: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+
+    // A caller warning asking for the message behind it. Keyed on the id so a
+    // second warning for a different scan navigates again, and reported back so
+    // the activity forgets it — otherwise every recomposition after the user
+    // navigates away would drag them back to the trace.
+    LaunchedEffect(openTraceForScanId) {
+        val scanId = openTraceForScanId ?: return@LaunchedEffect
+        navController.navigate(Routes.trace(scanId))
+        onTraceOpened()
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route
 

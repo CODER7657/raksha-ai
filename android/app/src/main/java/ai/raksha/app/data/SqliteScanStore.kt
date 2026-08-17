@@ -93,6 +93,53 @@ class SqliteScanStore(context: Context) : ScanStore {
         }
     }
 
+    /**
+     * One row per flagged scan, newest first, carrying no message body.
+     *
+     * `EXISTS` rather than a join, so a scan with four hits produces one row
+     * instead of four and the caller does not have to collapse duplicates. The
+     * rule ids come back in a second query for the same reason `recent` batches
+     * its hits: one query for the set, not one per sender.
+     */
+    override fun flaggedSenders(): List<FlaggedSender> =
+        helper.readableDatabase.use { db ->
+            val flagged = db.rawQuery(
+                "SELECT $COL_ID, $COL_SENDER, $COL_SCANNED_AT FROM $TABLE_SCANS " +
+                    "WHERE EXISTS (SELECT 1 FROM $TABLE_HITS WHERE $COL_SCAN_ID = $TABLE_SCANS.$COL_ID) " +
+                    "ORDER BY $COL_SCANNED_AT DESC",
+                null,
+            ).use { cursor ->
+                generateSequence {
+                    if (cursor.moveToNext()) {
+                        Triple(cursor.getLong(0), cursor.getString(1).orEmpty(), cursor.getLong(2))
+                    } else {
+                        null
+                    }
+                }.toList()
+            }
+            if (flagged.isEmpty()) return@use emptyList()
+
+            val ruleIds = db.ruleIdsFor(flagged.map { it.first })
+            flagged.map { (id, sender, at) ->
+                FlaggedSender(sender, id, at, ruleIds[id].orEmpty())
+            }
+        }
+
+    private fun SQLiteDatabase.ruleIdsFor(scanIds: List<Long>): Map<Long, List<String>> {
+        val placeholders = scanIds.joinToString(",") { "?" }
+        return rawQuery(
+            "SELECT $COL_SCAN_ID, $COL_RULE_ID FROM $TABLE_HITS " +
+                "WHERE $COL_SCAN_ID IN ($placeholders) ORDER BY $COL_ID ASC",
+            scanIds.map { it.toString() }.toTypedArray(),
+        ).use { cursor ->
+            buildMap<Long, MutableList<String>> {
+                while (cursor.moveToNext()) {
+                    getOrPut(cursor.getLong(0)) { mutableListOf() }.add(cursor.getString(1))
+                }
+            }
+        }
+    }
+
     override fun clear() {
         helper.writableDatabase.use { db ->
             // Hits go first even with the cascade, so a database opened without
