@@ -171,6 +171,42 @@ def test_a_late_verdict_may_also_lower_it_and_says_so(store):
     assert row["reason"]
 
 
+def test_an_unknown_verdict_is_loud_rather_than_silently_dropped(store):
+    """Raised in review, and the worst failure available in this module.
+
+    `_SEVERITY.get(v, 0)` ranked anything unrecognised as `safe`, so
+    `safe -> "high-risk"` — a hyphen instead of an underscore — compared equal,
+    returned no direction, and the escalation vanished. Logged nowhere, and
+    indistinguishable from nothing-to-report, in the one module whose entire job
+    is making sure a late escalation is never silent.
+    """
+    for bad in ("high-risk", "HIGH_RISK", "critical", ""):
+        with pytest.raises(verdict_revision.UnknownVerdict):
+            verdict_revision.revise(
+                verdict_revision.Revision(
+                    scan_id="scan-1", verdict=bad, risk_score=90,
+                    reason="page_analysis", signals=[],
+                )
+            )
+    assert store["revisions"] == []
+
+
+def test_an_unknown_previous_verdict_is_also_loud(store):
+    """The scan side of the same check. A stored verdict outside the set means
+    something upstream is wrong, and revising against it would compare a real
+    escalation to a rank we invented."""
+    store["scan"] = {**SAFE_SCAN, "verdict": "critical"}
+    with pytest.raises(verdict_revision.UnknownVerdict):
+        verdict_revision.revise(_worse())
+
+
+def test_the_row_does_not_stamp_its_own_created_at(store):
+    """The column has `default now()`. Stamping it here too gives one field two
+    clocks, and the database is the one readers and the audit chain agree on."""
+    verdict_revision.revise(_worse())
+    assert "created_at" not in store["revisions"][0]
+
+
 def test_the_direction_is_recorded_rather_than_inferred(store):
     """A client deciding how loudly to announce needs this, and deriving it
     means knowing the verdict ordering — which is not a thing a UI should have

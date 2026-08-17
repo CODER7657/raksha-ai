@@ -66,9 +66,14 @@ create policy scan_revisions_owner_select on public.scan_revisions
     )
   );
 
--- Acknowledging is the only thing a user may write, and only on their own rows.
--- Deliberately no update policy for any other column: a user must not be able to
--- edit what we concluded, only to record that they have seen it.
+-- WHICH ROWS a user may update. Note what this does NOT do: RLS cannot express
+-- "only this column", so on its own this policy would let an owner rewrite
+-- `verdict`, `direction`, `reason` and `signals` on their own revisions —
+-- subject only to the CHECK constraints. The column restriction is the grant
+-- below, not this policy.
+--
+-- `with check` is omitted deliberately so it defaults to the `using` expression,
+-- which stops a user moving a revision onto somebody else's scan.
 create policy scan_revisions_owner_acknowledge on public.scan_revisions
   for update
   using (
@@ -81,3 +86,14 @@ create policy scan_revisions_owner_acknowledge on public.scan_revisions
 -- Writes come from the service role only. A revision is our conclusion, not
 -- something a client may assert about itself.
 revoke insert, delete on public.scan_revisions from anon, authenticated;
+
+-- WHICH COLUMN. Postgres `UPDATE` is table-wide unless granted per column, and
+-- acknowledging requires the privilege — so without this, either acknowledging
+-- does not work or the restriction does not exist. Both cannot be false.
+--
+-- This matters more here than almost anywhere else in the schema. The table is
+-- the record of what we later concluded, in a product whose differentiator is
+-- answering "what was I told, and when did you know better?" after somebody has
+-- been defrauded. A record its subject can rewrite does not answer that.
+revoke update on public.scan_revisions from anon, authenticated;
+grant  update (acknowledged_at) on public.scan_revisions to authenticated;

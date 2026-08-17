@@ -42,7 +42,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any
 
 from app.core.supabase_client import get_supabase
@@ -73,7 +72,7 @@ def _read_scan(scan_id: str) -> dict[str, Any] | None:
     response = (
         get_supabase()
         .table("scans")
-        .select("id,verdict,risk_score,explanation")
+        .select("id,verdict,risk_score")
         .eq("id", scan_id)
         .limit(1)
         .execute()
@@ -95,14 +94,39 @@ def _append_audit(scan_id: str, payload: dict) -> None:
     ).execute()
 
 
+class UnknownVerdict(ValueError):
+    """A verdict outside the closed set reached the revision path.
+
+    Loud on purpose. `_SEVERITY.get(v, 0)` used to map anything unrecognised to
+    `safe`'s rank, so `safe -> "high-risk"` — a hyphen instead of an underscore —
+    compared equal, returned no direction, and the escalation was dropped
+    silently. Indistinguishable from nothing-to-report, in the one module whose
+    job is to make sure a late escalation is never silent.
+
+    The migration already declares the set on both columns; the guard was simply
+    a layer too late to reach it, because `direction_of` returned None before an
+    insert was ever attempted. `llm.py` validates against this same set, so
+    treating it as closed is the house habit.
+    """
+
+
 def direction_of(previous: str, current: str) -> str | None:
     """`raised`, `lowered`, or None when the verdict did not move.
+
+    Raises `UnknownVerdict` on anything outside the closed set rather than
+    ranking it as `safe`.
 
     Recorded on the row rather than derived by the client: deriving it means
     encoding the verdict ordering in a UI, and a UI that gets that ordering
     wrong announces a downgrade as an alarm.
     """
-    before, after = _SEVERITY.get(previous, 0), _SEVERITY.get(current, 0)
+    for value, label in ((previous, "previous"), (current, "current")):
+        if value not in _SEVERITY:
+            raise UnknownVerdict(
+                f"{label} verdict {value!r} is not one of {sorted(_SEVERITY)}"
+            )
+
+    before, after = _SEVERITY[previous], _SEVERITY[current]
     if after == before:
         return None
     return "raised" if after > before else "lowered"
@@ -114,6 +138,11 @@ def revise(revision: Revision) -> dict | None:
     None means one of three things, and all three are correct outcomes: the
     verdict did not move, the original scan could not be read, or the write
     failed. None of them mutate what the user was shown.
+
+    A verdict outside the closed set **raises** rather than returning None. That
+    was a fourth None case until review, and the worst one available here: an
+    escalation dropped over a hyphen, logged nowhere, indistinguishable from
+    nothing-to-report.
     """
     scan = _read_scan(revision.scan_id)
     if not scan:
@@ -123,7 +152,15 @@ def revise(revision: Revision) -> dict | None:
         return None
 
     previous = scan.get("verdict", "")
-    direction = direction_of(previous, revision.verdict)
+    try:
+        direction = direction_of(previous, revision.verdict)
+    except UnknownVerdict:
+        # Loud, and distinguishable from "nothing to report". Dropping an
+        # escalation over a typo is the failure this module exists to prevent,
+        # so it must never look like the quiet path.
+        logger.exception("Refusing to revise %s on an unknown verdict", revision.scan_id)
+        raise
+
     if direction is None:
         # Not news. A risk score moving 5 to 3 under an unchanged `safe` is not
         # something to interrupt anyone for, and interrupting them anyway is how
@@ -142,7 +179,9 @@ def revise(revision: Revision) -> dict | None:
         # Unacknowledged is the announcement. A row that arrived already seen
         # would be an edit wearing a revision's clothes.
         "acknowledged_at": None,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        # `created_at` is deliberately absent: the column has `default now()`,
+        # and stamping it here too would give one field two clocks. The database
+        # is the one both readers and the audit chain already agree on.
     }
 
     try:
