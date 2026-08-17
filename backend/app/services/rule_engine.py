@@ -169,9 +169,9 @@ RULES: dict[str, list[Rule]] = {
     "gu": [
         Rule("otp_share", _either_order(r"(?:ઓટીપી|OTP)", r"(?:શેર|મોકલ|જણાવ|કહ)")),
         Rule("kyc_expiry", _either_order(r"(?:કેવાયસી|KYC)", r"(?:અપડેટ|સમાપ્ત|બંધ|રદ|પૂર્ણ કરો)")),
-        Rule("account_lock", _either_order(r"(?:ખાતું|ખાતા|એકાઉન્ટ)", r"(?:બ્લોક|બંધ|ફ્રીઝ)")),
+        Rule("account_lock", _either_order(r"(?:ખાતું|ખાતા|એકાઉન્ટ|કાર્ડ)", r"(?:બ્લોક|બંધ|ફ્રીઝ)")),
         Rule("lottery_win", r"(?:લોટરી|ઇનામ|બક્ષિસ)|જીત"),
-        Rule("urgent_verify", _either_order(r"(?:તાત્કાલિક|તરત|જલદી|આજે જ)", r"(?:ચકાસ|વેરિફાઈ|અપડેટ|પુષ્ટિ|પૂર્ણ કરો)")),
+        Rule("urgent_verify", _either_order(r"(?:તાત્કાલિક|તરત|જલદી|આજે જ|કલાકમાં)", r"(?:ચકાસ|વેરિફ|અપડેટ|પુષ્ટિ|પૂર્ણ કરો)")),
     ],
     "bn": [
         Rule("otp_share", _either_order(r"(?:ওটিপি|OTP)", r"(?:শেয়ার|পাঠান|পাঠিয়ে|বলুন|জানান)")),
