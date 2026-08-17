@@ -123,6 +123,31 @@ def test_without_corpus_counts_it_falls_back_to_measured_gaps_only():
     assert all(gap.kind == "measured" for gap in ranked)
 
 
+def test_absent_pattern_counts_means_unknown_and_not_zero():
+    """Raised in review, and it is the distinction this module argues for twice
+    elsewhere — `acceptance_rate` returns None rather than 0.0, and the trace
+    calls `language_covered: null` a third state rather than a falsy second.
+
+    With `corpus_cases` supplied and `pattern_counts` absent, every language
+    came back `unmeasured, patterns=0` — English included, which has forty — and
+    the order collapsed to miss count under a label that was false for the three
+    languages that are actually served.
+    """
+    ranked = pattern_discovery.rank_gaps(MISSED, corpus_cases=CASES)
+
+    assert all(gap.kind == "measured" for gap in ranked), (
+        "a language was called unmeasured on counts nobody supplied"
+    )
+    assert "en" not in {gap.language for gap in ranked}
+
+
+def test_an_explicitly_empty_pattern_count_does_mean_zero():
+    """The other side of the same distinction. `{}` is somebody having looked
+    and found nothing, which is a real finding — unlike `None`."""
+    ranked = pattern_discovery.rank_gaps(MISSED, corpus_cases=CASES, pattern_counts={})
+    assert ranked and all(gap.kind == "unmeasured" for gap in ranked)
+
+
 # --- learn from rejections -------------------------------------------------
 
 

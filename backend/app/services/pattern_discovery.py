@@ -134,7 +134,25 @@ def rank_gaps(
     reach the pattern database — see `test_discovery_never_writes_to_the_pattern_database`
     — and taking the counts as an argument keeps that true while letting the
     caller supply them.
+
+    **Absent `pattern_counts` means unknown, not zero.** Without it nothing is
+    reported as unmeasured, whatever else was supplied: claiming a language has
+    no pattern coverage when nobody looked is the confidently-wrong direction,
+    and this function's output directs the scarcest resource in the project.
     """
+    # Whether the counts were SUPPLIED, kept separate from what they contain.
+    # `pattern_counts or {}` alone conflates "nobody told us" with "we looked and
+    # there are none", and the consequence is not cosmetic: with `corpus_cases`
+    # supplied and this absent, every language came back `unmeasured,
+    # patterns=0` — English included, which has forty — and the order collapsed
+    # back to miss count wearing a label that was false for the three languages
+    # that are actually served.
+    #
+    # The same distinction `acceptance_rate` makes by returning None rather than
+    # 0.0, and the trace makes with `language_covered: null` being a third state
+    # rather than a falsy second.
+    counts_known = pattern_counts is not None
+
     missed_by_language = missed_by_language or {}
     corpus_cases = corpus_cases or {}
     pattern_counts = pattern_counts or {}
@@ -146,7 +164,7 @@ def rank_gaps(
         patterns = pattern_counts.get(language, 0)
         cases = corpus_cases.get(language, 0)
 
-        if patterns == 0 and (corpus_cases or pattern_counts):
+        if counts_known and patterns == 0:
             # Nothing to retrieve against. The strongest reason available, and
             # it needs no benchmark to state.
             gaps.append(Gap(language, "unmeasured", missed, cases, patterns))
