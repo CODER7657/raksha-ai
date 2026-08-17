@@ -49,7 +49,7 @@ call/SMS      imperson.    urgency       OTP/PIN      money moves
 | 1 | **Number reputation** | Check an incoming call against numbers **this phone** has already flagged — a number is known because an SMS it sent here tripped the on-device rules. Cheapest signal, weakest evidence: numbers are disposable, and it knows nothing about a caller who has not texted first. | ✅ **Built** — #133 |
 | 2 | **SMS auto-scan** | Android reads incoming SMS, scores on-device, raises a notification. **Zero user action.** Highest-value quick win: phishing SMS is the most common vector. | ✅ **Built** — #38, hardened #86/#93 |
 | 3 | **Call screening** | `CallScreeningService` sees an unknown number pre-answer and posts a warning. Native Android, no recording, and the call is never rejected, silenced or logged differently. Needs API 30+ and a role the user grants. | ✅ **Built** — #133 |
-| 4 | **Live call analysis** | Streaming transcription during the call, detecting authority claims, urgency and OTP requests, with a persistent warning. Highest impact, hardest to build; Android restricts third-party call audio and recording-consent law varies by state. | ❌ Not built |
+| 4 | **Live call analysis** | Streaming transcription during the call, detecting authority claims, urgency and OTP requests. Highest impact, hardest to build; Android restricts third-party call audio and recording-consent law varies by state. **No guaranteed deliverable** — see below. | ❌ Not built |
 | 5 | **Payment interrupt** | Accessibility service watches UPI apps. Payment about to leave for a flagged VPA → full-screen interrupt. | ❌ **Not built** — and the thesis rests on it |
 
 ### What the phone can actually do today
@@ -77,6 +77,27 @@ alone suggests. Both are worth stating here, because the gap between "built" and
 - **Layer 1 is empty on a new install**, and fills only when a number sends a
   scam SMS to *this* handset. It protects against the second contact from a
   number, never the first. That is the honest shape of the cheapest signal.
+
+**And the gap that follows from those two: nothing covers first contact.** A
+caller who has never texted this phone is invisible to layers 1 and 3, and layer
+4 was the answer to that — streaming audio is the only signal on the device that
+does not depend on having heard from the number before.
+
+**Layer 4 has no guaranteed deliverable.** It was scoped behind a feasibility
+gate with a no-audio fallback beneath it, on the reasoning that the fallback
+ships whatever the gate returns. That reasoning is withdrawn: the fallback was a
+*persistent* during-call warning, and persistence is not achievable without a
+permission this app has refused. `setOngoing(true)` does not resist dismissal on
+API 36 — one ordinary swipe removes it, measured 3 of 3 against a no-swipe
+control that survived 2 of 2 — and the alternatives need `READ_PHONE_STATE` or
+`SYSTEM_ALERT_WINDOW`. Stripped of persistence, the fallback is the notification
+layer 3 already posts.
+
+So if the audio questions return "cannot be built", first contact is covered by
+nothing, and **the product has to say that rather than let a call-warning surface
+imply it is watching the call.** The claim any of these layers makes is about a
+number that has written to this phone before — never about what is being said on
+the line.
 
 The Android client still declares exactly two permissions — `RECEIVE_SMS` and
 `POST_NOTIFICATIONS` — and **no `INTERNET`**. Layer 3 added none: the screening

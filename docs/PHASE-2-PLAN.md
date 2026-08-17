@@ -320,12 +320,26 @@ Judged against: does it close a real gap, and can three people run it.
     needs no `INTERNET`, so the bullet above is untouched by layer 4 — but it
     converts the question from a policy one into a feasibility one: twelve
     languages, on the cheap handset `THREAT-LANDSCAPE.md` §02 designs for
-  - **The no-audio fallback is the first thing built, not the consolation.** A
+  - ~~**The no-audio fallback is the first thing built, not the consolation.** A
     persistent during-call warning driven by layers 1 and 3 depends on none of
     the open questions. If call audio proves unreachable it is the whole of
     layer 4; if it does not, it is still what the user gets when transcription
-    is unavailable or declined. Constraint 4 again — the honest degraded state
-    is a feature, not a fallback
+    is unavailable or declined~~
+    **Withdrawn: it cannot be built as specified.** The reasoning rested on an
+    assumption neither author noticed making — that *persistence* is achievable
+    without a new permission. It is not. `setOngoing(true)` sets
+    `FLAG_ONGOING_EVENT` and a single ordinary swipe still removes the
+    notification on API 36, measured 3 of 3 against a no-swipe control that
+    survived 2 of 2. Every other route needs `READ_PHONE_STATE` to know the call
+    is live, or `SYSTEM_ALERT_WINDOW` — which is the capability tapjacking uses
+    and #86 defends against. Stripped of persistence the fallback is the
+    notification #133 already ships.
+
+    **The consequence is that layer 4 has no guaranteed deliverable.** The
+    precondition argument above still holds; the safety net does not. If the
+    audio questions return "cannot be built", first contact from a number is
+    covered by nothing — and the product must say so rather than let a
+    call-warning surface imply it is watching the call
 
 ---
 
