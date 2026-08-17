@@ -24,10 +24,21 @@ incoming SMS entirely on-device.
 | Provider rungs | Groq OK, Gemini OK, embeddings OK — checked live |
 | Migrations | `0001`–`0007` applied; `0008` open in a PR |
 
-**The caveat that must travel with those numbers:** nine of the twelve languages
-have two corpus cases each. Their 1.000 means the plumbing works, not that the
-vocabulary is right. Only `en` (42 cases) and `hi` (14) are measured in any
-meaningful sense. Do not put "twelve languages" in front of a buyer without it.
+**The caveat that must travel with those numbers:** nine of the twelve language
+codes have two corpus cases each. Their 1.000 means the plumbing works, not that
+the vocabulary is right.
+
+**This is now a scope decision rather than a caveat. The product claims three
+languages — English, Hindi, Gujarati — and does not say twelve at all.** The
+earlier instruction here was "do not put twelve in front of a buyer *without*
+the caveat", which left the number sayable by anyone willing to add a sentence.
+It was said without the sentence, repeatedly. A claim that survives only when
+someone remembers a footnote is not a claim worth keeping.
+
+The rules for the other nine stay in the engine — an unreviewed rule that catches
+a real scam beats no rule, and nothing is served by deleting coverage a user
+might benefit from. They are simply not advertised. A language becomes supported
+when a speaker reads its rules, which is what `testdata/review/` exists for.
 
 ---
 
