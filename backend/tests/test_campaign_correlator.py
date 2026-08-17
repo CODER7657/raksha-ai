@@ -185,6 +185,45 @@ def test_a_report_with_no_first_sighting_is_skipped_rather_than_guessed():
     assert campaign_correlator.campaigns([stale], now=NOW) == []
 
 
+def test_the_migration_never_backfills_a_first_sighting_on_write():
+    """Raised in review, and the guard belongs in the repository rather than in
+    somebody's memory.
+
+    An earlier draft of 0014 had `first_reported_at = coalesce(..., now())` in
+    the on-conflict clause. That gave a pre-0014 row a first sighting on its
+    next report — the defaulting the migration's own comment rejects, moved from
+    migration time to write time, and worse there: `report_count` is all-time
+    while the window would start today.
+
+        legacy row, 40 reports over 3 months, 2 more an hour apart
+          -> 42 reports, window 1.0h, 42.0/hour
+        a genuine campaign of 42 reports in that hour
+          -> 42 reports, window 1.0h, 42.0/hour
+
+    Byte-identical, and the rate sort puts the fabricated one first.
+
+    Read as text because the failure mode is somebody adding the line back to
+    make legacy rows "work", which is precisely how it arrived.
+    """
+    import pathlib
+
+    sql = (
+        pathlib.Path(__file__).resolve().parents[2]
+        / "supabase/migrations/0014_community_reports_first_seen.sql"
+    ).read_text(encoding="utf-8")
+
+    body = sql[sql.index("on conflict") :]
+    statements = [
+        line for line in body.splitlines()
+        if "first_reported_at" in line and not line.strip().startswith("--")
+    ]
+    assert not statements, (
+        f"0014 assigns first_reported_at in its on-conflict clause: {statements}. "
+        f"A legacy row's true first sighting is unknowable, and inventing one "
+        f"fabricates a campaign at the top of a rate-sorted panel."
+    )
+
+
 def test_a_malformed_timestamp_does_not_take_the_run_down():
     broken = {
         "pattern_hash": "a", "language": "en", "report_count": 40,

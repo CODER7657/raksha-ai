@@ -52,10 +52,34 @@ begin
   on conflict (pattern_hash)
   do update set
     report_count = community_reports.report_count + 1,
-    last_reported_at = now(),
-    -- coalesce, not assignment: a pre-0014 row acquires a first sighting the
-    -- next time it is reported, and a row that already has one keeps it.
-    first_reported_at = coalesce(community_reports.first_reported_at, now())
+    last_reported_at = now()
+    -- `first_reported_at` is DELIBERATELY NOT TOUCHED HERE, and an earlier
+    -- draft of this migration got it wrong in a way worth recording.
+    --
+    -- It said `first_reported_at = coalesce(..., now())`, so a pre-0014 row
+    -- acquired a first sighting on its next report. That is exactly the
+    -- defaulting rejected above, moved from migration time to write time — and
+    -- it is worse there, because `report_count` is all-time while the window
+    -- would start today. The two denominators disagree and nothing downstream
+    -- can tell:
+    --
+    --   legacy row, 40 reports over 3 months, 2 more an hour apart
+    --     -> 42 reports, window 1.0h, 42.0/hour
+    --   a genuine campaign of 42 reports in that same hour
+    --     -> 42 reports, window 1.0h, 42.0/hour
+    --
+    -- Byte-identical, and because campaigns sort by rate the fabricated one
+    -- lands at the TOP of the panel meant to show what is happening now.
+    --
+    -- A legacy row's true first sighting is unknown and unknowable, which is
+    -- the same answer `campaigns()` already gives by skipping NULL. Leaving it
+    -- NULL makes "old rows go quiet" permanent rather than temporary, which is
+    -- the honest version of that sentence. Post-0014 rows get it on insert and
+    -- are unaffected.
+    --
+    -- If legacy volume ever has to count, the answer is a separate counter
+    -- incremented only alongside `first_reported_at`, so the numerator and the
+    -- window cover the same period.
   returning report_count into new_count;
 
   return new_count;
