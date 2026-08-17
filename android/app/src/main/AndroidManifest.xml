@@ -143,16 +143,22 @@
             CallScreeningService     API 24
             RoleManager              API 29  <- no role, no binding, below this
             Call.Details
-              .getContactDisplayName API 30  <- no contact guard, below this
+              .getContactDisplayName API 30  <- feature floor, see below
 
           Below 29 the only route is replacing the user's dialer, which needs
           CALL_PHONE and a whole dialer UI, and lands back in the restricted
           queue this layer exists to avoid. So minSdk stays 24 and the feature
           floor is 30, enforced in RakshaCallScreeningService rather than only
-          written down: screening without being able to recognise the user's own
-          contacts is the benign-half failure that gets a feature switched off,
-          and a user below the floor is told their Android version cannot do
-          this rather than shown a switch that does nothing.
+          written down, and a user below it is told their Android version cannot
+          do this rather than shown a switch that does nothing.
+
+          The floor was set on the belief that getContactDisplayName is what
+          keeps a number in the user's contacts from being warned about.
+          Measured, it is not: the platform never binds a third-party screening
+          service for a contact at all. The control pair is in
+          RakshaCallScreeningService. The floor stays at 30 for the weaker and
+          honest reason that the platform's exclusion is measured on API 36 and
+          not on 29, where there would be no fallback if it differs.
 
           BIND_SCREENING_SERVICE is held by the system, not by us. Declaring it
           here is what stops any other app binding this service.

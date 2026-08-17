@@ -24,16 +24,29 @@ import android.os.Build
  *    the only route is replacing the user's dialer, which needs `CALL_PHONE`, a
  *    whole dialer UI, and lands right back in the restricted-permission queue
  *    this layer exists to avoid.
- *  - `Call.Details.getContactDisplayName()` arrives at **API 30**, and that is
- *    the guard that stops a number in the user's own contacts being warned
- *    about.
+ *  - `Call.Details.getContactDisplayName()` arrives at **API 30**.
  *
- * So the floor here is 30, not 29 and not `minSdk` 24. Screening without the
- * ability to recognise the user's own contacts is the benign-half failure that
- * gets a feature switched off for good, and #116 is explicit that the benign
- * half is the important half. A user on 24–29 is told plainly that their
- * Android version cannot do this, in the same register as the force-stop
- * notice: the app does not claim a layer it does not have.
+ * So the floor here is 30, and **the reason is not the one this class was
+ * written with.** The floor was set believing `getContactDisplayName` was what
+ * stopped a number in the user's own contacts being warned about. Measured on
+ * an emulator at API 36, the platform never binds a third-party screening
+ * service for a contact at all — `RakshaCallScreeningService` has the control
+ * pair — so that check is a backstop rather than the mechanism, and the
+ * benign-half argument for the floor does not hold.
+ *
+ * The floor stays at 30 anyway, for a weaker and honest reason: the platform's
+ * exclusion is measured on 36 and **not** on 29, and on 29 there is no
+ * `getContactDisplayName` to fall back on if it behaves differently. Choosing 30
+ * is preferring an unmeasured feature gap to an unmeasured false positive, which
+ * is the direction constraint 4 points.
+ *
+ * **Worth widening to 29 if someone measures it there**, since that is more of
+ * the cheap handsets THREAT-LANDSCAPE §02 designs for. It needs an API 29 system
+ * image, which this checkout does not have.
+ *
+ * A user below the floor is told plainly that their Android version cannot do
+ * this, in the same register as the force-stop notice: the app does not claim a
+ * layer it does not have.
  */
 object CallScreeningRole {
 

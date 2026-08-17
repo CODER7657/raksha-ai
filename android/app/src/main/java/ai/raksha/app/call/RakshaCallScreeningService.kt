@@ -98,8 +98,22 @@ class RakshaCallScreeningService : CallScreeningService() {
         // number they just dialled themselves is noise.
         if (!incoming) return
 
-        // The benign half. Somebody in the user's own contacts is not a stranger
-        // to be warned about, whatever their number once sent.
+        // The benign half — and **this is a backstop, not the mechanism.**
+        //
+        // It was written believing it was what stopped a number in the user's
+        // contacts being warned about. Measured on an emulator (API 36), that is
+        // not what happens: the platform never binds a third-party screening
+        // service for a contact at all, so this line is never reached for one.
+        // Control pair, same number, same flagged SMS, same build, contact
+        // status the only variable:
+        //
+        //   contact     mIsInContacts=true   no SCREENING_BOUND, service not called
+        //   not contact mIsInContacts=false  bound, KNOWN in 69ms, warned
+        //
+        // So the benign half is held by Telecom, upstream of us. This stays as a
+        // second line for the cases where that exclusion does not apply — an OEM
+        // build that filters differently, or a caller matched to a contact by a
+        // route the platform's own check missed.
         //
         // A blank name is *not* evidence the caller is unknown — it is also what
         // an unavailable lookup returns, and #123 settled that inability to
