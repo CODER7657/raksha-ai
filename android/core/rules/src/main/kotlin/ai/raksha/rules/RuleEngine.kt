@@ -187,11 +187,11 @@ val RULES: Map<String, List<Rule>> = mapOf(
         ),
     ),
     "gu" to listOf(
-        Rule("otp_share", eitherOrder("""(?:ઓટીપી|OTP)""", """(?:શેર|મોકલ|જણાવ)""")),
-        Rule("kyc_expiry", eitherOrder("""(?:કેવાયસી|KYC)""", """(?:અપડેટ|સમાપ્ત|બંધ|રદ)""")),
-        Rule("account_lock", eitherOrder("""(?:ખાતું|ખાતા|એકાઉન્ટ)""", """(?:બ્લોક|બંધ|ફ્રીઝ)""")),
+        Rule("otp_share", eitherOrder("""(?:ઓટીપી|OTP)""", """(?:શેર|મોકલ|જણાવ|કહ)""")),
+        Rule("kyc_expiry", eitherOrder("""(?:કેવાયસી|KYC)""", """(?:અપડેટ|સમાપ્ત|બંધ|રદ|પૂર્ણ કરો)""")),
+        Rule("account_lock", eitherOrder("""(?:ખાતું|ખાતા|એકાઉન્ટ|કાર્ડ)""", """(?:બ્લોક|બંધ|ફ્રીઝ)""")),
         Rule("lottery_win", """(?:લોટરી|ઇનામ|બક્ષિસ)|જીત"""),
-        Rule("urgent_verify", eitherOrder("""(?:તાત્કાલિક|તરત|જલદી)""", """(?:ચકાસ|વેરિફાઈ|અપડેટ|પુષ્ટિ)""")),
+        Rule("urgent_verify", eitherOrder("""(?:તાત્કાલિક|તરત|જલદી|આજે જ|કલાકમાં)""", """(?:ચકાસ|વેરિફ|અપડેટ|પુષ્ટિ|પૂર્ણ કરો)""")),
     ),
     "bn" to listOf(
         Rule("otp_share", eitherOrder("""(?:ওটিপি|OTP)""", """(?:শেয়ার|পাঠান|পাঠিয়ে|বলুন|জানান)""")),
