@@ -1,0 +1,113 @@
+name: Frontend deploy
+
+# Why this exists, because "Vercel already deploys on push" was true and stopped
+# being true without anyone noticing.
+#
+# Vercel's Git integration refuses a deployment when the commit's **git author**
+# is not a member of the Vercel team. Squash-merging preserves the PR author, so
+# every merge authored by a teammate was rejected with "Deployment was blocked"
+# — a platform refusal, not a build failure. Measured across ten consecutive
+# production deployments:
+#
+#   ef85034  Ayush3422      failure      41225ea  Pavan Patel   success
+#   c71e8d7  patel hem 60   failure      b5b582d  Pavan Patel   success
+#   be02681  patel hem 60   failure      90ca01b  Pavan Patel   success
+#   e1aea50  Ayush3422      failure
+#   0285ba4  patel hem 60   failure
+#   e1c03d6  patel hem 60   failure
+#   b55fbbe  Ayush3422      failure
+#
+# Ten for ten on author. The frontend sat four merges stale in production and
+# nothing said so — the failing check was the one HANDOFF §08 told everyone to
+# ignore, because on a teammate's *pull request* it genuinely is noise. On a
+# push to master it was the only thing reporting a real outage.
+#
+# Adding the team to Vercel fixes it at the root and costs a seat per person.
+# This does not: a token has no git author, so who wrote the commit stops
+# mattering.
+#
+# TURN OFF the Vercel Git integration for production once this is live, or every
+# teammate merge keeps producing a blocked deployment and a red check beside a
+# green one — which is the ambiguity that hid this in the first place.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  # Manual re-deploy, for rolling forward after a failed run without needing an
+  # empty commit.
+  workflow_dispatch:
+
+# Deploys are atomic — Vercel promotes only on success — so cancelling a
+# superseded run is safe, and the newest commit on master is the one that should
+# win. A cancelled run leaves the previous deployment serving.
+concurrency:
+  group: frontend-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Fail with the reason attached rather than letting `vercel pull` fail
+      # somewhere further in with an authentication error that reads like a
+      # network problem.
+      - name: Check the deploy secrets exist
+        run: |
+          missing=""
+          [ -n "$VERCEL_TOKEN" ]      || missing="$missing VERCEL_TOKEN"
+          [ -n "$VERCEL_ORG_ID" ]     || missing="$missing VERCEL_ORG_ID"
+          [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing VERCEL_PROJECT_ID"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secrets:$missing"
+            echo
+            echo "VERCEL_TOKEN comes from vercel.com/account/tokens."
+            echo "The other two are in .vercel/project.json after 'vercel link',"
+            echo "or in the project's settings page."
+            exit 1
+          fi
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@latest
+
+      # Run from the repository root, NOT from frontend/. The Vercel project's
+      # Root Directory is already set to `frontend`, so the CLI appends it —
+      # running this inside frontend/ resolves to frontend/frontend and fails
+      # with "the provided path does not exist".
+      - name: Pull the project settings
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      # `vercel build` runs the project's own build, which runs `prebuild` —
+      # the i18n parity check and the design-token check. Those guards still
+      # gate the deploy; nothing here bypasses them.
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+# Deliberately NOT deploying previews from a pull_request trigger, even though
+# that would restore previews for teammate PRs, which have never worked.
+#
+# A `pull_request` run for a same-repo branch has access to secrets AND runs the
+# workflow as it exists on the PR branch. So a PR that edits this file could read
+# VERCEL_TOKEN. These are trusted teammates and CODEOWNERS routes /.github/ to
+# the lead — but "the review would catch it" is a control that depends on a
+# human reading a YAML diff carefully, and a deploy token is not the thing to
+# rest that on. Previews stay broken until there is a reason worth the exposure.

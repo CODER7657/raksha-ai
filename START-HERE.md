@@ -38,7 +38,7 @@ you would have to already know. Recording it so nobody has to guess again.
 | Piece | Where | Deploys | Notes |
 |---|---|---|---|
 | Backend | Render, free tier — `https://raksha-ai-c5yu.onrender.com` | **Manually.** Auto-deploy is off | Sleeps after ~15 min idle; cold start is 40-50s |
-| Frontend | Vercel | Automatically, per push to `master` | |
+| Frontend | Vercel | Automatically, per push to `master` — via GitHub Actions, **not** Vercel's Git integration | Deploys by token, because Vercel's Git integration refuses commits authored by anyone outside its team |
 | Database | Supabase (Postgres + pgvector) | **Manually.** By hand in the SQL editor | Migrations in `supabase/migrations/` |
 
 **A merge is not a deploy.** Two of the three above need a human, and the first

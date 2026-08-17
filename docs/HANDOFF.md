@@ -39,7 +39,7 @@ applied by hand. Two of three deployment targets need a human.
 | Piece | Where | Deploys |
 |---|---|---|
 | Backend | Render — `raksha-ai-c5yu.onrender.com` | **Manually** |
-| Frontend | Vercel | Automatically on push to `master` |
+| Frontend | Vercel | **Via `.github/workflows/frontend-deploy.yml`**, on push to `master` |
 | Database | Supabase | **Manually**, SQL editor |
 
 **Dashboard-only config, invisible from the code:**
@@ -308,8 +308,12 @@ Written in #55, and it held:
 - **One issue, one branch, one PR.** No bundling.
 - **Do not start the next issue until the current PR merges.**
 - **Rebase before pushing** — master moves several times a day.
-- **CI green before review.** The one check to ignore is Vercel's author-access
-  failure on a teammate's PR.
+- **CI green before review.** Vercel's author-access failure **on a teammate's
+  pull request** is noise — previews are not wired for anyone but the lead. That
+  exemption stops at the PR: the same refusal on a push to `master` was a real
+  production outage that ran for four merges, because the frontend deploy went
+  by git author and squash-merging preserves the PR author's. Ignoring a check
+  is a rule about one trigger, never about one integration.
 - **Say what you verified**, not "fixed it". Every good review here turned on
   someone stating a measurement.
 - **Push back.** Four times a teammate was right where a written instruction was
