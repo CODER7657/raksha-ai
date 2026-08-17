@@ -46,20 +46,36 @@ call/SMS      imperson.    urgency       OTP/PIN      money moves
 
 | # | Layer | What it does | Status |
 |---|---|---|---|
-| 1 | **Number reputation** | Check incoming call against community-reported fraud numbers before answer. Cheapest signal, weakest evidence — numbers are disposable. | ❌ Not built |
+| 1 | **Number reputation** | Check an incoming call against numbers **this phone** has already flagged — a number is known because an SMS it sent here tripped the on-device rules. Cheapest signal, weakest evidence: numbers are disposable, and it knows nothing about a caller who has not texted first. | ✅ **Built** — #133 |
 | 2 | **SMS auto-scan** | Android reads incoming SMS, scores on-device, raises a notification. **Zero user action.** Highest-value quick win: phishing SMS is the most common vector. | ✅ **Built** — #38, hardened #86/#93 |
-| 3 | **Call screening** | `CallScreeningService` evaluates unknown numbers pre-answer. Native Android, no recording. | ❌ Not built |
+| 3 | **Call screening** | `CallScreeningService` sees an unknown number pre-answer and posts a warning. Native Android, no recording, and the call is never rejected, silenced or logged differently. Needs API 30+ and a role the user grants. | ✅ **Built** — #133 |
 | 4 | **Live call analysis** | Streaming transcription during the call, detecting authority claims, urgency and OTP requests, with a persistent warning. Highest impact, hardest to build; Android restricts third-party call audio and recording-consent law varies by state. | ❌ Not built |
 | 5 | **Payment interrupt** | Accessibility service watches UPI apps. Payment about to leave for a flagged VPA → full-screen interrupt. | ❌ **Not built** — and the thesis rests on it |
 
 ### What the phone can actually do today
 
-**One layer of five, and the detector on it is the weakest one we have.**
+**Three layers of five, and every detector on them is the same rule engine.**
 
-The Android client declares exactly two permissions — `RECEIVE_SMS` and
-`POST_NOTIFICATIONS` — and **no `INTERNET`**. It has no HTTP library. So the
-device cannot reach the backend at all, which means on-device detection is the
-regex rule engine and nothing else: no retrieval, no model, no cloud escalation.
+Layers 1 and 3 arrived together in #133 and they are narrower than the table
+alone suggests. Both are worth stating here, because the gap between "built" and
+"protects someone" is where this document has been wrong before:
+
+- **Layer 3 needs API 30+.** `CallScreeningService` dates from API 24, but a
+  non-dialer app cannot hold the screening role until `RoleManager` at 29, and
+  the floor was set at 30. On a phone below that the app says so rather than
+  offering a switch that does nothing. `minSdk` is still 24, so some of the
+  handsets §02 designs for get layers 2 and 5 and not layer 3.
+- **Layer 1 is empty on a new install**, and fills only when a number sends a
+  scam SMS to *this* handset. It protects against the second contact from a
+  number, never the first. That is the honest shape of the cheapest signal.
+
+The Android client still declares exactly two permissions — `RECEIVE_SMS` and
+`POST_NOTIFICATIONS` — and **no `INTERNET`**. Layer 3 added none: the screening
+role is granted by the user through a system dialog rather than declared here,
+which is why it could ship while `RECEIVE_SMS` sat in Play's queue. It has no
+HTTP library. So the device cannot reach the backend at all, which means
+on-device detection is the regex rule engine and nothing else: no retrieval, no
+model, no cloud escalation.
 
 The "On-device model" box in the diagram below is `RuleEngine.kt`, six rule
 concepts, pattern matching. **There is no model on the device.** That is a
@@ -68,13 +84,14 @@ leaves the phone because nothing can — but it is not what the box says.
 
 Everything else a user can do (text scan, voice scan, UPI check, chat, practice)
 lives on the **website** and requires them to already suspect something. That is
-the pull model §00 says V2 stops waiting on. Today the website is still the
-product and the phone is one layer of it.
+the pull model §00 says V2 stops waiting on. The phone now carries three of the
+five layers; the website still carries everything else.
 
 Stated plainly because the gap is easy to miss from the diagrams, and because
-the honest version is still strong: one interception layer working end to end
-on-device with no message leaving the phone is a real thing. Claiming five is
-what would cost us.
+the honest version is still strong: three interception layers working end to end
+on-device, with nothing leaving the phone, is a real thing. Claiming five is what
+would cost us — and so is letting "built" stand in for "reaches everyone", which
+is why the two limits above are in this section rather than a commit message.
 
 **Design principle.** A scam does not fail when it is detected. It fails when the
 money stops. Layers 1–4 are advisory; only layer 5 is terminal. Build it assuming
@@ -282,7 +299,8 @@ pilot**, not assumptions to design around now.
 | P1 | On-device rule engine port | Removes the network from the hot path | Pavan |
 | P2 | Payment interrupt (UPI watcher) | The terminal intervention — highest value | Ayush |
 | P2 | Institution dashboard | What cyber cells and banks actually buy | Hem |
-| P3 | Call screening + live analysis | Hardest, legally constrained; needs the rest proven | Ayush |
+| ✅ | Call screening + number reputation | Shipped in #133 — the one layer that needed no Play declaration | Ayush |
+| P3 | Live call analysis | Hardest, legally constrained. The "needs the rest proven" precondition is now met, and #136 retired it; what remains is a feasibility gate, not a wait | Ayush |
 | P3 | Embedded SDK packaging | Only worth building once a bank has said yes | Pavan |
 
 **Sequencing logic.** P0 is unglamorous and comes first anyway: without a
