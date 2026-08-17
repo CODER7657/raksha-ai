@@ -99,7 +99,11 @@ class Gap:
     #: cases" is nonsense presented as a measurement, and a reviewer deciding
     #: where to spend an hour should be able to tell it from a real denominator.
     cases: int | None
-    patterns: int
+    #: `None` when the caller did not supply pattern counts — the same rule as
+    #: `cases`, and the last instance of it in this module. Reporting `0` for
+    #: unknown is what made an earlier version call English, with forty
+    #: patterns, uncovered.
+    patterns: int | None
 
 
 def rank_gaps(
@@ -167,7 +171,7 @@ def rank_gaps(
     gaps: list[Gap] = []
     for language in languages:
         missed = len(missed_by_language.get(language) or [])
-        patterns = pattern_counts.get(language, 0)
+        patterns = pattern_counts.get(language, 0) if counts_known else None
         cases = corpus_cases.get(language, 0) if cases_known else None
 
         if counts_known and patterns == 0:

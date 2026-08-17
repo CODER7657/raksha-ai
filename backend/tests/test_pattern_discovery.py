@@ -149,6 +149,16 @@ def test_an_unknown_case_count_is_not_reported_as_zero_cases():
     assert all(gap.cases is None for gap in ranked)
 
 
+def test_an_unknown_pattern_count_is_not_reported_as_zero_patterns():
+    """The last instance of the sweep, flagged on #115 after #135 merged.
+
+    `cases` was fixed to distinguish unknown from zero and `patterns` was left
+    reporting `0` — the same field whose defaulting made an earlier version call
+    English, with forty patterns, uncovered."""
+    ranked = pattern_discovery.rank_gaps(MISSED, corpus_cases=CASES)
+    assert all(gap.patterns is None for gap in ranked)
+
+
 def test_an_explicitly_empty_pattern_count_does_mean_zero():
     """The other side of the same distinction. `{}` is somebody having looked
     and found nothing, which is a real finding — unlike `None`."""
