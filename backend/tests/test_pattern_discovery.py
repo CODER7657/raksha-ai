@@ -55,22 +55,72 @@ DECISIONS = {
 # --- rank by what we miss --------------------------------------------------
 
 
-def test_gaps_are_ranked_by_how_much_we_miss(pytestconfig=None):
-    """Not alphabetical, not by how easy drafting is. Reviewer attention is the
-    scarcest thing here and it should go where detection actually fails."""
-    ranked = pattern_discovery.rank_gaps(MISSED)
-    assert [language for language, _ in ranked] == ["ta", "bn", "hi"]
+#: The real shape, from review of #135. A language's miss count is ceilinged by
+#: its case count, and nine of twelve languages have two cases and no patterns.
+CASES = {"en": 42, "hi": 14, "gu": 5, "ta": 2, "bn": 2}
+PATTERNS = {"en": 120, "hi": 40, "gu": 12, "ta": 0, "bn": 0}
 
 
-def test_a_language_we_miss_nothing_in_is_not_proposed():
+def test_a_language_with_no_patterns_outranks_one_we_merely_miss_cases_in():
+    """The finding that reversed this function.
+
+    Ranking on `missed_cases` alone looked principled and was structurally
+    backwards: miss count is capped by case count, so English (42 cases) and
+    Hindi (14) sort to the top permanently while the nine languages with two
+    cases and **zero patterns** sort to the bottom — and those are the ones
+    where retrieval returns nothing and the model judges unaided.
+
+    That inverts the module's own argument by a different route: it spends
+    reviewers on the languages that have a corpus, because having a corpus is
+    what lets you record a miss.
+    """
+    ranked = pattern_discovery.rank_gaps(
+        MISSED, corpus_cases=CASES, pattern_counts=PATTERNS
+    )
+    kinds = [gap.kind for gap in ranked]
+    assert kinds[: kinds.count("unmeasured")] == ["unmeasured"] * kinds.count("unmeasured")
+    assert {gap.language for gap in ranked if gap.kind == "unmeasured"} == {"ta", "bn"}
+
+
+def test_a_gap_carries_its_denominator():
+    """`ta: 2 missed` and `ta: 2 missed of 2 cases` are different claims, and a
+    reviewer needs the second to know how much the first is worth."""
+    ranked = pattern_discovery.rank_gaps(
+        MISSED, corpus_cases=CASES, pattern_counts=PATTERNS
+    )
+    tamil = next(gap for gap in ranked if gap.language == "ta")
+    assert tamil.cases == 2
+    assert tamil.patterns == 0
+
+
+def test_a_language_we_miss_nothing_in_and_have_patterns_for_is_not_proposed():
     """Drafting where we already work spends a reviewer to learn nothing."""
-    assert "en" not in dict(pattern_discovery.rank_gaps(MISSED))
+    ranked = pattern_discovery.rank_gaps(
+        MISSED, corpus_cases=CASES, pattern_counts=PATTERNS
+    )
+    assert "en" not in {gap.language for gap in ranked}
+
+
+def test_measured_gaps_still_rank_among_themselves_by_misses():
+    ranked = pattern_discovery.rank_gaps(
+        MISSED, corpus_cases=CASES, pattern_counts=PATTERNS
+    )
+    measured = [gap.language for gap in ranked if gap.kind == "measured"]
+    assert measured == ["hi"]
 
 
 def test_ranking_an_empty_benchmark_proposes_nothing():
     """No measurement is not the same as no gap, and inventing work from an
     absent benchmark is how a queue fills with drafts nobody can justify."""
     assert pattern_discovery.rank_gaps({}) == []
+
+
+def test_without_corpus_counts_it_falls_back_to_measured_gaps_only():
+    """A caller that cannot supply pattern counts still gets something usable,
+    and does not get every language reported as an unmeasured gap."""
+    ranked = pattern_discovery.rank_gaps(MISSED)
+    assert [gap.language for gap in ranked] == ["ta", "bn", "hi"]
+    assert all(gap.kind == "measured" for gap in ranked)
 
 
 # --- learn from rejections -------------------------------------------------

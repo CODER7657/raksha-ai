@@ -42,9 +42,10 @@ producing plausible drafts that later degrade every verdict silently.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
-from app.services.pattern_review import REJECTION_REASONS
+from app.services.pattern_review import DECISIONS, REJECTION_REASONS
 
 logger = logging.getLogger(__name__)
 
@@ -81,23 +82,83 @@ _LESSONS: dict[str, str] = {
 }
 
 
-def rank_gaps(missed_by_language: dict[str, list]) -> list[tuple[str, int]]:
-    """Languages worth drafting for, worst first.
+@dataclass(frozen=True)
+class Gap:
+    """A reason to draft for one language, and how well founded it is."""
 
-    Ordered by how many cases the benchmark actually missed, not alphabetically
-    and not by how easy drafting happens to be. A language we miss nothing in is
-    omitted entirely — drafting there spends a reviewer to learn nothing.
+    language: str
+    #: `unmeasured` — no corpus to speak of, so no miss can be recorded.
+    #: `measured`   — the benchmark ran and missed these.
+    kind: str
+    missed: int
+    #: Carried so a reviewer can see that `ta: 2/2 missed` rests on two cases.
+    #: A miss count without its denominator reads as a rate and is not one.
+    cases: int
+    patterns: int
 
-    An empty benchmark proposes nothing. No measurement is not the same as no
-    gap, and inventing work from an absent benchmark fills the queue with drafts
-    nobody can justify.
+
+def rank_gaps(
+    missed_by_language: dict[str, list],
+    *,
+    corpus_cases: dict[str, int] | None = None,
+    pattern_counts: dict[str, int] | None = None,
+) -> list[Gap]:
+    """Languages worth drafting for, strongest reason first.
+
+    **Unmeasured gaps outrank measured ones**, and that reverses what this
+    function did originally. Ranking on `missed_cases` alone looked principled
+    and was structurally backwards:
+
+        en 42   hi 14   gu 5   mr bn ta ur te kn ml pa or  2 each
+
+    A language's miss count is ceilinged by its case count, so nine of twelve
+    can never report more than two. Sorting by count therefore promotes English
+    and Hindi permanently, regardless of how well they are served — and the nine
+    at the bottom are exactly the ones with **no rows in the pattern corpus at
+    all**, where retrieval returns nothing and the model judges unaided.
+
+    That inverts this module's own argument. "Drafting where drafting is easy
+    spends reviewers on languages that already work" is precisely what a
+    miss-count ranking does, by a different route: it spends them on the
+    languages that have a corpus, because having a corpus is what lets you
+    record a miss.
+
+    A rate would fix the ordering and inherit the blind spot. Recall of 1.000
+    over two cases means the plumbing works, not that the vocabulary is right,
+    and one case flipping moves a rate over that denominator by 0.5. So the
+    ranking is on the gap that can be stated **without** a benchmark: no
+    patterns is a stronger reason to draft than a measured miss, and it is
+    knowable today.
+
+    `pattern_counts` is passed in rather than read here. This module must not
+    reach the pattern database — see `test_discovery_never_writes_to_the_pattern_database`
+    — and taking the counts as an argument keeps that true while letting the
+    caller supply them.
     """
-    gaps = [
-        (language, len(missed))
-        for language, missed in (missed_by_language or {}).items()
-        if missed
-    ]
-    return sorted(gaps, key=lambda pair: (-pair[1], pair[0]))
+    missed_by_language = missed_by_language or {}
+    corpus_cases = corpus_cases or {}
+    pattern_counts = pattern_counts or {}
+
+    languages = set(missed_by_language) | set(corpus_cases) | set(pattern_counts)
+    gaps: list[Gap] = []
+    for language in languages:
+        missed = len(missed_by_language.get(language) or [])
+        patterns = pattern_counts.get(language, 0)
+        cases = corpus_cases.get(language, 0)
+
+        if patterns == 0 and (corpus_cases or pattern_counts):
+            # Nothing to retrieve against. The strongest reason available, and
+            # it needs no benchmark to state.
+            gaps.append(Gap(language, "unmeasured", missed, cases, patterns))
+        elif missed:
+            gaps.append(Gap(language, "measured", missed, cases, patterns))
+
+    # Unmeasured first; within each kind, more misses first, then by name so the
+    # order is stable for a reviewer coming back to a queue.
+    return sorted(
+        gaps,
+        key=lambda gap: (0 if gap.kind == "unmeasured" else 1, -gap.missed, gap.language),
+    )
 
 
 def rejection_lessons(decisions: dict[str, dict], language: str) -> list[str]:
@@ -128,6 +189,25 @@ def rejection_lessons(decisions: dict[str, dict], language: str) -> list[str]:
     return seen
 
 
+def _decided(decisions: dict[str, dict]) -> list[dict]:
+    """Drafts a human has ruled on, in any direction.
+
+    Reads `pattern_review.DECISIONS` rather than restating it. The tuple was
+    written out twice here — once in `acceptance_rate` and once in `report` —
+    and neither copy was the definition. A fourth decision state would have made
+    a draft in it leave the numerator AND the denominator, so it would stop
+    being counted rather than being counted wrong, which is far harder to notice
+    in a rate.
+
+    A module whose whole argument is that a closed vocabulary makes the loop
+    safe should be reading the closed vocabulary.
+    """
+    return [
+        record for record in (decisions or {}).values()
+        if record.get("decision") in DECISIONS
+    ]
+
+
 def acceptance_rate(decisions: dict[str, dict]) -> float | None:
     """Accepted over decided, or None when nothing has been decided.
 
@@ -144,10 +224,7 @@ def acceptance_rate(decisions: dict[str, dict]) -> float | None:
     claims, and reporting zero for a queue nobody has reviewed blames the
     generator for a reviewer backlog.
     """
-    decided = [
-        record for record in (decisions or {}).values()
-        if record.get("decision") in ("accepted", "rejected", "revoked")
-    ]
+    decided = _decided(decisions)
     if not decided:
         return None
     accepted = sum(1 for record in decided if record.get("decision") == "accepted")
@@ -162,10 +239,7 @@ def report(decisions: dict[str, dict]) -> dict[str, Any]:
     that makes a generator nobody accepts from look productive.
     """
     rate = acceptance_rate(decisions)
-    decided = [
-        record for record in (decisions or {}).values()
-        if record.get("decision") in ("accepted", "rejected", "revoked")
-    ]
+    decided = _decided(decisions)
     return {
         "acceptance_rate": rate,
         "decided": len(decided),
