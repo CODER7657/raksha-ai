@@ -93,7 +93,12 @@ class Gap:
     missed: int
     #: Carried so a reviewer can see that `ta: 2/2 missed` rests on two cases.
     #: A miss count without its denominator reads as a rate and is not one.
-    cases: int
+    #:
+    #: `None` when the caller did not supply case counts, for the same reason
+    #: `patterns` distinguishes unknown from zero: rendering "2 missed of 0
+    #: cases" is nonsense presented as a measurement, and a reviewer deciding
+    #: where to spend an hour should be able to tell it from a real denominator.
+    cases: int | None
     patterns: int
 
 
@@ -152,6 +157,7 @@ def rank_gaps(
     # 0.0, and the trace makes with `language_covered: null` being a third state
     # rather than a falsy second.
     counts_known = pattern_counts is not None
+    cases_known = corpus_cases is not None
 
     missed_by_language = missed_by_language or {}
     corpus_cases = corpus_cases or {}
@@ -162,7 +168,7 @@ def rank_gaps(
     for language in languages:
         missed = len(missed_by_language.get(language) or [])
         patterns = pattern_counts.get(language, 0)
-        cases = corpus_cases.get(language, 0)
+        cases = corpus_cases.get(language, 0) if cases_known else None
 
         if counts_known and patterns == 0:
             # Nothing to retrieve against. The strongest reason available, and

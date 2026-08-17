@@ -141,6 +141,14 @@ def test_absent_pattern_counts_means_unknown_and_not_zero():
     assert "en" not in {gap.language for gap in ranked}
 
 
+def test_an_unknown_case_count_is_not_reported_as_zero_cases():
+    """Same rule, swept from the same review. Rendering "2 missed of 0 cases" is
+    nonsense presented as a measurement, and a reviewer choosing where to spend
+    an hour should be able to tell it from a real denominator."""
+    ranked = pattern_discovery.rank_gaps(MISSED, pattern_counts=PATTERNS)
+    assert all(gap.cases is None for gap in ranked)
+
+
 def test_an_explicitly_empty_pattern_count_does_mean_zero():
     """The other side of the same distinction. `{}` is somebody having looked
     and found nothing, which is a real finding — unlike `None`."""
