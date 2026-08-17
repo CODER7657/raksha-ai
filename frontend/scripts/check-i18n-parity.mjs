@@ -28,8 +28,30 @@ const SHIPPED = ['hi', 'gu']
 // Keys allowed to be absent, with the reason. Not a convenience hatch: a
 // machine translation of a scam warning is the harm `i18n/index.ts` warns
 // about, so "missing and named" beats "filled in by whoever was here".
+// Every entry here is a gap being *named*, never one being accepted. A machine
+// translation of a safety instruction reads as authoritative while being wrong
+// about the sentence that has to be right, which is why the message below
+// refuses one and why these sit in a list instead.
 const KNOWN_GAPS = {
   'android.rule_generic_warning': 'No translation yet — tracked in #52 (native-speaker review).',
+
+  // Layer 3, #116 §4. A Hindi or Gujarati speaker sees the call-screening
+  // feature entirely in English, which for the senior citizen
+  // THREAT-LANDSCAPE §02 designs for is close to not having it. @Ayush3422
+  // owns language and supplies these before the feature is called shipped in
+  // any locale but English. Tracked in #52 with the rest.
+  //
+  // The Android build has its own list of the same eight keys, in
+  // app/build.gradle.kts. Two mechanisms for one concern is exactly what
+  // #116 §2 is about, and this comment is the seam until they are one.
+  'android.call_warning_title': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_heading': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_on': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_off': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_enable': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_explainer': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_unsupported': 'No translation yet — #116 §4, tracked in #52.',
+  'android.call_screening_nothing_known': 'No translation yet — #116 §4, tracked in #52.',
 }
 
 const flatten = (obj, prefix = '') =>
