@@ -317,10 +317,10 @@ Written in #55, and it held:
   impact (#32), and the honest scope of a reflection-based test (#61). All four
   left the reasoning in the code.
 
-### Two rules that predict where to look
+### Three rules that predict where to look
 
-Both came out of review during the agent-layer work, and both earn their place
-by pointing at bugs rather than by describing ones already found.
+All came out of review, and each earns its place by pointing at bugs rather than
+by describing ones already found.
 
 **An accommodation made to keep an existing test green is a place the tests were
 already wrong.** (#130.) A conditional was added to `analyse` so nine existing
@@ -338,7 +338,27 @@ elsewhere and written down why: `acceptance_rate` returns `None` rather than
 calls `language_covered: null` "a third state, not a falsy second". Keep whether
 a thing was *supplied* separate from what it *contains*.
 
-The second one has a corollary worth stating on its own: **writing a principle
+**A result that flatters the design has to clear a higher bar than one that does
+not.** (#116 §6.) Measuring whether an ongoing notification resists a swipe, the
+first run showed it surviving one gesture and dying on the second — which reads
+as "resists a reflex, yields to intent", almost exactly the behaviour the design
+wanted. It was wrong coordinates: the swipe landed at y=1523 when the row was at
+y=729. Re-dumping the view hierarchy each cycle turned an encouraging result into
+the real one, which is that a single ordinary swipe removes it every time.
+
+The tell is that the near-miss was *plausible*. A result that contradicts the
+design gets re-run on instinct; one that confirms it gets written up. So the
+check is procedural rather than attentional — re-derive the inputs on every
+cycle rather than reusing the ones that produced the pleasing answer, and run the
+control that would fail if the mechanism were not doing the work.
+
+This is the same family as the other two, arriving from the observer's side
+rather than the code's: the earlier premises that turned out false (the bundled
+reputation set, the screening window, the contact guard) were all *assumptions
+nobody noticed making*. #116 §6 added a fourth, and it was load-bearing for a
+sequencing decision rather than for code.
+
+The second rule has a corollary worth stating on its own: **writing a principle
 in a docstring is not the same as holding it**, and the gap between the two is
 invisible to whoever wrote both. Both of these were violated within four lines
 of the comment arguing for them.
