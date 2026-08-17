@@ -211,7 +211,7 @@ val callScreeningUntranslated = setOf(
     "call_screening_enable",
     "call_screening_explainer",
     "call_screening_unsupported",
-    "call_screening_nothing_known",
+    "call_screening_limitation",
 )
 
 val knownUntranslated = mapOf(
@@ -373,6 +373,36 @@ abstract class GenerateRuleStrings : DefaultTask() {
                     "Every rule id the engine can emit needs a trace.rules.<id> entry in every " +
                     "locale, or the app would show a raw pattern to a user. Add them to " +
                     "frontend/src/i18n/locales/ first - the web app needs them too."
+            )
+        }
+
+        // A named gap must also still BE A KEY (#146).
+        //
+        // The check below catches "listed as untranslated, but translated now".
+        // It does not catch "listed as untranslated, but the key no longer
+        // exists" — and renaming call_screening_nothing_known to
+        // call_screening_limitation produced exactly that: the build succeeded
+        // while reporting 20 excused strings, one of which was gone. The count
+        // this task prints is the thing the entry was justifying, so an orphan
+        // makes it an overcount, which is the failure the stale check was
+        // written to prevent arriving from the other side.
+        //
+        // The web script had this half already; this one did not. That
+        // asymmetry is why two lists for one concern keeps being a problem
+        // (#116 §2) — each grew the guard the other's author happened to think
+        // of.
+        val orphaned = allowedMissing.get().flatMap { (locale, keys) ->
+            keys.filter { it !in englishSharedKeys }.map { "$locale/android.$it" }
+        }
+        if (orphaned.isNotEmpty()) {
+            throw GradleException(
+                "knownUntranslated names ${orphaned.size} key(s) that no longer exist: " +
+                    "${orphaned.joinToString(", ")}.\n" +
+                    "Nothing renders them, and each one inflates the excused count this " +
+                    "build reports - so the number stops meaning what it says.\n" +
+                    "Remove them from knownUntranslated in app/build.gradle.kts, and from " +
+                    "KNOWN_GAPS in frontend/scripts/check-i18n-parity.mjs, which lists the " +
+                    "same keys."
             )
         }
 
