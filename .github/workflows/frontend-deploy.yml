@@ -86,6 +86,37 @@ jobs:
       - name: Install the Vercel CLI
         run: npm install --global vercel@latest
 
+      # The step above checks the secrets are PRESENT. The first run proved that
+      # is not the same as them WORKING: all three were set, and `vercel pull`
+      # still failed with "Could not retrieve Project Settings" — which reads
+      # like a corrupt local link and is actually a permissions answer.
+      #
+      # This project is owned by a TEAM (VERCEL_ORG_ID starts with `team_`), and
+      # a token created under a personal scope cannot see a team's projects. The
+      # token has to be scoped to the team that owns it.
+      #
+      # `whoami` names the scope the token actually has, so the failure says
+      # which side is wrong instead of pointing at a directory that is not there.
+      # A check that confirms a secret exists and not that it works is the same
+      # shape as every other guard this repo has had to fix.
+      - name: Check the token can see the project
+        run: |
+          echo "Token scope:"
+          vercel whoami --token="$VERCEL_TOKEN" || {
+            echo
+            echo "VERCEL_TOKEN is not valid at all — expired, revoked, or mistyped."
+            exit 1
+          }
+          echo
+          if ! vercel project ls --token="$VERCEL_TOKEN" >/dev/null 2>&1; then
+            echo "The token is valid but cannot list this scope's projects."
+            echo
+            echo "VERCEL_ORG_ID starts with 'team_', so the project belongs to a"
+            echo "team. Create the token again at vercel.com/account/tokens and"
+            echo "set its SCOPE to that team rather than to a personal account."
+            exit 1
+          fi
+
       # Run from the repository root, NOT from frontend/. The Vercel project's
       # Root Directory is already set to `frontend`, so the CLI appends it —
       # running this inside frontend/ resolves to frontend/frontend and fails
