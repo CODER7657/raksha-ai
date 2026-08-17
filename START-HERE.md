@@ -13,8 +13,15 @@ old model will be rejected in review.
 ## 1. What this project is now
 
 Raksha AI detects financial scams — calls, SMS, fake UPI requests, loan fraud —
-for first-time digital banking users in India, in twelve languages, and explains
-the verdict in plain language out loud.
+for first-time digital banking users in India, and explains the verdict in plain
+language out loud.
+
+**Three supported languages: English, Hindi, Gujarati.** This changed — the
+project claimed twelve for most of its life. The engine still carries rules for
+twelve codes and that has not been removed, because an unreviewed rule that
+catches a real scam is better than no rule at all. What changed is the claim: a
+language is supported when a speaker has read its rules, and that is true of
+three. See `docs/RULE-PARITY.md` §02b before writing anything that says twelve.
 
 **The one thing that changed:** a jury member asked how a *website* helps someone
 who has a scammer on the phone right now. It doesn't. A victim who is being

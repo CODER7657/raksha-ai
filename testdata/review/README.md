@@ -4,11 +4,21 @@ One sheet per unreviewed language, for #89 and the seeding half of #88.
 
 ## Why these exist
 
-Eight of the twelve languages we advertise have detection rules **no speaker of
-that language has read**. `docs/RULE-PARITY.md` §02b is blunt about what that
+Nine of the twelve language codes in the engine have detection rules **no speaker
+of that language has read**. `docs/RULE-PARITY.md` §02b is blunt about what that
 means: a rule nobody who speaks the language has read is a guess, and a guessed
 rule that never fires is invisible. That is exactly how nine languages shipped
 with no coverage at all before #31.
+
+**The product now claims three languages — English, Hindi and Gujarati — which
+is what these sheets were for.** Scoping the claim does not retire them: the
+rules for the other nine are still in the engine, still running, and still
+unread. A sheet that comes back from a speaker is what moves a language from
+"code exists" to "supported", and that route stays open for whichever one finds
+a speaker first.
+
+The sheets are not obsolete. They are the only thing standing between an
+unreviewed rule set and a claim nobody can support.
 
 The blocker was never that nobody would review. It was that the thing to review
 looked like this:

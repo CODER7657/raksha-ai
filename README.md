@@ -20,7 +20,10 @@ explains *why* it's risky in plain language, and gives a safe next action — al
 ## Core Features (MVP)
 - **Text/message scan** — paste any SMS/WhatsApp/email text → risk score + red flags + plain-language explanation
 - **Voice/call scan** — upload or record a call snippet → transcribed (speech-to-text) → same scam analysis
-- **Multilingual** — 12 languages, input and output (see below)
+- **Multilingual** — **three supported languages: English, Hindi, Gujarati.** The engine carries rule
+  coverage for twelve language codes and the interface is translated into Hindi and Gujarati, but only
+  these three have detection rules a speaker has actually read. The other nine are unreviewed and are
+  not claimed — see [Supported Languages](#supported-languages)
 - **RAG-grounded classification** — every message is checked against a real vector database of known
   scam patterns before the LLM judges it, so results are grounded in retrieved evidence, not a raw
   model guess (see [Architecture](#architecture--how-rag-works))
@@ -68,9 +71,39 @@ Full detail in [`backend/README.md`](./backend/README.md#how-rag-works-here) and
 - Full checklist: [`backend/README.md`](./backend/README.md#security--no-loopholes-checklist)
 
 ## Supported Languages
-English, Hindi, Gujarati, Marathi, Bengali, Tamil, Telugu, Kannada, Malayalam, Punjabi, Odia, Urdu.
-(Demo will focus on **English, Hindi, Gujarati** — the rest come free from the same LLM prompt-based
-translation layer, so listing all 12 is a legitimate "scalability" talking point without extra build cost.)
+
+**Three: English, Hindi, Gujarati.**
+
+A language is supported when a speaker has read its detection rules. That is true
+of these three and of no others, so these three are what we claim.
+
+The engine still carries rules for twelve codes — Marathi, Bengali, Tamil,
+Telugu, Kannada, Malayalam, Punjabi, Odia and Urdu included — and none of that
+has been removed. An unreviewed rule that catches a real scam is better than no
+rule, and a user typing in Tamil is better served by an imperfect offline net
+than by nothing. What changed is that we no longer present it as coverage.
+
+**Why this used to say twelve, and why that was wrong.** The earlier version of
+this section argued the other nine "come free from the same LLM prompt-based
+translation layer, so listing all 12 is a legitimate scalability talking point
+without extra build cost". Every part of that turned out to be false in a way
+that was measurable:
+
+- Nine of the twelve had **no offline rules at all** until #31 — with both LLM
+  providers down, a scan in those languages returned a 503, an error page instead
+  of a warning
+- Nine still have **two corpus cases each**. Their recall of 1.000 means the
+  plumbing works, not that the vocabulary is right
+- Gujarati was marked reviewed and in-service and still could not see *"tell me
+  the OTP"* until a speaker read the rules (#141)
+
+The cost was never in the prompt layer. It is in someone who speaks the language
+reading the rules and saying whether a scammer would write that — and that is a
+person, not a build step.
+
+`REVIEW_STATUS` in `backend/app/services/rule_engine.py` carries the per-language
+state, and `trace.rule_review` puts it in front of the user so a verdict in an
+unreviewed language says so. See `docs/RULE-PARITY.md` §02b.
 
 ## Unique / Out-of-the-Box Features
 These are what differentiate us from a plain "paste text, get a label" classifier:

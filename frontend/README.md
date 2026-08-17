@@ -22,7 +22,7 @@ Auth/API scaffolding already exists — don't rebuild these, build on top of the
 ## Screens to build (see main repo README / Figma link in #design channel)
 1. **Landing / Hero** — what Raksha AI does, "Paste a message" CTA, trust-building visuals
 2. **Login / Signup** — email+password and "Continue with Google", plus a password-reset link. Wire to `useAuth()`, don't hand-roll auth logic
-3. **Scan Input** — text paste box + voice upload/record + language selector (12 languages, see main README)
+3. **Scan Input** — text paste box + voice upload/record + language selector. The selector offers the twelve codes `LanguageCode` accepts; **three are supported** — English, Hindi, Gujarati — and `trace.rule_review` tells the user which state theirs is in. See main README
 4. **Result / Risk Report** — risk score (Safe/Suspicious/High Risk), highlighted red-flag phrases, plain-language explanation, "what to do next" action card, speaker icon (TTS read-aloud), "Forward to family" share card button
 5. **History Dashboard** — list of past scans, simple trend chart of scam types, "Community Scam Radar" counter widget
 6. **Practice / Simulator** — quiz-style scam-spotting mini-game (unique feature, see main README)

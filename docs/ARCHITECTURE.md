@@ -268,8 +268,15 @@ the same dashboard would be the mistake.
 
 RBI requires banks to run customer fraud-awareness programmes: an existing,
 funded, mandatory budget line, mostly spent today on posters and SMS blasts
-nobody reads. We are that obligation delivered as working software in twelve
-languages, with reporting to evidence the programme.
+nobody reads. We are that obligation delivered as working software, with
+reporting to evidence the programme.
+
+**Say three languages, not twelve.** English, Hindi and Gujarati are the ones a
+speaker has read the rules for. The engine carries twelve codes and that is a
+real engineering fact, but it is not a coverage claim, and a bank asking "which
+languages" is asking the second question. Nine of the twelve have two corpus
+cases each — enough to show the plumbing works, not enough to say the vocabulary
+is right.
 
 - **Embedded SDK** inside the bank's app — protection with no separate install
 - **Payment interrupt** on their own UPI flow — the highest-value integration
