@@ -54,6 +54,13 @@ import android.os.Build
  * failure, with the reason on the record so nobody reopens it from
  * documentation.
  *
+ * **Taken on an emulator image, not an API 29 handset**, and OEM builds can
+ * filter differently. The residual uncertainty runs in the safe direction: if a
+ * real 29 device does exclude contacts, this leaves coverage unclaimed rather
+ * than shipping a false positive. Erring closed costs reach; erring open costs
+ * the benign half, and constraint 4 picks that direction — so the conclusion
+ * holds however the emulator differs.
+ *
  * A user below the floor is told plainly that their Android version cannot do
  * this, in the same register as the force-stop notice: the app does not claim a
  * layer it does not have.
@@ -61,11 +68,26 @@ import android.os.Build
 object CallScreeningRole {
 
     /**
+     * The lowest Android version this feature is allowed to run on.
+     *
+     * Extracted so it can be asserted. The floor is a measured decision with a
+     * named false positive behind it (see the class note), and until #140 the
+     * only thing protecting it was a comment — nothing in the test tree
+     * referenced it, so lowering it to `Q` would have produced a green suite and
+     * been discovered on somebody's phone.
+     *
+     * `CallScreeningFloorTest` pins this, and carries the measurement in its
+     * failure message. That is the part a comment cannot do: it puts the reason
+     * in front of whoever is changing the value, at the moment they change it.
+     */
+    const val MIN_SDK_FOR_SCREENING = Build.VERSION_CODES.R
+
+    /**
      * Whether this Android version can screen calls at all.
      *
-     * `R` is API 30. See the class note for why the floor is not 29.
+     * See the class note for why the floor is 30 and not 29.
      */
-    fun isSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+    fun isSupported(): Boolean = Build.VERSION.SDK_INT >= MIN_SDK_FOR_SCREENING
 
     /**
      * Whether the role exists on this device. Distinct from [isSupported]:
