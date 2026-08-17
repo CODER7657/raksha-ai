@@ -65,6 +65,15 @@ alone suggests. Both are worth stating here, because the gap between "built" and
   the floor was set at 30. On a phone below that the app says so rather than
   offering a switch that does nothing. `minSdk` is still 24, so some of the
   handsets §02 designs for get layers 2 and 5 and not layer 3.
+
+  **29 was measured and is closed.** It looked like a free widening — the role
+  exists there, and it reaches more cheap handsets. It is not. On an API 29
+  image the platform binds the screening service for a number in the user's own
+  contacts, which API 36 does not, and there is no `getContactDisplayName` at 29
+  to catch it: same number, same flagged message, contact status the only
+  variable, and 29 warned about a saved contact while 36 was never called at
+  all. Widening the floor would ship a false positive about the people a user
+  deliberately saved, to the population least able to absorb one.
 - **Layer 1 is empty on a new install**, and fills only when a number sends a
   scam SMS to *this* handset. It protects against the second contact from a
   number, never the first. That is the honest shape of the cheapest signal.

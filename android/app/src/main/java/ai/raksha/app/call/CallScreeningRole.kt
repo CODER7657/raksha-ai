@@ -34,15 +34,25 @@ import android.os.Build
  * pair — so that check is a backstop rather than the mechanism, and the
  * benign-half argument for the floor does not hold.
  *
- * The floor stays at 30 anyway, for a weaker and honest reason: the platform's
- * exclusion is measured on 36 and **not** on 29, and on 29 there is no
- * `getContactDisplayName` to fall back on if it behaves differently. Choosing 30
- * is preferring an unmeasured feature gap to an unmeasured false positive, which
- * is the direction constraint 4 points.
+ * **The floor stays at 30, and it is now measured rather than chosen out of
+ * caution.** #133 left this open on the grounds that 29 was unmeasured and might
+ * be worth widening to, since it reaches more of the cheap handsets
+ * THREAT-LANDSCAPE §02 designs for. It has been measured on an API 29 image, and
+ * the answer is no. Same number, same flagged SMS, contact status the only
+ * variable:
  *
- * **Worth widening to 29 if someone measures it there**, since that is more of
- * the cheap handsets THREAT-LANDSCAPE §02 designs for. It needs an API 29 system
- * image, which this checkout does not have.
+ *   API 36, caller is a contact   platform does not bind us        no warning
+ *   API 29, caller is a contact   platform binds us, KNOWN in 1ms  **warned**
+ *
+ * The contact exclusion API 36 enforces is simply not there at 29 — the service
+ * is bound for a number sitting in the user's own address book — and there is no
+ * `getContactDisplayName` at 29 to catch it. Widening the floor would ship a
+ * warning about the people a user has deliberately saved, to exactly the
+ * population least able to absorb a false positive.
+ *
+ * So 29 is closed rather than open: not a missed opportunity but a benign-half
+ * failure, with the reason on the record so nobody reopens it from
+ * documentation.
  *
  * A user below the floor is told plainly that their Android version cannot do
  * this, in the same register as the force-stop notice: the app does not claim a
