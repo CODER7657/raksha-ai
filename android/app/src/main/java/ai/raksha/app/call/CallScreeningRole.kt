@@ -34,15 +34,32 @@ import android.os.Build
  * pair — so that check is a backstop rather than the mechanism, and the
  * benign-half argument for the floor does not hold.
  *
- * The floor stays at 30 anyway, for a weaker and honest reason: the platform's
- * exclusion is measured on 36 and **not** on 29, and on 29 there is no
- * `getContactDisplayName` to fall back on if it behaves differently. Choosing 30
- * is preferring an unmeasured feature gap to an unmeasured false positive, which
- * is the direction constraint 4 points.
+ * **The floor stays at 30, and it is now measured rather than chosen out of
+ * caution.** #133 left this open on the grounds that 29 was unmeasured and might
+ * be worth widening to, since it reaches more of the cheap handsets
+ * THREAT-LANDSCAPE §02 designs for. It has been measured on an API 29 image, and
+ * the answer is no. Same number, same flagged SMS, contact status the only
+ * variable:
  *
- * **Worth widening to 29 if someone measures it there**, since that is more of
- * the cheap handsets THREAT-LANDSCAPE §02 designs for. It needs an API 29 system
- * image, which this checkout does not have.
+ *   API 36, caller is a contact   platform does not bind us        no warning
+ *   API 29, caller is a contact   platform binds us, KNOWN in 1ms  **warned**
+ *
+ * The contact exclusion API 36 enforces is simply not there at 29 — the service
+ * is bound for a number sitting in the user's own address book — and there is no
+ * `getContactDisplayName` at 29 to catch it. Widening the floor would ship a
+ * warning about the people a user has deliberately saved, to exactly the
+ * population least able to absorb a false positive.
+ *
+ * So 29 is closed rather than open: not a missed opportunity but a benign-half
+ * failure, with the reason on the record so nobody reopens it from
+ * documentation.
+ *
+ * **Taken on an emulator image, not an API 29 handset**, and OEM builds can
+ * filter differently. The residual uncertainty runs in the safe direction: if a
+ * real 29 device does exclude contacts, this leaves coverage unclaimed rather
+ * than shipping a false positive. Erring closed costs reach; erring open costs
+ * the benign half, and constraint 4 picks that direction — so the conclusion
+ * holds however the emulator differs.
  *
  * A user below the floor is told plainly that their Android version cannot do
  * this, in the same register as the force-stop notice: the app does not claim a
@@ -51,11 +68,26 @@ import android.os.Build
 object CallScreeningRole {
 
     /**
+     * The lowest Android version this feature is allowed to run on.
+     *
+     * Extracted so it can be asserted. The floor is a measured decision with a
+     * named false positive behind it (see the class note), and until #140 the
+     * only thing protecting it was a comment — nothing in the test tree
+     * referenced it, so lowering it to `Q` would have produced a green suite and
+     * been discovered on somebody's phone.
+     *
+     * `CallScreeningFloorTest` pins this, and carries the measurement in its
+     * failure message. That is the part a comment cannot do: it puts the reason
+     * in front of whoever is changing the value, at the moment they change it.
+     */
+    const val MIN_SDK_FOR_SCREENING = Build.VERSION_CODES.R
+
+    /**
      * Whether this Android version can screen calls at all.
      *
-     * `R` is API 30. See the class note for why the floor is not 29.
+     * See the class note for why the floor is 30 and not 29.
      */
-    fun isSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+    fun isSupported(): Boolean = Build.VERSION.SDK_INT >= MIN_SDK_FOR_SCREENING
 
     /**
      * Whether the role exists on this device. Distinct from [isSupported]:
