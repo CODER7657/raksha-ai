@@ -300,8 +300,30 @@ Judged against: does it close a real gap, and can three people run it.
 - **A2A / cross-agent protocols.** Right at the institution boundary, wrong
   inside one codebase — discovery and a wire protocol between our own agents is
   pure attack surface
-- **Live call analysis (layer 4).** Android restricts third-party call audio and
-  recording-consent law varies by state. Needs the rest proven first
+- ~~**Live call analysis (layer 4).** Android restricts third-party call audio
+  and recording-consent law varies by state. Needs the rest proven first~~
+  **Superseded.** "Needs the rest proven first" was the whole of the reason, and
+  layers 1, 2 and 3 are now built (#38, #133), so the precondition is met. Layer
+  4 is scoped in #116 §6 — behind a feasibility gate rather than as a task list,
+  because the two obstacles named above are still unmeasured and either can
+  return "cannot be built"
+
+  Two of them settled here, because they are product decisions rather than
+  Android ones:
+
+  - **Transcription is on-device or it does not happen.** Server-side means live
+    call audio leaves the phone, which contradicts §02, stops every Data Safety
+    answer being "No", and retires the strongest sentence this product has. That
+    is a larger claim to give up than any single feature is worth. On-device
+    needs no `INTERNET`, so the bullet above is untouched by layer 4 — but it
+    converts the question from a policy one into a feasibility one: twelve
+    languages, on the cheap handset `THREAT-LANDSCAPE.md` §02 designs for
+  - **The no-audio fallback is the first thing built, not the consolation.** A
+    persistent during-call warning driven by layers 1 and 3 depends on none of
+    the open questions. If call audio proves unreachable it is the whole of
+    layer 4; if it does not, it is still what the user gets when transcription
+    is unavailable or declined. Constraint 4 again — the honest degraded state
+    is a feature, not a fallback
 
 ---
 
