@@ -341,6 +341,33 @@ Judged against: does it close a real gap, and can three people run it.
     covered by nothing — and the product must say so rather than let a
     call-warning surface imply it is watching the call
 
+    **The one permission-free route was measured and is not shipping.** Posting
+    a delete intent and re-posting when the user dismisses does work, cleanly:
+    the intent fired on every swipe, re-post turnaround was 13–14ms, and a round
+    cap ended it as designed.
+
+    ```
+    dismiss received: round=1 visible_for=29587ms
+    re-posted: round=2 turnaround=14ms
+    dismiss received: round=2 visible_for=20436ms
+    re-posted: round=3 turnaround=13ms
+    dismiss received: round=3 visible_for=6069ms
+    stopping after 3 round(s)
+    ```
+
+    It is not shipping, and the reason is not technical. Without call state the
+    re-post is blind to whether the call is still happening, so its worst case is
+    nagging somebody who declined in ten seconds — the same missing signal that
+    killed the original design, one layer down. And #134 already reasoned this
+    through from the other end: a notification on every scan trains people to
+    ignore the one that matters, and re-showing what a user deliberately
+    dismissed is that harm with a shorter fuse, aimed at the people least able to
+    tell a nag from a warning.
+
+    Recorded because "measured, behaves like this, not shipped for this reason"
+    is worth more than the argument alone — and because the next person to think
+    of it deserves the number rather than a repeat of the experiment
+
 ---
 
 ## 03 · Ownership
