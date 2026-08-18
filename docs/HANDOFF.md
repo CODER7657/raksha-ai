@@ -7,22 +7,39 @@ time of writing, not recalled.
 
 ## 00 · Where the project stands
 
-Live on Vercel (frontend) and Render (backend), both free tier. Detection across
-twelve languages, RAG-grounded via pgvector, Groq → Gemini → offline-rules
-ladder, Sarvam voice, practice game, chat assistant. Android client scans
-incoming SMS entirely on-device.
+Live on Vercel (frontend) and Render (backend), both free tier. Detection in
+**three languages — English, Hindi, Gujarati** — RAG-grounded via pgvector,
+Groq → Gemini → offline-rules ladder, Sarvam voice, practice game, chat
+assistant. Android client scans incoming SMS, screens incoming calls, and keeps
+its own number reputation, all entirely on-device.
 
-**Verified numbers, not claims:**
+**Verified numbers, not claims.** Re-measured 17 August against `master`, not
+carried over:
 
 | | |
 |---|---|
-| Test suite | **421 passing** — plus 4 Android unit tests that now actually run (#80) |
-| Rule corpus | 79 rows — 77 enforced, 2 known gaps (both accepted false positives) |
-| Offline engine | recall **1.000** in all twelve languages |
-| LLM path | English precision **0.933** / recall **1.000**; Hindi **0.923** / **1.000**. Held out, re-scored against all 79 rows (#76) |
-| Evasion queue | 3 entries, all `fixed` |
-| Provider rungs | Groq OK, Gemini OK, embeddings OK — checked live |
-| Migrations | `0001`–`0007` applied; `0008` open in a PR |
+| Backend tests | **884 passing**, ruff clean |
+| Android tests | 83 unit tests, 0 failures, and the rule-parity task genuinely executes rather than resolving FROM-CACHE (#129). Counted by @Ayush3422 on #146 — Gradle cannot run in the review sandbox, so CI is the source |
+| Rule corpus | **88 rows** — 85 enforced, 3 `known_gap` (all accepted false positives) |
+| Corpus balance | 57 scam / 31 benign overall. Per supported language: `en` 42 (28/14), `hi` 14 (12/2), `gu` 14 (8/6) |
+| Offline engine | recall **1.000** across all twelve language codes — see the paragraph below before quoting that |
+| LLM path | English precision **0.933** / recall **1.000**; Hindi **0.923** / **1.000**, held out (#76). **Stale**: measured against 79 rows, and the corpus is now 88 |
+| Interception layers | **3 of 5 built** — number reputation and call screening landed with #133, SMS auto-scan with #38. Layer 4 has no guaranteed deliverable; layer 5 is the thesis and is unbuilt |
+| Agents | **3 of 7 real** — A6 red-team, A2 stages 1–3, A3 correlator. A1's human gate exists; its generator does not |
+| Migrations | `0001`, `0003`–`0014` — **all 13 applied** |
+| Provider rungs | Groq OK, Gemini OK, embeddings OK — last checked live before 15 August |
+
+**Two numbers in that table are the wrong shape, and saying so is the point of
+the table.** The offline recall of 1.000 covers twelve codes, nine of which have
+two corpus cases each — see below. The LLM precision figures were measured
+against 79 rows and the corpus has moved to 88 since, so they describe a corpus
+that no longer exists; re-run `scripts/run_llm_benchmark.py` before either number
+goes in front of anyone.
+
+**The benign half is smaller than the scam half everywhere**, which contradicts
+the standing rule in §08 that it should be larger. `hi` at 12 scam to 2 benign is
+the worst of the three supported languages. Over-warning is the accepted
+direction, but 2 benign cases cannot establish that we are not over-warning.
 
 **The caveat that must travel with those numbers:** nine of the twelve language
 codes have two corpus cases each. Their 1.000 means the plumbing works, not that
@@ -228,48 +245,69 @@ wire protocol that is pure attack surface between our own agents.
 
 ## 06 · Open work
 
-**@Ayush3422 is back.** The redistribution recorded in the previous version of
-this section is over, and the Android work has gone back to him. What has not
-changed is the reasoning behind it: Android platform work does not go to a
-frontend developer, and that held while he was away rather than being an excuse
-made at the time.
+**Three issues carry everything now**, one per person, and they are the source of
+truth rather than this section. It exists to say where each stands, not to
+duplicate them:
+
+| Issue | Owner | Scope |
+|---|---|---|
+| **#110** | @CODER7657 | The QA gate. `PHASE-2-PLAN.md` §06 is the definition of done for the **project**, not a stage |
+| **#115** | @Hem60 | The entire agent layer, plus the language work |
+| **#116** | @Ayush3422 | The entire Android client, design system and monorepo |
+
+**This is the last build phase.** There is nothing after it.
 
 ### @CODER7657
 
-| # | What | Note |
-|---|---|---|
-| #32 | **Persist review-queue decisions** | Rescoped and moved from Hem. A/B/C/D all render; only the store is missing. Not UI work — where a decision is written, what an accepted draft *becomes* now that 0007 rejects an unapproved `agent` row, and whether a decision is reversible |
-| #83 | **Server-side half of the Android trust chain** | New, split out of #29. Bundle signing, Play Integrity verified server-side, device trace held to the backend schema. All three are places where a device-side control is only as good as something on the server |
-| #77 | `test_key_pools.py` reads the developer's real `.env` | Small, and it fails for whoever has just finished configuring their machine |
+| What | Note |
+|---|---|
+| **#110 — the QA gate** | The definition of done. Nothing else on this list competes with it |
+| **Speakers for the other nine languages** | The only route is the pilot's cyber-cell partners, who have both the speakers and the real scam reports. A relationship rather than a task, and the one item nobody else can start |
+| **Re-run the LLM benchmark** | §00's precision figures were measured against 79 corpus rows and there are now 88. Stale numbers in the one table headed "verified" |
+| **The Node floor is documented but not enforced** | `START-HERE.md` §2 says 22.12.0 is the floor because `@supabase/supabase-js` needs `>=22.0.0`; `frontend-ci.yml` and `frontend-deploy.yml` both build on Node 20. It works because npm engine violations are warnings — so CI is not building what developers are told to run |
+| #83 | Server-side half of the Android trust chain — bundle signing, Play Integrity verified server-side. Still open, still not urgent while the device holds no `INTERNET` |
+| #77 | `test_key_pools.py` reads the developer's real `.env`. Small, and it fails for whoever has just configured their machine |
 
-### @Ayush3422
+### @Ayush3422 — see #116
 
-| # | What | Note |
-|---|---|---|
-| **#39** | Play `RECEIVE_SMS` declaration | **Submitted, awaiting Google.** Still the only item with an external clock. Nothing Android reaches a user until it clears |
-| **#82** | **Release readiness — what blocks the first APK** | New. Finite, unlike #29. No `signingConfig` exists at all; Data Safety form; target-API deadlines untracked; plus tapjacking and surviving a reboot |
-| #29 | Android enterprise bar | A standing bar, not a task. Audited against the tree: about a third is done. R8 (#69), shared i18n (#71), the whole #38 SMS pipeline. The server-side items moved to #83 |
+Layers 1, 2 and 3 are built. §1 of that issue is what blocks the project:
 
-### @Hem60
+- **Data Safety form** and the **accessibility declaration** — neither is blocked
+  on anyone, and the declaration starts a review clock we do not control. #39
+  taught what discovering that clock late costs
+- Fresh build → **install on the Pixel**, the longest-idle item on the board
+- Nine `call_*` strings in `hi` and `gu`. Per the three-language scope that is the
+  complete set, not the first two of twelve
+- **Layer 4 has no guaranteed deliverable** (#143). The no-audio fallback turned
+  out not to be buildable without a permission we have refused, so if the audio
+  questions return "cannot be built", first contact is covered by nothing
 
-Nothing open. #71, #75 and #79 all merged; #32, #41 and #64 are closed or moved.
+### @Hem60 — see #115
 
-Worth saying plainly: every rendering surface the human gate asked for now
-exists — review queue, benchmark dashboard both halves, evasion queue,
-provenance, operator console. The remaining pieces are schema and lifecycle
-questions, which is why they moved rather than stayed.
+Five of six sections done. A2 stages 1–3, email, the late-verdict record, A1's
+ranking and measure, and the A3 correlator have all landed.
 
-### Not started, worth remembering
+- **A1's model half** — the generator itself, under a kill switch on the batch
+  pool. Now measurable against a real Gujarati corpus rather than eight fixtures
+- **A5** — after A3 has produced a real finding once, which is his sequencing and
+  is right
+- Urdu is **dropped** with the three-language scope. `REVIEW_VIA` and
+  `reviewed-by-proxy` stay: they cost nothing and are the route back if a speaker
+  appears
 
+### Still true, and worth remembering
+
+- **`scam_patterns` holds 14 rows.** That is the RAG corpus, for three claimed
+  languages. It is small, and #135's discovery loop is what is meant to grow it
 - **The A6 loop only attacks seeds we already catch.** It has never been run
-  across all twelve languages, or against the `full` detector at scale.
-- **A2 phishing investigator** — `AGENT-BUILD-PLAN.md` §03. Needs the CaMeL-style
-  dual-LLM split: the reading model gets no tools, the acting model never sees
-  page content.
-- **`scam_patterns` holds 14 rows.** That is the RAG corpus. It is small.
-- **Native-speaker review** — #52 is closed as "reviewers found", but
-  `REVIEW_STATUS` in `rule_engine.py` still marks eight languages `unreviewed`.
-  Update it as each is actually reviewed; that table is what a buyer is shown.
+  against the `full` detector at scale
+- **A4 and A7 stay blocked** — no WhatsApp channel exists, and A7 would reproduce
+  the unreviewed-language problem at volume
+- **The review gate has still never been walked end to end.** `pattern_decisions`
+  exists (0009, applied) and `pattern_drafts.jsonl` is eight hand-written rows.
+  Nothing generates drafts, so no human has yet decided on a machine-produced
+  one — the gate is real and the thing it gates is a fixture. Row counts are not
+  visible from the repository; check the table rather than trusting this line
 
 ---
 
