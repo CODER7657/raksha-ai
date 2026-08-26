@@ -1,16 +1,22 @@
 name: Backend CI
 
 on:
-  # Manual trigger, because a push that should have run this once did not.
-  # b836909 changed backend/app/services/llm.py — squarely inside the paths
-  # filter below — and no Backend CI run was ever created for that SHA. The
-  # cause is not visible from here; the consequence was, and it is that a check
-  # which fails to fire has no way of being asked to fire.
+  # Manual trigger. Four workflows here already had one — android-release,
+  # keep-alive, provider-smoke and frontend-deploy — and the three that gate
+  # correctness did not, which is the wrong way round.
   #
-  # This repository has been bitten three times by a check that did not run
-  # (#22, #34, #125) and each time the symptom was silence. A dispatch trigger
-  # does not stop that happening; it makes it recoverable in one click instead
-  # of needing an empty commit to provoke.
+  # The prompt for adding it was a mistake worth recording rather than the
+  # reason it stays. On b836909 I queried the API for that commit's runs, found
+  # only a manually-dispatched one, and concluded Backend CI had failed to
+  # fire. It had not: the run was created at 17:08:37Z, roughly two minutes
+  # after I looked. I drew a firm conclusion from an absence without first
+  # establishing that the absence was stable, which is the same error this
+  # repository keeps finding in its own guards — silence read as a result.
+  #
+  # A dispatch trigger is still worth having on a correctness gate: when a check
+  # genuinely does not run (#22, #34, #125) the recovery should not be an empty
+  # commit. But it is here on that argument, not on an incident that did not
+  # happen.
   workflow_dispatch:
   pull_request:
     branches: [master]
