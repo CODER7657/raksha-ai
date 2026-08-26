@@ -72,8 +72,33 @@ FETCHERS = {
 }
 
 
-def refresh(feed: str) -> int:
-    """Rewrite one feed's file. Returns the digest count, or -1 if skipped."""
+def existing_count(feed: str) -> int:
+    """How many digests the feed file already holds. Missing file counts zero."""
+    path = threat_feeds.FEED_DIR / f"{feed}.txt"
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return 0
+    return sum(1 for line in lines if line.strip() and not line.startswith("#"))
+
+
+def refresh(feed: str, *, allow_empty: bool = False) -> int:
+    """Rewrite one feed's file. Returns the digest count, or -1 if skipped.
+
+    **A successful fetch that yields nothing does not overwrite a working
+    list.** The docstring at the top of this file has always promised that a
+    refresh never silently empties a list, and the exception path honoured it —
+    but a feed answering 200 with an empty body, or with a changed format this
+    parser no longer understands, produced zero digests and wrote them out.
+
+    That is the worst available failure. `lookup()` returning `[]` reads as "no
+    feed listed this URL", so an emptied list is not a broken feature, it is a
+    clean bill of health issued to every URL on the scan path, and nothing
+    upstream would have noticed: the old code returned a success count of 0.
+
+    `--allow-empty` exists for the case where a feed genuinely has no live
+    entries and someone has checked. It has to be asked for.
+    """
     try:
         urls = FETCHERS[feed]()
     except Exception as exc:
@@ -82,6 +107,17 @@ def refresh(feed: str) -> int:
 
     digests = sorted({threat_feeds.digest_for(url) for url in urls if url})
     digests = [d for d in digests if d != threat_feeds.digest_for("")]
+
+    if not digests and not allow_empty:
+        held = existing_count(feed)
+        if held:
+            print(
+                f"  {feed}: REFUSED — fetch returned nothing and {held} digest(s) "
+                f"are already on disk. Left untouched. The feed is more likely "
+                f"down or reformatted than genuinely empty; re-run with "
+                f"--allow-empty if it really is."
+            )
+            return -1
 
     path = threat_feeds.FEED_DIR / f"{feed}.txt"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,12 +135,17 @@ def refresh(feed: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--feed", choices=sorted(FETCHERS), help="refresh one feed only")
+    parser.add_argument(
+        "--allow-empty",
+        action="store_true",
+        help="permit a fetch that returned nothing to replace a non-empty list",
+    )
     args = parser.parse_args()
 
     feeds = [args.feed] if args.feed else list(threat_feeds.FEEDS)
     print(f"Refreshing {len(feeds)} feed(s) into {threat_feeds.FEED_DIR}")
 
-    counts = {feed: refresh(feed) for feed in feeds}
+    counts = {feed: refresh(feed, allow_empty=args.allow_empty) for feed in feeds}
     threat_feeds.reset_cache()
 
     refreshed = [f for f, c in counts.items() if c >= 0]

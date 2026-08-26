@@ -1,0 +1,114 @@
+name: Refresh threat feeds
+
+# The known-bad hash lists are files in the repository, and nothing was
+# rebuilding them. `threat_feeds.py` shipped with the loader, the
+# canonicalisation, the signal shape and its tests; `refresh_threat_feeds.py`
+# shipped with the fetchers. Neither had a caller, so all four lists have been
+# empty since they were created.
+#
+# An empty list is not a broken feature in any way a user can see. `lookup()`
+# returning `[]` reads as "no feed listed this URL", so a stage-1 link check has
+# been issuing a clean bill of health on the feed basis to every URL that has
+# ever been scanned. That is the shape of failure this repository keeps finding:
+# silent, and identical to a quiet day.
+#
+# COST. Two HTTP GETs and about a minute of runner time, daily — roughly 30
+# minutes a month against the 2,000 a private repo gets. URLhaus refreshes every
+# five minutes and OpenPhish every twelve hours, so daily is behind both feeds
+# and ahead of the pace a phishing URL stays live. Hourly would spend eight
+# times the minutes to shorten a window that is already shorter than the
+# review-and-deploy cycle.
+#
+# SECRETS. None required. Two of the four feeds need credentials — Safe Browsing
+# wants an API key and PhishTank a registered application key — and the script
+# skips them by name rather than pretending. A skipped feed leaves its existing
+# file untouched.
+#
+# WHY THIS COMMITS. The lists are committed data, not build output: the scan
+# path reads them from disk on a Render instance that is deployed from the
+# repository. A refresh that did not commit would rebuild the lists inside a
+# runner and throw them away.
+#
+# WHAT THAT COSTS, measured on the first real run rather than guessed. URLhaus
+# returned 16,097 digests and OpenPhish 300 — 1,037 KB and 19 KB. URLhaus
+# refreshes every five minutes, so most of that file changes daily and the
+# commit is close to a full rewrite: roughly 1 MB of git history per day, or
+# ~365 MB a year, for a private repository.
+#
+# That is survivable and it is not free, and nobody had costed it before this
+# workflow existed. If it becomes a problem the options are a shorter retention
+# window on the URLhaus list, fetching at deploy time instead of committing, or
+# storing hash prefixes rather than full digests. Recorded here so the decision
+# is made with the number in front of it.
+
+on:
+  schedule:
+    # 03:30 UTC — 09:00 IST, so an overnight refresh is already in place before
+    # anyone is demoing, and a failure is visible at the start of the day.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+# One refresh at a time. Two overlapping runs would race on the same four files
+# and could commit a half-updated set.
+concurrency:
+  group: refresh-threat-feeds
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Deliberately NOT passing --allow-empty. A feed that answers 200 with an
+      # empty body, or with a format the parser no longer understands, must not
+      # replace a working list with nothing — the script refuses and reports the
+      # feed as skipped. Emptying a list is a decision a person makes after
+      # checking, not something a nightly job does on a bad morning.
+      #
+      # The script already prints a per-feed count, so its own output becomes the
+      # commit body rather than being recomputed here. One source for the number.
+      - name: Rebuild the hash lists
+        working-directory: backend
+        run: python scripts/refresh_threat_feeds.py | tee "$RUNNER_TEMP/refresh.log"
+
+      # `git diff --quiet` exits non-zero when there is something to commit, so
+      # the commit runs only on a real change. A daily no-op commit would bury
+      # the days something actually moved.
+      - name: Commit the rebuilt lists
+        working-directory: backend
+        run: |
+          if git diff --quiet -- data/feeds/; then
+            echo "No feed changed. Nothing to commit."
+            exit 0
+          fi
+
+          {
+            echo "Refresh threat feed hash lists"
+            echo
+            cat "$RUNNER_TEMP/refresh.log"
+            echo
+            echo "Rebuilt by .github/workflows/refresh-threat-feeds.yml."
+            echo "Digests only, never URLs - see backend/data/feeds/README.md."
+          } > "$RUNNER_TEMP/commit-message.txt"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/feeds/
+          git commit -F "$RUNNER_TEMP/commit-message.txt"
+          git push
