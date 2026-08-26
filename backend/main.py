@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.core.config import get_settings
 from app.rate_limit import limiter
-from app.routes import benchmark, chat, practice, review, scan, tts, upi
+from app.routes import benchmark, chat, insights, practice, review, scan, tts, upi
 
 settings = get_settings()
 
@@ -30,6 +30,7 @@ app.include_router(practice.router)
 app.include_router(tts.router)
 app.include_router(benchmark.router)
 app.include_router(review.router)
+app.include_router(insights.router)
 
 
 @app.get("/health")
