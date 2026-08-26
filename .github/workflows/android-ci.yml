@@ -15,6 +15,17 @@ name: Android CI
 # three.
 
 on:
+  # Manual trigger, because a push that should have run this once did not.
+  # b836909 changed backend/app/services/llm.py — squarely inside the paths
+  # filter below — and no Backend CI run was ever created for that SHA. The
+  # cause is not visible from here; the consequence was, and it is that a check
+  # which fails to fire has no way of being asked to fire.
+  #
+  # This repository has been bitten three times by a check that did not run
+  # (#22, #34, #125) and each time the symptom was silence. A dispatch trigger
+  # does not stop that happening; it makes it recoverable in one click instead
+  # of needing an empty commit to provoke.
+  workflow_dispatch:
   pull_request:
     branches: [master]
     paths:
