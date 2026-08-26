@@ -26,14 +26,53 @@ BATCH = "batch"
 #: dies on a rate limit throws away every call it already paid for.
 _ATTEMPTS = {INTERACTIVE: 1, BATCH: 3}
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
-# `gemini-1.5-flash` was retired and now 404s, which had quietly left the
-# fallback dead — see the note on `classify_message`. Pinned to an exact
-# version rather than the `gemini-flash-latest` alias on purpose: an
-# auto-advancing model would move verdicts underneath a stamped
+# Retired on 24 Aug 2026. `llama-3.3-70b-versatile` 404s — confirmed against
+# the live model list, which the key can read: 14 models, and it is not among
+# them. This is the third time a pinned id has been retired underneath us
+# (#45 gemini-1.5-flash, #56 the same id left behind in chat.py), and the
+# scheduled smoke check is what caught it — after failing unnoticed for a week,
+# which is its own lesson.
+#
+# `openai/gpt-oss-120b` chosen from the five listed models that support
+# `response_format={"type": "json_object"}`, which is a hard requirement here
+# and is not visible from the model list. Measured, same call shape as
+# `_call_groq`, against the canonical KYC+OTP scam:
+#
+#   openai/gpt-oss-120b   818ms   high_risk 92
+#   openai/gpt-oss-20b    502ms   high_risk 90
+#   qwen/qwen3.8-27b      546ms   high_risk 95
+#   qwen/qwen3.6-27b     2482ms   high_risk 98
+#   groq/compound-mini    801ms   high_risk 92
+#
+# The largest, because this is the primary detector and 818ms sits inside the
+# 1-3s live-scan budget in PHASE-2-PLAN §00b. One sample is not an accuracy
+# claim — see the warning below.
+GROQ_MODEL = "openai/gpt-oss-120b"
+
+# `gemini-2.5-flash` is being sunset: it still answers on the older interactive
+# key and 404s on the batch key with "no longer available to new users", which
+# is why only the batch rung failed. Measured on both keys — 3.6-flash works on
+# both, 2.5-flash only on the grandfathered one — so this fixes the batch pool
+# and gets ahead of the interactive key losing it too.
+#
+# Pinned to an exact version rather than the `gemini-flash-latest` alias on
+# purpose: an auto-advancing model would move verdicts underneath a stamped
 # PROMPT_VERSION, and reproducing a six-month-old decision is the whole reason
 # the stamp exists (ARCHITECTURE.md §03).
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.6-flash"
+
+# WHAT THIS CHANGE DOES NOT ESTABLISH. Both ids were verified to exist, to
+# accept JSON mode, and to classify one canonical scam correctly. That restores
+# the ladder; it does not preserve the accuracy numbers. The precision and
+# recall figures in HANDOFF §00 were measured against `llama-3.3-70b-versatile`
+# and describe a model that is no longer reachable. Re-run
+# `scripts/run_llm_benchmark.py` before either number is quoted again.
+#
+# A related gap, recorded rather than fixed: `verdict_cache` is keyed on
+# PROMPT_VERSION so a prompt change invalidates it, but a model change does not.
+# Verdicts judged by the retired model are still served under `scan-v2`. The
+# cached trace does carry the original provider and model, so a reader can tell
+# them apart — but the cache cannot.
 
 # Bump whenever SYSTEM_PROMPT or _build_user_prompt changes in a way that could
 # move a verdict. Without it, a decision made six months ago cannot be
