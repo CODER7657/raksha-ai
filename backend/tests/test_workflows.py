@@ -127,3 +127,20 @@ def test_keep_alive_stays_off_the_actions_quota():
     its own. Warming belongs to an external pinger (see docs/DEPLOY-CHECKLIST)."""
     workflow = _load("keep-alive.yml")
     assert "schedule" not in (workflow["on"] or {})
+
+
+# --- backend-ci.yml ----------------------------------------------------------
+
+
+def test_backend_ci_lints_with_the_pinned_ruff():
+    """An unpinned `pip install ruff` pulled 0.17.4, whose new rules failed lint
+    on code nobody had touched. The version lives in requirements-dev.txt only."""
+    workflow = _load("backend-ci.yml")
+    install = _step(workflow, "build", "Install dependencies")["run"]
+    assert "pip install -r requirements-dev.txt" in install
+    for line in install.splitlines():
+        if "pip install" in line:
+            assert "ruff" not in line, f"ruff installed outside requirements-dev.txt: {line.strip()}"
+
+    dev = (pathlib.Path(__file__).resolve().parents[1] / "requirements-dev.txt").read_text(encoding="utf-8")
+    assert re.search(r"^ruff==\d+\.\d+\.\d+$", dev, re.MULTILINE), "ruff must be pinned exactly"

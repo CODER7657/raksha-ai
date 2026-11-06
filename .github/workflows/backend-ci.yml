@@ -60,8 +60,9 @@ jobs:
           # requirements-dev.txt includes requirements.txt and pins the test
           # tooling, so CI runs the pytest version the repo asks for rather than
           # whatever is newest that morning.
+          # ruff is pinned there too: an unpinned install picked up 0.17.4 on
+          # 2026-11-06 and failed lint on 16 untouched lines (UP017 and others).
           pip install -r requirements-dev.txt
-          pip install ruff
 
       # Both steps below used to end in `|| true` and `|| echo "No tests yet"`.
       # That made the check unfailable: #18 shipped 47 tests that could not even
