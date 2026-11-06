@@ -2,3 +2,9 @@
 # does not install them into the deployed image.
 -r requirements.txt
 pytest==8.3.3
+# Pinned so lint changes only when someone bumps this line. New rules from a
+# newer release are adopted in their own PR, not on whichever day CI resolves it.
+ruff==0.16.4
+# Parses .github/workflows in tests/test_workflows.py. Already present through
+# uvicorn[standard]; pinned here so the tests do not depend on that extra.
+PyYAML==6.0.2

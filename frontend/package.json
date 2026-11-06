@@ -8,6 +8,7 @@
     "prebuild": "node scripts/check-i18n-parity.mjs && node scripts/check-design-tokens.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "node --test scripts/check-build-env.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
