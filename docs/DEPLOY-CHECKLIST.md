@@ -44,6 +44,24 @@ Open <https://supabase.com/dashboard/projects>.
 
 Scan history doesn't come back with a new project. That is expected.
 
+### Stop it pausing again
+
+Supabase pauses a free project after 7 days with no activity. The
+**Keep Supabase active** workflow (`.github/workflows/supabase-keep-alive.yml`)
+reads one row of `scam_patterns` every 3 days, which costs about 10 Actions
+minutes a month. It needs two repository secrets: GitHub → **Settings →
+Secrets and variables → Actions**.
+
+| Secret | Value |
+|---|---|
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_ANON_KEY` | the anon / publishable key, the same one Vercel uses |
+
+Then use **Actions → Keep Supabase active → Run workflow** once. A green run
+shows `scam_patterns -> HTTP 200`. A red run names the problem: a missing
+secret, a paused project, or a bad key. A yellow warning means the RAG seed
+hasn't been run on this project.
+
 ## 2. Vercel environment variables
 
 Go to Vercel → project → **Settings → Environment Variables**. Set each one

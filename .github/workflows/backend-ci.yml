@@ -33,6 +33,7 @@ on:
       - '.github/workflows/refresh-threat-feeds.yml'
       - '.github/workflows/frontend-ci.yml'
       - '.github/workflows/keep-alive.yml'
+      - '.github/workflows/supabase-keep-alive.yml'
   push:
     branches: [master]
     paths:

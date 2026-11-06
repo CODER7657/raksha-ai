@@ -6,8 +6,14 @@ before anyone read a log, so the properties that fix it are asserted here,
 where a PR that undoes one goes red the same day.
 """
 
+import http.server
+import os
 import pathlib
 import re
+import shutil
+import subprocess
+import threading
+from typing import ClassVar
 
 import pytest
 import yaml
@@ -144,3 +150,158 @@ def test_backend_ci_lints_with_the_pinned_ruff():
 
     dev = (pathlib.Path(__file__).resolve().parents[1] / "requirements-dev.txt").read_text(encoding="utf-8")
     assert re.search(r"^ruff==\d+\.\d+\.\d+$", dev, re.MULTILINE), "ruff must be pinned exactly"
+
+
+# --- supabase-keep-alive.yml -------------------------------------------------
+#
+# Supabase pauses a free project after 7 days idle. The schedule and the query
+# are pinned below, and the step's own shell script is run against a local
+# fake so its pass, warn and fail paths are exercised rather than read.
+
+
+@pytest.fixture(scope="module")
+def supabase_keep_alive():
+    return _load("supabase-keep-alive.yml")
+
+
+def _cron_day_step(cron: str) -> int:
+    _minute, _hour, day, month, weekday = cron.split()
+    assert (month, weekday) == ("*", "*"), "only a day-of-month step is reasoned about here"
+    return 1 if day == "*" else int(day.removeprefix("*/"))
+
+
+def test_supabase_ping_runs_well_inside_the_7_day_pause(supabase_keep_alive):
+    (entry,) = supabase_keep_alive["on"]["schedule"]
+    step = _cron_day_step(entry["cron"])
+    # Two dropped runs in a row must still land before day 7.
+    assert 3 * step < 7 + 3, f"every {step} days leaves no room for missed runs"
+    assert step <= 3
+    assert "workflow_dispatch" in supabase_keep_alive["on"]
+
+
+def test_supabase_ping_needs_no_token_permissions(supabase_keep_alive):
+    assert supabase_keep_alive["permissions"] == {}
+
+
+def test_supabase_ping_reads_credentials_from_secrets(supabase_keep_alive):
+    env = _step(supabase_keep_alive, "ping", "Query the database")["env"]
+    assert env == {
+        "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+        "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}",
+    }
+
+
+def test_supabase_ping_sends_the_key_in_headers_only(supabase_keep_alive):
+    run = _step(supabase_keep_alive, "ping", "Query the database")["run"]
+    url_lines = [line for line in run.splitlines() if "/rest/v1/" in line]
+    assert url_lines and all("SUPABASE_ANON_KEY" not in line for line in url_lines)
+    assert not re.search(r"echo[^\n]*SUPABASE_ANON_KEY", run), "the key must never be echoed"
+
+
+def _find_bash() -> str | None:
+    """bash as on the runner. On Windows, `bash` on PATH is often WSL's
+    launcher, which cannot see this checkout, so Git's own bash is preferred."""
+    if os.name == "nt" and (git := shutil.which("git")):
+        candidate = pathlib.Path(git).resolve().parents[1] / "bin" / "bash.exe"
+        if candidate.exists():
+            return str(candidate)
+    return shutil.which("bash")
+
+
+BASH = _find_bash()
+SHELL = BASH and shutil.which("curl")
+
+
+class _FakeSupabase(http.server.BaseHTTPRequestHandler):
+    status = 200
+    body = b'[{"id":1}]'
+    seen: ClassVar[list] = []
+
+    def do_GET(self):
+        type(self).seen.append((self.path, self.headers.get("apikey"), self.headers.get("Authorization")))
+        self.send_response(self.status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(self.body)
+
+    def log_message(self, *_args):
+        pass
+
+
+@pytest.fixture
+def fake_supabase():
+    _FakeSupabase.seen = []
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _FakeSupabase)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield server
+    server.shutdown()
+    server.server_close()
+
+
+def _run_ping(workflow: dict, env: dict, tmp_path) -> subprocess.CompletedProcess:
+    script = _step(workflow, "ping", "Query the database")["run"]
+    # Drop retries so the failure cases finish in seconds, not 30.
+    script = script.replace("--retry 3 --retry-delay 10 --retry-all-errors", "")
+    path = tmp_path / "ping.sh"
+    path.write_text(script, encoding="utf-8", newline="\n")
+    full_env = {**os.environ, "RUNNER_TEMP": tmp_path.as_posix(), **env}
+    return subprocess.run(
+        [BASH, "-e", path.as_posix()], env=full_env, capture_output=True, text=True, timeout=60, check=False
+    )
+
+
+@pytest.mark.skipif(not SHELL, reason="needs bash and curl, as on the Actions runner")
+def test_supabase_ping_passes_against_a_live_project(supabase_keep_alive, fake_supabase, tmp_path):
+    _FakeSupabase.status, _FakeSupabase.body = 200, b'[{"id":1}]'
+    url = f"http://127.0.0.1:{fake_supabase.server_port}/"
+    result = _run_ping(supabase_keep_alive, {"SUPABASE_URL": url, "SUPABASE_ANON_KEY": "anon-test"}, tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "HTTP 200" in result.stdout
+    assert "::warning::" not in result.stdout
+    path, apikey, auth = _FakeSupabase.seen[0]
+    assert path == "/rest/v1/scam_patterns?select=id&limit=1", "trailing slash on the URL must not double up"
+    assert (apikey, auth) == ("anon-test", "Bearer anon-test")
+    assert "anon-test" not in result.stdout + result.stderr
+
+
+@pytest.mark.skipif(not SHELL, reason="needs bash and curl, as on the Actions runner")
+def test_supabase_ping_warns_on_an_unseeded_project(supabase_keep_alive, fake_supabase, tmp_path):
+    _FakeSupabase.status, _FakeSupabase.body = 200, b"[]\n"
+    url = f"http://127.0.0.1:{fake_supabase.server_port}"
+    result = _run_ping(supabase_keep_alive, {"SUPABASE_URL": url, "SUPABASE_ANON_KEY": "k"}, tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "::warning::scam_patterns is empty" in result.stdout
+
+
+@pytest.mark.skipif(not SHELL, reason="needs bash and curl, as on the Actions runner")
+@pytest.mark.parametrize("status", [401, 503])
+def test_supabase_ping_fails_on_an_error_status(supabase_keep_alive, fake_supabase, tmp_path, status):
+    _FakeSupabase.status, _FakeSupabase.body = status, b"{}"
+    url = f"http://127.0.0.1:{fake_supabase.server_port}"
+    result = _run_ping(supabase_keep_alive, {"SUPABASE_URL": url, "SUPABASE_ANON_KEY": "k"}, tmp_path)
+
+    assert result.returncode == 1
+    assert f"Supabase answered {status}" in result.stdout
+
+
+@pytest.mark.skipif(not SHELL, reason="needs bash and curl, as on the Actions runner")
+def test_supabase_ping_fails_when_the_host_is_gone(supabase_keep_alive, tmp_path):
+    """The shape of the original outage: the project's host stopped resolving."""
+    env = {"SUPABASE_URL": "http://does-not-exist.invalid", "SUPABASE_ANON_KEY": "k"}
+    result = _run_ping(supabase_keep_alive, env, tmp_path)
+
+    assert result.returncode == 1
+    assert "Supabase answered 000" in result.stdout
+
+
+@pytest.mark.skipif(not SHELL, reason="needs bash and curl, as on the Actions runner")
+@pytest.mark.parametrize("missing", ["SUPABASE_URL", "SUPABASE_ANON_KEY"])
+def test_supabase_ping_names_a_missing_secret(supabase_keep_alive, tmp_path, missing):
+    env = {"SUPABASE_URL": "http://127.0.0.1:9", "SUPABASE_ANON_KEY": "k", missing: ""}
+    result = _run_ping(supabase_keep_alive, env, tmp_path)
+
+    assert result.returncode == 1
+    assert f"Missing repository secrets: {missing}" in result.stdout

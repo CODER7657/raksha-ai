@@ -1,0 +1,72 @@
+name: Keep Supabase active
+
+# Supabase pauses a free-tier project after 7 days without activity, and a
+# paused project takes the whole app down: sign-in, scan history and RAG
+# retrieval all live there. That is how zqutlhwixrbanrokwjtl went dark - the
+# host stopped resolving and nobody noticed until the site was checked.
+#
+# This makes one real database request every 3 days: a one-row read of
+# scam_patterns, which RLS lets anyone read (0001_init.sql). A request to the
+# REST API reaches Postgres, which is what counts as activity; a request that
+# never touches the database might not.
+#
+# WHY EVERY 3 DAYS. The limit is 7. Two missed runs in a row (GitHub delays
+# or drops scheduled runs under load) still leave a day in hand. `*/3` on the
+# day-of-month restarts each month, which only ever shortens the gap.
+#
+# COST. ~10 runs a month at one billed minute each, against the 2,000 a
+# private repo gets. Compare keep-alive.yml, where Render's 15-minute sleep
+# makes the same trick unaffordable.
+#
+# SECRETS. SUPABASE_URL and SUPABASE_ANON_KEY. The anon key is public by design
+# (it ships in the frontend bundle), but it is kept as a secret so it is masked
+# in logs and lives in one place. The key goes in a header, never in the URL,
+# and is never echoed.
+
+on:
+  schedule:
+    - cron: '15 4 */3 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: supabase-keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Query the database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          missing=""
+          [ -n "$SUPABASE_URL" ]      || missing="$missing SUPABASE_URL"
+          [ -n "$SUPABASE_ANON_KEY" ] || missing="$missing SUPABASE_ANON_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+          # A paused or deleted project fails here as a DNS or HTTP error, so
+          # the run goes red the day it happens rather than when a user finds it.
+          code=$(curl -sS -o "$RUNNER_TEMP/body.json" -w '%{http_code}' --max-time 60 \
+            --retry 3 --retry-delay 10 --retry-all-errors \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "${SUPABASE_URL%/}/rest/v1/scam_patterns?select=id&limit=1") || code=000
+          echo "scam_patterns -> HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase answered $code. If the project is paused, restore it from the dashboard (docs/DEPLOY-CHECKLIST.md §1)."
+            exit 1
+          fi
+
+          # Activity is recorded either way, but an empty table means the RAG
+          # seed never ran on this project, and every scan is ungrounded.
+          if [ "$(tr -d '[:space:]' < "$RUNNER_TEMP/body.json")" = "[]" ]; then
+            echo "::warning::scam_patterns is empty - run backend/scripts/seed_scam_patterns.py against this project."
+          fi
