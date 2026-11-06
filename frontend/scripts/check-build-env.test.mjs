@@ -60,6 +60,12 @@ test('rejects a trailing slash, path, query or fragment', () => {
   }
 })
 
+test('accepts an uppercase host or an explicit default port', () => {
+  assert.equal(apiBaseUrlError('https://Raksha.Example'), null)
+  assert.equal(apiBaseUrlError('https://raksha.example:443'), null)
+  assert.equal(apiBaseUrlError('http://localhost:8000'), null)
+})
+
 test('rejects embedded credentials', () => {
   assert.match(apiBaseUrlError('https://u:p@a.example'), /credentials/)
 })

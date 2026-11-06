@@ -39,7 +39,9 @@ export function apiBaseUrlError(value) {
     return `${name} may use plain http only for localhost (got ${url.host}).`
   }
   if (url.username || url.password) return `${name} must not contain credentials.`
-  if (value !== url.origin) {
+  // Compared on the parts, not on `url.origin`, so an uppercase host or an
+  // explicit default port is not mistaken for a path.
+  if (url.pathname !== '/' || url.search || url.hash || value.endsWith('/')) {
     return `${name} must be an origin with no path, query or trailing slash (got ${JSON.stringify(value)}, expected ${JSON.stringify(url.origin)}).`
   }
   return null

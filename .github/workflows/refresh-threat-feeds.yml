@@ -147,6 +147,6 @@ jobs:
           fi
 
           if ! gh pr create --base master --head "$BOT_BRANCH"                 --title "Refresh threat feed hash lists"                 --body-file "$RUNNER_TEMP/commit-message.txt"; then
-            echo "::error::Pushed $BOT_BRANCH but could not open a PR. Enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open it by hand: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/master...$BOT_BRANCH"
+            echo "::error::Pushed $BOT_BRANCH but could not open a PR (gh's error is above). If it says GitHub Actions is not permitted to create pull requests, enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open it by hand: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/master...$BOT_BRANCH"
             exit 1
           fi
