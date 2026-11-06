@@ -29,6 +29,10 @@ on:
       # likely to break it.
       - 'testdata/**'
       - '.github/workflows/backend-ci.yml'
+      # tests/test_workflows.py asserts on these. Editing one alone must run it.
+      - '.github/workflows/refresh-threat-feeds.yml'
+      - '.github/workflows/frontend-ci.yml'
+      - '.github/workflows/keep-alive.yml'
   push:
     branches: [master]
     paths:

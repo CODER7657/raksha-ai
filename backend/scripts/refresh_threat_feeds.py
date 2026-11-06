@@ -8,7 +8,8 @@ the next lookup.
     python scripts/refresh_threat_feeds.py
     python scripts/refresh_threat_feeds.py --feed urlhaus
 
-Two of the four need no credentials and are fetched here. Google Safe Browsing
+OpenPhish needs no credentials. URLhaus needs a free abuse.ch Auth-Key
+(URLHAUS_AUTH_KEY) since abuse.ch retired keyless downloads. Google Safe Browsing
 and PhishTank both require keys, and rather than pretend otherwise this skips
 them with a message naming the environment variable each wants. A feed that is
 skipped leaves its existing file untouched — a refresh must never silently
@@ -24,6 +25,8 @@ import csv
 import io
 import os
 import sys
+import zipfile
+from urllib.parse import quote
 
 import httpx
 
@@ -40,15 +43,85 @@ def _fetch(url: str) -> str:
     return response.text
 
 
-def fetch_urlhaus() -> list[str]:
-    """URLhaus online CSV — fast on fresh campaigns, no key."""
-    body = _fetch("https://urlhaus.abuse.ch/downloads/csv_online/")
+URLHAUS_KEY_VARIABLE = "URLHAUS_AUTH_KEY"
+URLHAUS_EXPORT = "https://urlhaus-api.abuse.ch/v2/files/exports/{key}/recent.csv"
+
+
+def _redact(text: str, secret: str) -> str:
+    """Remove `secret`, raw or URL-encoded, from `text`."""
+    for form in {secret, quote(secret, safe="")} - {""}:
+        text = text.replace(form, "***")
+    return text
+
+
+def _download_urlhaus(key: str) -> str:
+    """The keyed v2 export. Returns CSV text, unzipping if abuse.ch zipped it.
+
+    abuse.ch retired every keyless download on 2026-10-21 — `csv_online/` and
+    its siblings answer **410 Gone** — and the replacement takes the free
+    Auth-Key (auth.abuse.ch) **in the URL path**, not a header. So any error
+    that quotes the URL quotes the key. httpx's own messages do exactly that,
+    which is why this re-raises with the key redacted rather than letting the
+    exception reach `refresh()`'s print and the Actions log.
+    """
+    url = URLHAUS_EXPORT.format(key=quote(key, safe=""))
+    try:
+        response = httpx.get(url, timeout=TIMEOUT, follow_redirects=True)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        hint = f" — check {URLHAUS_KEY_VARIABLE}" if status in (401, 403) else ""
+        raise RuntimeError(f"HTTP {status} from the URLhaus export{hint}") from None
+    except httpx.HTTPError as exc:
+        raise RuntimeError(_redact(f"{type(exc).__name__}: {exc}", key)) from None
+
+    body = response.content
+    if body[:2] == b"PK":
+        with zipfile.ZipFile(io.BytesIO(body)) as archive:
+            names = [n for n in archive.namelist() if n.endswith(".csv")]
+            if not names:
+                raise RuntimeError("URLhaus export zip holds no .csv")
+            body = archive.read(names[0])
+    return body.decode("utf-8", errors="replace")
+
+
+def parse_urlhaus_csv(body: str) -> list[str]:
+    """URLs still marked online, from a URLhaus CSV.
+
+    The commented header (`# id,dateadded,url,url_status,...`) names the
+    columns and is used when present, so a reordered export still parses. The
+    fallback is the layout URLhaus has always shipped: url third, status fourth.
+
+    `recent.csv` is the last 30 days with offline entries included — about
+    63,000 rows, against the ~16,000 the retired `csv_online` held. Keeping
+    only `online` rows keeps the old meaning, and keeps the committed list (and
+    its daily git churn, costed in the workflow) the size it was.
+    """
+    url_col, status_col = 2, 3
     urls = []
     for row in csv.reader(io.StringIO(body)):
-        if not row or row[0].startswith("#") or len(row) < 3:
+        if not row:
             continue
-        urls.append(row[2])
+        if row[0].startswith("#"):
+            header = [cell.strip().lstrip("#").strip() for cell in row]
+            if "url" in header:
+                url_col = header.index("url")
+                status_col = header.index("url_status") if "url_status" in header else None
+            continue
+        if len(row) <= url_col:
+            continue
+        if status_col is not None and len(row) > status_col and row[status_col].strip() != "online":
+            continue
+        urls.append(row[url_col])
     return urls
+
+
+def fetch_urlhaus() -> list[str]:
+    """URLhaus — fast on fresh campaigns. Needs a free abuse.ch Auth-Key."""
+    key = os.environ.get(URLHAUS_KEY_VARIABLE, "").strip()
+    if not key:
+        raise RuntimeError(f"needs {URLHAUS_KEY_VARIABLE} (free at auth.abuse.ch)")
+    return parse_urlhaus_csv(_download_urlhaus(key))
 
 
 def fetch_openphish() -> list[str]:

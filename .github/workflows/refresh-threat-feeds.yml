@@ -19,15 +19,29 @@ name: Refresh threat feeds
 # times the minutes to shorten a window that is already shorter than the
 # review-and-deploy cycle.
 #
-# SECRETS. None required. Two of the four feeds need credentials — Safe Browsing
-# wants an API key and PhishTank a registered application key — and the script
-# skips them by name rather than pretending. A skipped feed leaves its existing
-# file untouched.
+# SECRETS. URLHAUS_AUTH_KEY, optional. abuse.ch retired keyless downloads on
+# 2026-10-21 (the old csv_online URL answers 410 Gone); the free Auth-Key from
+# auth.abuse.ch goes in the export URL's path, and the script redacts it from
+# every error it prints. Safe Browsing and PhishTank need keys too. Any feed
+# without its key is skipped by name, and a skipped feed leaves its existing
+# file untouched. OpenPhish needs nothing, so a run with no secrets still
+# refreshes one list rather than failing outright.
 #
 # WHY THIS COMMITS. The lists are committed data, not build output: the scan
 # path reads them from disk on a Render instance that is deployed from the
 # repository. A refresh that did not commit would rebuild the lists inside a
 # runner and throw them away.
+#
+# WHY IT OPENS A PR INSTEAD OF PUSHING TO MASTER. It used to `git push` to
+# master, and master requires a reviewed PR, so every run since protection was
+# turned on died with GH006 after doing all the work — 35 red runs in a row.
+# Now each run rebuilds one rolling branch (BOT_BRANCH) from master, force-
+# pushes it, and opens a PR or updates the open one. A day nobody merges costs
+# nothing: tomorrow's run replaces the branch rather than stacking a second PR.
+#
+# Needs Settings → Actions → General → "Allow GitHub Actions to create and
+# approve pull requests". Without it the push still lands and the step fails
+# naming that setting.
 #
 # WHAT THAT COSTS, measured on the first real run rather than guessed. URLhaus
 # returned 16,097 digests and OpenPhish 300 — 1,037 KB and 19 KB. URLhaus
@@ -54,8 +68,14 @@ concurrency:
   group: refresh-threat-feeds
   cancel-in-progress: false
 
+# contents: write pushes the bot branch; pull-requests: write opens the PR.
+# Neither can touch master: it is protected and needs a reviewed PR.
 permissions:
   contents: write
+  pull-requests: write
+
+env:
+  BOT_BRANCH: bot/threat-feeds
 
 jobs:
   refresh:
@@ -85,16 +105,20 @@ jobs:
       # commit body rather than being recomputed here. One source for the number.
       - name: Rebuild the hash lists
         working-directory: backend
+        env:
+          URLHAUS_AUTH_KEY: ${{ secrets.URLHAUS_AUTH_KEY }}
         run: python scripts/refresh_threat_feeds.py | tee "$RUNNER_TEMP/refresh.log"
 
       # `git diff --quiet` exits non-zero when there is something to commit, so
-      # the commit runs only on a real change. A daily no-op commit would bury
-      # the days something actually moved.
-      - name: Commit the rebuilt lists
+      # the PR is touched only on a real change. A daily no-op would bury the
+      # days something actually moved.
+      - name: Open or update the feed refresh PR
         working-directory: backend
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if git diff --quiet -- data/feeds/; then
-            echo "No feed changed. Nothing to commit."
+            echo "No feed changed. Nothing to propose."
             exit 0
           fi
 
@@ -109,6 +133,20 @@ jobs:
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BOT_BRANCH"
           git add data/feeds/
           git commit -F "$RUNNER_TEMP/commit-message.txt"
-          git push
+          # The branch belongs to this workflow alone and is rebuilt from
+          # master every run, so overwriting it is the intent.
+          git push --force origin "HEAD:refs/heads/$BOT_BRANCH"
+
+          existing=$(gh pr list --head "$BOT_BRANCH" --base master --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            echo "Updated open PR #$existing."
+            exit 0
+          fi
+
+          if ! gh pr create --base master --head "$BOT_BRANCH"                 --title "Refresh threat feed hash lists"                 --body-file "$RUNNER_TEMP/commit-message.txt"; then
+            echo "::error::Pushed $BOT_BRANCH but could not open a PR. Enable Settings → Actions → General → 'Allow GitHub Actions to create and approve pull requests', or open it by hand: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/master...$BOT_BRANCH"
+            exit 1
+          fi

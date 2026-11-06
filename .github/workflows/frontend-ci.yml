@@ -52,5 +52,30 @@ jobs:
       - name: Type check
         run: npm run typecheck --if-present
 
+      - name: Unit tests
+        run: npm test
+
+      # vite.config.ts now refuses to build without a valid API base URL and
+      # Supabase config (scripts/check-build-env.mjs), so CI has to supply
+      # some. This bundle is never deployed, so the values only need to be
+      # well formed: the public backend origin and an obviously fake project.
       - name: Build
+        env:
+          VITE_API_BASE_URL: https://raksha-ai-c5yu.onrender.com
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: npm run build
+
+      # The guard is only worth having if it actually stops a build. This is
+      # the exact value that shipped to production.
+      - name: Build refuses a placeholder API URL
+        env:
+          VITE_API_BASE_URL: '[SENSITIVE]'
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+        run: |
+          if npx vite build --logLevel error > "$RUNNER_TEMP/bad-build.log" 2>&1; then
+            echo "::error::vite build accepted VITE_API_BASE_URL=[SENSITIVE]"
+            exit 1
+          fi
+          grep -q 'VITE_API_BASE_URL is not an absolute URL' "$RUNNER_TEMP/bad-build.log"
