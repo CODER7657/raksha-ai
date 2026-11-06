@@ -55,7 +55,7 @@ Secrets and variables → Actions**.
 | Secret | Value |
 |---|---|
 | `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
-| `SUPABASE_ANON_KEY` | the anon / publishable key, the same one Vercel uses |
+| `SUPABASE_ANON_KEY` | Project Settings → API Keys: the **publishable** key (`sb_publishable_…`), or the legacy **anon** key under *Legacy API keys*. The same value Vercel uses. Never the secret or `service_role` key |
 
 Then use **Actions → Keep Supabase active → Run workflow** once. A green run
 shows `scam_patterns -> HTTP 200`. A red run names the problem: a missing

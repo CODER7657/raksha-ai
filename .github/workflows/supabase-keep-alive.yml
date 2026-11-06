@@ -52,12 +52,15 @@ jobs:
             exit 1
           fi
 
+          # The key goes in `apikey` only. The legacy anon key works there, and
+          # the newer sb_publishable_ keys are not JWTs, so they must not be
+          # sent as `Authorization: Bearer`.
+          #
           # A paused or deleted project fails here as a DNS or HTTP error, so
           # the run goes red the day it happens rather than when a user finds it.
           code=$(curl -sS -o "$RUNNER_TEMP/body.json" -w '%{http_code}' --max-time 60 \
             --retry 3 --retry-delay 10 --retry-all-errors \
             -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
             "${SUPABASE_URL%/}/rest/v1/scam_patterns?select=id&limit=1") || code=000
           echo "scam_patterns -> HTTP $code"
           if [ "$code" != "200" ]; then

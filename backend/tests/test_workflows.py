@@ -262,7 +262,8 @@ def test_supabase_ping_passes_against_a_live_project(supabase_keep_alive, fake_s
     assert "::warning::" not in result.stdout
     path, apikey, auth = _FakeSupabase.seen[0]
     assert path == "/rest/v1/scam_patterns?select=id&limit=1", "trailing slash on the URL must not double up"
-    assert (apikey, auth) == ("anon-test", "Bearer anon-test")
+    assert apikey == "anon-test"
+    assert auth is None, "publishable keys are not JWTs and break as a Bearer token"
     assert "anon-test" not in result.stdout + result.stderr
 
 
