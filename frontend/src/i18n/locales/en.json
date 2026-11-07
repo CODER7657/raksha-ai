@@ -261,5 +261,11 @@
     "call_screening_explainer": "If someone calls from a number that already sent you a message Raksha warned you about, you get a notice while the phone rings. Calls are never blocked, silenced or recorded, and nothing is sent anywhere.",
     "call_screening_unsupported": "This phone's version of Android cannot check calls. Message checking still works.",
     "call_screening_limitation": "Raksha only knows numbers that have already sent you a message it flagged. A caller who has never texted you is not checked, and Raksha cannot hear what anyone says on a call. This warns you about a second contact, not a first."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "There is nothing at this address. Check the link, or start a new scan from the home page.",
+    "home": "Go to home page",
+    "path": "Requested address"
   }
 }
