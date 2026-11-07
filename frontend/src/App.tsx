@@ -11,6 +11,7 @@ import { OperatorConsolePage } from './pages/OperatorConsolePage'
 import { AboutPage } from './pages/AboutPage'
 import { PracticePage } from './pages/PracticePage'
 import { ChatPage } from './pages/ChatPage'
+import { NotFoundPage } from './pages/NotFoundPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
 
@@ -41,6 +42,7 @@ function App() {
         <Route path="operator" element={<OperatorConsolePage />} />
         <Route path="about" element={<AboutPage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
