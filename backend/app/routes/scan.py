@@ -2,6 +2,7 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user
@@ -432,7 +433,9 @@ async def scan_audio(
         raise HTTPException(status_code=400, detail="Empty audio file")
 
     try:
-        transcript = stt.transcribe(
+        # Up to two network calls: off the event loop, so other requests keep moving.
+        transcript = await run_in_threadpool(
+            stt.transcribe,
             audio_bytes,
             language,
             filename=file.filename or "audio.webm",

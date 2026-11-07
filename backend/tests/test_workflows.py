@@ -128,9 +128,8 @@ def test_frontend_ci_runs_the_unit_tests(frontend_ci):
 
 def test_keep_alive_stays_off_the_actions_quota():
     """Private repo: 2,000 free Actions minutes a month, each run billed as a
-    full minute. Render sleeps after 15 minutes idle, so a useful schedule is
-    every 14 minutes or less — at least 3,100 runs a month, over the quota on
-    its own. Warming belongs to an external pinger (see docs/DEPLOY-CHECKLIST)."""
+    full minute. The backend is a serverless function and does not sleep, so
+    the health check is manual; a schedule would spend minutes for nothing."""
     workflow = _load("keep-alive.yml")
     assert "schedule" not in (workflow["on"] or {})
 

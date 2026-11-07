@@ -210,3 +210,21 @@ def test_route_codec_params_are_ignored_for_the_type_check(monkeypatch):
     with pytest.raises(HTTPException) as e:
         call_route(b"audio", "audio/webm;codecs=opus")
     assert e.value.status_code == 422  # got past the 415 check
+
+
+def test_frontend_checks_the_same_audio_limit():
+    """The browser refuses an over-size clip before sending it, because a body
+    over the host's cap is rejected at the edge without CORS headers and would
+    surface only as "Failed to fetch". The two numbers must stay equal."""
+    import pathlib
+    import re
+
+    source = (pathlib.Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib"
+              / "uploadLimits.ts").read_text(encoding="utf-8")
+    match = re.search(r"MAX_AUDIO_BYTES = ([\d\s*]+);", source)
+    assert match, "MAX_AUDIO_BYTES not found in frontend/src/lib/uploadLimits.ts"
+    factors = [int(n) for n in match.group(1).split("*")]
+    value = 1
+    for n in factors:
+        value *= n
+    assert value == scan.MAX_AUDIO_BYTES

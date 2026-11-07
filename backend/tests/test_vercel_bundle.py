@@ -32,6 +32,9 @@ def repo(tmp_path):
         "requirements.txt": "fastapi\n",
         "app/__init__.py": "",
         "app/core/paths.py": "",
+        "app/services/scripts/helper.py": "x = 1\n",
+        "app/tests_data/fixture.json": "{}",
+        ".python-version": "3.12\n",
         "data/feeds/urlhaus.txt": "abc\n",
         ".env.example": "GROQ_API_KEY=\n",
         ".env": "GROQ_API_KEY=real-secret\n",
@@ -60,7 +63,8 @@ def test_bundle_has_the_app_and_testdata_and_nothing_secret(repo, tmp_path):
     out = bundle.build(tmp_path / "out", backend=repo / "backend", repo=repo)
     got = files(out)
     for needed in ["main.py", "index.py", "vercel.json", "requirements.txt", "app/core/paths.py",
-                   "data/feeds/urlhaus.txt", ".env.example",
+                   "data/feeds/urlhaus.txt", ".env.example", ".python-version",
+                   "app/services/scripts/helper.py", "app/tests_data/fixture.json",
                    "testdata/rule_corpus.jsonl", "testdata/benchmark/llm-latest.json"]:
         assert needed in got, needed
     for banned in [".env", ".env.local", "tests/test_x.py", "scripts/run.py", ".benchmark_cache.json",
@@ -85,9 +89,9 @@ def test_refuses_to_delete_a_directory_it_did_not_make(repo, tmp_path):
     assert (other / "keep.txt").exists()
 
 
-@pytest.mark.parametrize("where", ["backend", "backend/inside", "."])
-def test_refuses_to_build_into_or_around_the_backend(repo, where):
-    with pytest.raises(ValueError, match="backend itself"):
+@pytest.mark.parametrize("where", ["backend", "backend/inside", ".", "testdata", "testdata/out"])
+def test_refuses_to_build_into_or_around_a_source(repo, where):
+    with pytest.raises(ValueError, match="source directory"):
         bundle.build(repo / where, backend=repo / "backend", repo=repo)
 
 

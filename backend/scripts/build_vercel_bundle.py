@@ -21,33 +21,45 @@ BACKEND = pathlib.Path(__file__).resolve().parents[1]
 REPO = BACKEND.parent
 MARKER = ".raksha-bundle"
 
-#: Never deployed. `.env*` above all: the function reads its secrets from the
-#: platform, and a stray local key file must not become a public artifact.
-EXCLUDE = [
-    "tests", "scripts", ".venv", "venv", ".pytest_cache", ".ruff_cache", ".vercel",
-    "__pycache__", "*.pyc", ".env*", ".benchmark_cache.json", "requirements-dev.txt",
-    "pytest.ini", "ruff.toml", "runtime.txt",
-]
+#: Never deployed, at any depth. `.env*` above all: the function reads its
+#: secrets from the platform, and a stray local key file must not become a
+#: public artifact.
+EXCLUDE_EVERYWHERE = ["__pycache__", "*.pyc", ".env*", ".pytest_cache", ".ruff_cache"]
+#: Never deployed, but only at the top of backend/: a runtime package that
+#: happens to be called `scripts` or `tests` deeper down must still ship.
+EXCLUDE_AT_ROOT = {
+    "tests", "scripts", ".venv", "venv", ".vercel", ".benchmark_cache.json",
+    "requirements-dev.txt", "pytest.ini", "ruff.toml",
+}
 #: Kept, although `.env*` would match it: it holds names, not values.
 KEEP = {".env.example"}
 
 
-def _ignore(directory: str, names: list[str]) -> set[str]:
-    skipped = set(shutil.ignore_patterns(*EXCLUDE)(directory, names))
-    return skipped - KEEP
+def _ignorer(backend: pathlib.Path):
+    root = backend.resolve()
+    everywhere = shutil.ignore_patterns(*EXCLUDE_EVERYWHERE)
+
+    def ignore(directory: str, names: list[str]) -> set[str]:
+        skipped = set(everywhere(directory, names))
+        if pathlib.Path(directory).resolve() == root:
+            skipped |= EXCLUDE_AT_ROOT & set(names)
+        return skipped - KEEP
+
+    return ignore
 
 
 def build(out: pathlib.Path, backend: pathlib.Path = BACKEND, repo: pathlib.Path = REPO) -> pathlib.Path:
     out = out.resolve()
-    if out == backend.resolve() or backend.resolve() in out.parents or out in backend.resolve().parents:
-        raise ValueError(f"refusing to build into or around the backend itself: {out}")
+    testdata = repo / "testdata"
+    for source in (backend.resolve(), testdata.resolve()):
+        if out == source or source in out.parents or out in source.parents:
+            raise ValueError(f"refusing to build into or around a source directory: {out}")
     if out.exists():
         if not (out / MARKER).exists():
             raise ValueError(f"{out} exists and is not a bundle made by this script")
         shutil.rmtree(out)
 
-    shutil.copytree(backend, out, ignore=_ignore)
-    testdata = repo / "testdata"
+    shutil.copytree(backend, out, ignore=_ignorer(backend))
     if not testdata.is_dir():
         raise FileNotFoundError(f"no testdata directory at {testdata}")
     shutil.copytree(testdata, out / "testdata", ignore=shutil.ignore_patterns("__pycache__"))

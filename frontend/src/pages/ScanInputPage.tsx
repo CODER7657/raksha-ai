@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
+import { audioTooLarge } from '../lib/uploadLimits'
 import type { ScanResult } from '../lib/scanResult'
 import { CornerBrackets } from '../components/CornerBrackets'
 import { LanguageSelect } from '../components/LanguageSelect'
@@ -124,6 +125,7 @@ export function ScanInputPage() {
         })
       } else {
         if (!audioBlob) throw new Error(t('scan.errorRecordFirst'))
+        if (audioTooLarge(audioBlob.size)) throw new Error(t('scan.errorAudioTooLarge'))
         const formData = new FormData()
         formData.append('file', audioBlob, audioBlob instanceof File ? audioBlob.name : 'recording.webm')
         result = await apiFetch(`/api/scan/audio?language=${encodeURIComponent(language)}`, {

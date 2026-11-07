@@ -47,7 +47,9 @@ _SARVAM_STT_LANGUAGES = {
 #: code the API would reject.
 _WHISPER_LANGUAGES = {"en", "hi", "gu", "mr", "bn", "ta", "te", "kn", "ml", "pa", "ur"}
 
-_TIMEOUT_S = 60.0
+#: Per provider. Two rungs means a voice scan can wait twice this before the
+#: route answers 503, so it is kept short enough for a person to still be there.
+_TIMEOUT_S = 20.0
 
 
 class STTUnavailable(Exception):

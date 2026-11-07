@@ -63,6 +63,7 @@
     "errorCheckFailed": "Check failed — try again.",
     "errorPasteFirst": "Paste a message first.",
     "errorRecordFirst": "Record or upload audio first.",
+    "errorAudioTooLarge": "This audio file is too large. Use a clip under 4 MB.",
     "errorScanFailed": "Scan failed — try again.",
     "checking": "Checking…",
     "scanning": "Scanning…",
