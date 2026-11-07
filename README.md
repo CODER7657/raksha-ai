@@ -1,4 +1,9 @@
-# Raksha AI 🛡️
+# Raksha AI
+
+[![backend](https://github.com/CODER7657/raksha-ai/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/CODER7657/raksha-ai/actions/workflows/backend-ci.yml)
+[![frontend](https://github.com/CODER7657/raksha-ai/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/CODER7657/raksha-ai/actions/workflows/frontend-ci.yml)
+[![android](https://github.com/CODER7657/raksha-ai/actions/workflows/android-ci.yml/badge.svg)](https://github.com/CODER7657/raksha-ai/actions/workflows/android-ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **A scam detector for first-time digital banking users in India.** Paste an SMS, WhatsApp
 message, email or UPI ID, or record a call. Raksha tells you how risky it is and why, and
@@ -16,14 +21,14 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **949 passing**: 530 test functions in 41 files, about 10 s run |
+| Backend tests | **993 passing** (2026-11-07): 565 test functions in 44 files, about 7 s run |
 | Android unit tests | **83** in 12 files, run in CI |
 | Frontend build-env tests | **13** |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |
 | LLM benchmark (2026-08-16) | 79 held-out cases, 0 leaked into the prompt: **recall 1.000, precision 0.946** |
 | Rules | 56 across 11 language tables. Marathi borrows Hindi's through the shared script |
 | Threat feeds | 16,097 URLhaus + 300 OpenPhish URLs, stored only as SHA-256 digests |
-| API | 21 routes · 13 web pages · 13 SQL migrations · 9 CI workflows |
+| API | 21 routes · 13 web pages · 13 SQL migrations · 10 CI workflows |
 | Cost | ₹0: every service runs on a free tier |
 
 The LLM benchmark ran on `llama-3.3-70b-versatile`. Production now uses `openai/gpt-oss-120b`,
@@ -109,10 +114,20 @@ seed the RAG base with `python -m scripts.seed_scam_patterns`. More detail is in
 ## Layout
 
 ```
-backend/    FastAPI app, rule engine, RAG, agents, 41 test files
+backend/    FastAPI app, rule engine, RAG, agents, 44 test files
 frontend/   React app, 13 pages
 android/    SMS + call screening app, on-device rules
 supabase/   13 SQL migrations (schema, RLS, RAG functions)
 testdata/   labelled corpora shared by Python and Kotlin tests
 docs/       architecture, rule parity, deploy checklist
 ```
+
+## Authors
+
+Built by [Pavan Patel](https://github.com/CODER7657), [Hem60](https://github.com/Hem60) and
+[Ayush3422](https://github.com/Ayush3422). Maverick Effect AI Challenge 2026 finalist.
+
+## License
+
+[MIT](LICENSE). Raksha gives a risk estimate, not a guarantee: always confirm with your bank
+through its official number before acting on a message.
