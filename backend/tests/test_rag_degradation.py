@@ -60,3 +60,17 @@ def test_live_routes_use_the_degrading_version():
         source = inspect.getsource(module)
         assert "rag.retrieve_or_empty(" in source
         assert "rag.retrieve_similar_patterns(" not in source
+
+
+def test_a_provider_error_that_echoes_the_request_is_not_logged(monkeypatch, caplog):
+    """Real SDK errors can quote the request body; only the type may be logged."""
+
+    def echoing(text, language):
+        raise ValueError(f"400 Bad Request: content={text!r}")
+
+    monkeypatch.setattr(rag, "retrieve_similar_patterns", echoing)
+    with caplog.at_level(logging.WARNING, logger="app.services.rag"):
+        rag.retrieve_or_empty("my OTP is 482913", "en")
+    assert "ValueError" in caplog.text
+    assert "482913" not in caplog.text
+    assert all(record.exc_info is None for record in caplog.records)
