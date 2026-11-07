@@ -193,7 +193,11 @@ export function LandingPage() {
               <p className="font-display text-[clamp(6rem,24vw,12rem)] font-extrabold leading-[0.8] tracking-[-0.06em] text-ink">
                 12
               </p>
-              <p className="swiss-label mt-4 text-ink">Indian languages</p>
+              {/* Not a bare "12 Indian languages": only three of the twelve have
+                  word lists a speaker has reviewed (see the feature card above),
+                  so the qualifier sits next to the number, not a scroll away. */}
+              <p className="swiss-label mt-4 text-ink">Languages checked</p>
+              <p className="mt-2 text-sm text-ink/70">3 speaker-reviewed: English, Hindi, Gujarati</p>
             </div>
           </TiltCard>
         </section>
