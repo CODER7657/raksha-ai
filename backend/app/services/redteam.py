@@ -62,6 +62,7 @@ import pathlib
 import re
 from dataclasses import asdict, dataclass, field
 
+from app.core.paths import TESTDATA
 from app.services import llm, rag
 from app.services.rule_engine import offline_rule_hits
 
@@ -70,7 +71,7 @@ from app.services.rule_engine import offline_rule_hits
 #: parents[3] is the repository root, not backend/ — evasions sit beside
 #: `rule_corpus.jsonl` because that is where they are headed once a human
 #: accepts one, and because the Kotlin suite reads that directory too.
-EVASIONS_PATH = pathlib.Path(__file__).resolve().parents[3] / "testdata" / "evasions.jsonl"
+EVASIONS_PATH = TESTDATA / "evasions.jsonl"
 
 #: Consecutive rounds producing nothing new before the loop calls it done.
 #: Counting rounds instead would stop while the tail is still yielding, and the

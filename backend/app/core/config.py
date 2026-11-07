@@ -104,9 +104,8 @@ class Settings(BaseSettings):
     def tts_browser_languages_list(self) -> list[str]:
         return [c.strip() for c in self.tts_browser_languages.split(",") if c.strip()]
 
-    # Speech-to-text. "auto" uses Sarvam when its key is set, else the local
-    # faster-whisper model. Whisper's `base` model cannot transcribe Gujarati
-    # (it returns Devanagari), and the larger models OOM on Render's free tier.
+    # Speech-to-text. "auto" uses Sarvam when its key is set, else Groq's hosted
+    # Whisper (GROQ_API_KEY). "groq" skips Sarvam. Either way Groq is the fallback.
     stt_provider: str = "auto"
     sarvam_stt_model: str = "saaras:v3"
 

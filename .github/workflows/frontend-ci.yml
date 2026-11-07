@@ -61,7 +61,7 @@ jobs:
       # well formed: the public backend origin and an obviously fake project.
       - name: Build
         env:
-          VITE_API_BASE_URL: https://raksha-ai-c5yu.onrender.com
+          VITE_API_BASE_URL: https://raksha-ai-api.vercel.app
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: npm run build

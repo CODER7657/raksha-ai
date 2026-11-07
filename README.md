@@ -5,7 +5,7 @@ message, email or UPI ID, or record a call. Raksha tells you how risky it is and
 what to do next, in English, Hindi or Gujarati.
 
 **Live:** [frontend-one-sage-77.vercel.app](https://frontend-one-sage-77.vercel.app) ·
-API [raksha-ai-c5yu.onrender.com/health](https://raksha-ai-c5yu.onrender.com/health)
+API [raksha-ai-api.vercel.app/health](https://raksha-ai-api.vercel.app/health)
 
 > New contributor? Start with [START-HERE.md](START-HERE.md), then
 > [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -79,14 +79,14 @@ says so. The per-language state is `REVIEW_STATUS` in
 | Layer | Choice |
 |---|---|
 | Web | React 19 + Vite + TypeScript + Tailwind, hosted on **Vercel** |
-| API | FastAPI (Python 3.11), hosted on **Render** free tier (512 MB) |
+| API | FastAPI (Python 3.12), a **Vercel** Python function in Mumbai (`bom1`) |
 | Data, auth, vectors | **Supabase**: Postgres, pgvector, and Auth with email and Google sign-in |
 | LLM | Groq first, Gemini as fallback |
 | Android | Kotlin, with the rule engine as a plain JVM module (`:core:rules`) |
 | CI | GitHub Actions: tests, lint, build, APK, deploy |
 
 **Free-tier upkeep:**
-- **Render:** sleeps after 15 min idle, so the first request takes about 50 s. An external 5-minute ping keeps it awake.
+- **API:** a serverless function, so there is no instance to keep awake. Voice falls back to Groq's hosted Whisper, so no speech model runs in the function.
 - **Supabase:** pauses after 7 days idle, so a workflow queries it every 3 days.
 - **Threat feeds:** refreshed daily and land as a PR.
 - **Setup:** dashboard steps are in [docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md).

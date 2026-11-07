@@ -35,6 +35,7 @@ import json
 import pathlib
 from dataclasses import asdict, dataclass, field
 
+from app.core.paths import TESTDATA
 from app.services import llm, rag
 from app.services.benchmark import LANGUAGES, load_corpus
 
@@ -60,9 +61,7 @@ CACHE_PATH = pathlib.Path(__file__).resolve().parents[2] / ".benchmark_cache.jso
 #: Lives beside the corpus at the repo root, not under frontend/, for the reason
 #: in testdata/README.md and because it must not be statically served: see
 #: `load_report`.
-REPORT_PATH = (
-    pathlib.Path(__file__).resolve().parents[3] / "testdata" / "benchmark" / "llm-latest.json"
-)
+REPORT_PATH = TESTDATA / "benchmark" / "llm-latest.json"
 
 #: Verdicts that count as "this is a scam" when scoring against `label`.
 SCAM_VERDICTS = {"suspicious", "high_risk"}

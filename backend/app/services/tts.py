@@ -28,9 +28,9 @@ tell the frontend to fall back to the browser's own voice. Voice is an
 enhancement layered over text that's already on screen; it must never become a
 hard dependency.
 
-No new dependencies — httpx is already pinned. The Render free tier is 512MB
-RAM and has OOM-crashed twice before (see app/services/transcribe.py), so the
-cache here is strictly bounded.
+No new dependencies — httpx is already pinned. The cache here is strictly
+bounded: memory is the backend's tightest budget (its earlier 512MB host
+OOM-crashed twice under a local Whisper model).
 """
 
 import base64

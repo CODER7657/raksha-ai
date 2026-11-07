@@ -24,11 +24,10 @@ import pathlib
 import re
 from dataclasses import asdict, dataclass
 
+from app.core.paths import TESTDATA
 from app.services.benchmark import load_corpus
 
-EVASIONS_PATH = (
-    pathlib.Path(__file__).resolve().parents[3] / "testdata" / "evasions.jsonl"
-)
+EVASIONS_PATH = TESTDATA / "evasions.jsonl"
 
 #: Only `open` entries need a decision. `fixed` closed itself when the detector
 #: caught up (#53), and `wontfix` was already judged.

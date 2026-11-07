@@ -27,14 +27,13 @@ import logging
 import pathlib
 from dataclasses import asdict, dataclass
 
+from app.core.paths import TESTDATA
 from app.services import rag
 from app.services.rule_engine import offline_rule_hits
 
 logger = logging.getLogger(__name__)
 
-DRAFTS_PATH = (
-    pathlib.Path(__file__).resolve().parents[3] / "testdata" / "pattern_drafts.jsonl"
-)
+DRAFTS_PATH = TESTDATA / "pattern_drafts.jsonl"
 
 #: At or above this cosine similarity, a draft is telling the reviewer nothing
 #: new. Mirrors the leakage threshold in benchmark_llm for the same reason —

@@ -21,7 +21,7 @@ LLM_MODULE = APP / "services" / "llm.py"
 #: Anything that looks like a provider model id. Deliberately loose — a new
 #: provider with a different naming scheme should trip this and be added to the
 #: constants rather than quietly slipping through.
-MODEL_LITERAL = re.compile(r"[\"'](?:gemini|llama|gpt|claude|mistral|mixtral)-[\w.-]+[\"']")
+MODEL_LITERAL = re.compile(r"[\"'](?:gemini|llama|gpt|claude|mistral|mixtral|whisper)-[\w.-]+[\"']")
 
 #: Prose in a docstring naming a retired model is documentation, not a call.
 #: Only executable string literals matter, so comment and docstring lines are
@@ -51,7 +51,7 @@ def test_no_module_hardcodes_a_model_id(path: pathlib.Path):
 def test_the_constants_are_the_ones_everything_imports():
     """A sanity check on the constants themselves, so this file fails loudly if
     someone empties them rather than passing by having nothing to find."""
-    assert llm.GROQ_MODEL and llm.GEMINI_MODEL
+    assert llm.GROQ_MODEL and llm.GEMINI_MODEL and llm.GROQ_STT_MODEL
     assert not llm.GEMINI_MODEL.endswith("-latest"), (
         "a floating alias moves verdicts underneath a stamped PROMPT_VERSION"
     )

@@ -66,7 +66,7 @@ retrieval step against a real vector store, not just prompt engineering.
 - [x] Rate limiting on the scan endpoint (protects free LLM quota + basic DoS resistance)
 - [x] Pydantic input validation (length limits, enum-restricted language codes)
 - [x] Offline fallback if both LLM providers fail, instead of a raw 500
-- [x] `/health` endpoint for Render + pre-demo warmup pings
+- [x] `/health` endpoint, checked by the deploy workflow
 - [ ] TODO before final submission: add `pip-audit`/`npm audit` to CI, add structured request logging
 
 ## Endpoints

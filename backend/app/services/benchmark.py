@@ -22,11 +22,10 @@ import json
 import pathlib
 from dataclasses import asdict, dataclass, field
 
+from app.core.paths import TESTDATA
 from app.services.rule_engine import RESOLVED_RULES, REVIEW_STATUS, offline_rule_hits
 
-CORPUS_PATH = (
-    pathlib.Path(__file__).resolve().parents[3] / "testdata" / "rule_corpus.jsonl"
-)
+CORPUS_PATH = TESTDATA / "rule_corpus.jsonl"
 
 # Mirrors LanguageCode in app/routes/scan.py. Duplicated rather than imported so
 # this module never pulls in FastAPI — the same call test_rule_corpus.py makes.

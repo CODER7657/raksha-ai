@@ -306,3 +306,48 @@ def test_supabase_ping_names_a_missing_secret(supabase_keep_alive, tmp_path, mis
 
     assert result.returncode == 1
     assert f"Missing repository secrets: {missing}" in result.stdout
+
+
+# ---------- backend deploy (Vercel) ----------
+
+@pytest.fixture
+def backend_deploy() -> dict:
+    return _load("backend-deploy.yml")
+
+
+def _deploy_steps(workflow: dict) -> list[dict]:
+    return workflow["jobs"]["deploy"]["steps"]
+
+
+def test_backend_deploy_never_runs_on_pull_requests(backend_deploy):
+    """A pull_request run of a same-repo branch can read VERCEL_TOKEN and runs
+    the workflow as the branch wrote it; see the note in frontend-deploy.yml."""
+    assert "pull_request" not in backend_deploy["on"]
+    assert "pull_request_target" not in backend_deploy["on"]
+
+
+def test_backend_deploy_redeploys_when_testdata_changes(backend_deploy):
+    paths = backend_deploy["on"]["push"]["paths"]
+    assert "backend/**" in paths and "testdata/**" in paths
+    assert backend_deploy["on"]["push"]["branches"] == ["master"]
+
+
+def test_backend_deploy_ships_the_bundle_not_the_checkout(backend_deploy):
+    steps = _deploy_steps(backend_deploy)
+    build = next(s for s in steps if "build_vercel_bundle.py" in s.get("run", ""))
+    deploy = next(s for s in steps if "vercel deploy" in s.get("run", ""))
+    assert steps.index(build) < steps.index(deploy)
+    assert deploy["working-directory"] == "${{ runner.temp }}/bundle"
+    assert "$RUNNER_TEMP/bundle" in build["run"]
+
+
+def test_backend_deploy_is_health_checked_after_deploying(backend_deploy):
+    steps = _deploy_steps(backend_deploy)
+    deploy = next(i for i, s in enumerate(steps) if "vercel deploy" in s.get("run", ""))
+    health = next(i for i, s in enumerate(steps) if "HEALTH_URL" in s.get("run", ""))
+    assert health > deploy
+    assert backend_deploy["jobs"]["deploy"]["env"]["HEALTH_URL"].endswith("/health")
+
+
+def test_backend_deploy_has_read_only_token_permissions(backend_deploy):
+    assert backend_deploy["permissions"] == {"contents": "read"}

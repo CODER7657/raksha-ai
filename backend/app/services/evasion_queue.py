@@ -46,8 +46,10 @@ import pathlib
 from datetime import datetime, timezone
 from typing import Any
 
+from app.core.paths import TESTDATA
+
 #: Beside `rule_corpus.jsonl`, because an accepted evasion is headed there.
-QUEUE_PATH = pathlib.Path(__file__).resolve().parents[3] / "testdata" / "evasions.jsonl"
+QUEUE_PATH = TESTDATA / "evasions.jsonl"
 
 OPEN = "open"
 FIXED = "fixed"

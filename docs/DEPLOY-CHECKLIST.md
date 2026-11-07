@@ -9,10 +9,10 @@ branch. The steps here need a dashboard and a person.
 | Every scan fails with HTTP 405 | Vercel's `VITE_API_BASE_URL` held the literal text `[SENSITIVE]`, so the bundle called `"[SENSITIVE]/api/scan/text"` on its own origin | Steps 2–3; the build now refuses this value |
 | Sign-in can't work | `zqutlhwixrbanrokwjtl.supabase.co` gives NXDOMAIN, meaning the Supabase project is paused or deleted | Step 1 |
 | "Refresh threat feeds" failed 35 times in a row | It pushed to protected `master` (GH006), and URLhaus retired keyless downloads (410 Gone) | Steps 5–6; the workflow now opens a PR |
-| First request after idle takes about 50 s | Render's free tier sleeps after 15 minutes | Step 7 |
+| First request after idle took about 50 s | Render's free tier slept after 15 minutes | Step 4: the backend is now a Vercel function |
 
-These already work and need nothing: the Render backend (`/health` → `{"status":"ok"}`)
-and CORS for `https://frontend-one-sage-77.vercel.app`, checked with a preflight.
+The backend is the Vercel project `raksha-ai-api` (`https://raksha-ai-api.vercel.app`),
+deployed by `backend-deploy.yml`; it needs the environment in step 4 before it can start.
 
 ## 1. Supabase: restore it or replace it
 
@@ -21,7 +21,7 @@ Open <https://supabase.com/dashboard/projects>.
 - **The project is listed as Paused:** click **Restore**. Supabase limits how long a paused
   free project stays restorable, so do it soon. The URL and keys stay the same, so
   skip to step 2 and reuse the old values. Check the old values are still the
-  ones on Vercel and Render.
+  ones on both Vercel projects.
 - **It isn't listed, or the restore window has passed:** create a new project
   (free tier, region `ap-south-1` Mumbai to sit near the users). Then:
   1. **Database → Extensions:** enable `vector`. `0001_init.sql` also runs
@@ -69,7 +69,7 @@ for **Production** and **Preview**:
 
 | Name | Value |
 |---|---|
-| `VITE_API_BASE_URL` | `https://raksha-ai-c5yu.onrender.com`, with no trailing slash |
+| `VITE_API_BASE_URL` | `https://raksha-ai-api.vercel.app`, with no trailing slash |
 | `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | the **anon / publishable** key. It's public by design, and RLS is the boundary |
 
@@ -91,22 +91,29 @@ deploy can't go live again.
 
 To check the deploy, open the site, sign up, and scan a test SMS. In DevTools →
 Network, the request should go to
-`https://raksha-ai-c5yu.onrender.com/api/scan/text`.
+`https://raksha-ai-api.vercel.app/api/scan/text`.
 
-## 4. Render environment (only for a new Supabase project)
+## 4. Backend environment (Vercel project `raksha-ai-api`)
 
-Go to Render → service `raksha-ai` → **Environment**. Set these, then
-**Save, rebuild and deploy**:
+Go to Vercel → project **raksha-ai-api** → **Settings → Environment Variables**,
+Production. Mark every key **Sensitive**. If the old Render service still
+exists, its **Environment** page has the current values to copy.
 
-| Name | Where it comes from |
-|---|---|
-| `SUPABASE_URL` | Supabase → Project Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | same page. Backend only, never the frontend |
-| `SUPABASE_JWT_SECRET` | Project Settings → JWT. Needed only for legacy HS256 tokens; new projects sign with JWKS, which the backend fetches from `SUPABASE_URL` |
-| `ALLOWED_ORIGINS` | keep `https://frontend-one-sage-77.vercel.app` |
+| Name | Needed | Where it comes from |
+|---|---|---|
+| `SUPABASE_URL` | yes, or the function cannot start | Supabase → Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes, or the function cannot start | same page. Backend only, never the frontend |
+| `GROQ_API_KEY`, `GEMINI_API_KEY` | yes, for scans and voice | the providers' consoles |
+| `AUDIT_HASH_PEPPER` | yes | the value already in use (changing it breaks correlation with old digests) |
+| `AGENT_OPERATOR_IDS` | yes, or nobody can flip an agent kill switch | Supabase user ids, comma separated |
+| `SUPABASE_JWT_SECRET` | only for legacy HS256 tokens | Project Settings → JWT |
+| `SARVAM_API_KEY` | optional: better Gujarati speech; Groq Whisper is the fallback | Sarvam dashboard |
+| `GROQ_API_KEY_BATCH`, `GEMINI_API_KEY_BATCH` | optional | separate quota for agent runs |
+| `ALLOWED_ORIGINS` | already set | `https://frontend-one-sage-77.vercel.app` |
 
-`backend/.env.example` lists every other variable, such as the LLM keys and
-TTS settings. Those are unaffected.
+`backend/.env.example` lists the rest (TTS settings, rate limits); all have
+defaults. Then **Actions → Backend deploy → Run workflow**: its last step fails
+unless `/health` answers 200.
 
 ## 5. Let the feed workflow open PRs
 
@@ -133,18 +140,9 @@ Since 2026-10-21, abuse.ch only serves URLhaus to holders of a free Auth-Key.
 
 Without the key, URLhaus is skipped by name and OpenPhish still refreshes.
 
-## 7. Keep the backend warm, for free
+## 7. Nothing to keep warm
 
-A scheduled GitHub Action won't work here. This repo is private, so it gets
-2,000 Actions minutes a month, and each run bills a full minute. Render sleeps
-after 15 minutes, so a useful ping is every ≤14 minutes, about 3,100 runs a
-month. `tests/test_workflows.py` keeps `keep-alive.yml` manual-only for that
-reason.
-
-Use UptimeRobot's free tier instead:
-
-1. <https://uptimerobot.com> → **New monitor** → HTTP(s).
-2. URL: `https://raksha-ai-c5yu.onrender.com/health`. Interval: 5 minutes.
-
-Render's free plan gives 750 instance-hours a month. One always-on service
-uses about 744, so this fits, with nothing to spare for a second free service.
+The backend moved from Render to a Vercel function (`backend-deploy.yml`), so
+there is no idle instance to sleep and no pinger to run. If an UptimeRobot
+monitor still points at the old Render URL, delete it along with the Render
+service.

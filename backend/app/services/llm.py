@@ -61,6 +61,11 @@ GROQ_MODEL = "openai/gpt-oss-120b"
 # the stamp exists (ARCHITECTURE.md §03).
 GEMINI_MODEL = "gemini-3.6-flash"
 
+# Speech-to-text fallback behind Sarvam (app/services/stt.py). large-v3 rather
+# than the turbo variant: turbo trades accuracy for speed, and the clips here are
+# short Indic-language snippets where the script coming back right matters more.
+GROQ_STT_MODEL = "whisper-large-v3"
+
 # WHAT THIS CHANGE DOES NOT ESTABLISH. Both ids were verified to exist, to
 # accept JSON mode, and to classify one canonical scam correctly. That restores
 # the ladder; it does not preserve the accuracy numbers. The precision and

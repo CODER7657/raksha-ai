@@ -111,8 +111,8 @@ failure when signing was actually intended.
 
 - [ ] `master` is green, and the commit you are releasing is on it
 - [ ] Every backend change the app depends on is **deployed**, not merely merged
-      (`START-HERE.md` §1b). The app talks to Render; a release pinned against an
-      API that has not shipped is a support problem with no local reproduction
+      (`START-HERE.md` §1b). The app itself scores on device, but release notes
+      that promise a web or API feature must match what is live
 - [ ] Migrations for those changes are applied
 - [ ] `versionCode` incremented — Play rejects a duplicate, and it is the one
       mistake that wastes a whole upload

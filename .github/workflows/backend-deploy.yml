@@ -1,0 +1,82 @@
+name: Backend deploy
+
+# Deploys backend/ to the Vercel project raksha-ai-api as a Python function.
+#
+# Why a workflow and not Vercel's Git integration: several read-only routes read
+# the repository's testdata/, which sits beside backend/, and the root
+# .vercelignore (which serves the frontend project) excludes backend/ entirely.
+# So the deploy directory is assembled here: backend/ minus tests and local
+# files, plus testdata/ (backend/scripts/build_vercel_bundle.py, tested in
+# tests/test_vercel_bundle.py), and deployed with the CLI, the same way
+# frontend-deploy.yml deploys the frontend.
+#
+# Secrets the function needs (SUPABASE_*, GROQ_*, GEMINI_*, AUDIT_HASH_PEPPER,
+# SARVAM_API_KEY, ...) live in the Vercel project's environment, never here.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'backend/**'
+      - 'testdata/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-production
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_BACKEND_PROJECT_ID }}
+      HEALTH_URL: https://raksha-ai-api.vercel.app/health
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check the deploy settings exist
+        run: |
+          missing=""
+          [ -n "$VERCEL_TOKEN" ]      || missing="$missing VERCEL_TOKEN(secret)"
+          [ -n "$VERCEL_ORG_ID" ]     || missing="$missing VERCEL_ORG_ID(secret)"
+          [ -n "$VERCEL_PROJECT_ID" ] || missing="$missing VERCEL_BACKEND_PROJECT_ID(variable)"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing:$missing"
+            exit 1
+          fi
+
+      - name: Assemble the bundle
+        run: python backend/scripts/build_vercel_bundle.py "$RUNNER_TEMP/bundle"
+
+      - name: Install the Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy
+        working-directory: ${{ runner.temp }}/bundle
+        run: vercel deploy --prod --yes --token="$VERCEL_TOKEN"
+
+      # A deploy that imports but cannot start (a missing env var fails Settings at
+      # import time) still "succeeds" on Vercel. This is the check that it serves.
+      - name: Health check
+        run: |
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$HEALTH_URL" || echo 000)
+            echo "attempt $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::error::$HEALTH_URL did not answer 200. Check the function logs in Vercel; a missing env var shows up there as a Settings validation error."
+          exit 1
