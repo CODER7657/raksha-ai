@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CornerBrackets } from '../components/CornerBrackets'
 import {
   fetchAgentRuns,
   fetchAgents,
@@ -48,12 +47,12 @@ export function OperatorConsolePage() {
 
   if (error) {
     return (
-      <p className="mx-auto max-w-4xl border border-red-600 bg-red-50 p-4 text-sm text-ink">
+      <p className="max-w-4xl border-l-4 border-accent py-2 pl-4 text-sm text-ink">
         Could not load the operator console: {error}
       </p>
     )
   }
-  if (!agents) return <p className="mx-auto max-w-4xl text-sm text-ink/60">Loading agents…</p>
+  if (!agents) return <p className="max-w-4xl text-sm text-ink/60">Loading agents…</p>
 
   return <OperatorConsole agents={agents} runs={runs} available={available} onChanged={load} />
 }
@@ -71,23 +70,23 @@ export function OperatorConsole({
   onChanged: () => void
 }) {
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <div className="flex items-center gap-2 mb-4">
         <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
+        <span className="swiss-label text-ink">
           Operator · agents
         </span>
       </div>
 
       {!available ? (
-        <div className="border-l-4 border-red-600 bg-red-50 px-4 py-3 mb-4 text-sm text-ink">
+        <div className="border-l-4 border-accent bg-paper px-4 py-3 mb-4 text-sm text-ink">
           <strong>The control plane cannot be reached.</strong> This is not the same as having no
           agents: whether any of them are running or disabled is currently unknown, and the switches
           below would not take effect. Agents themselves fail closed — they refuse to spend when
           they cannot check their own state — so nothing is running unsupervised.
         </div>
       ) : (
-        <p className="border-l-4 border-ink/30 bg-paper px-4 py-3 mb-4 text-[11px] text-ink/60 leading-relaxed">
+        <p className="border-l-4 border-ink/30 bg-paper px-4 py-3 mb-4 text-xs text-ink/60 leading-relaxed">
           Stopping an agent takes effect wherever it runs, including a teammate running it by hand
           from a terminal — the CLIs check this before spending anything. It does{' '}
           <strong>not</strong> touch detection: a scan still works with every agent here disabled.
@@ -137,22 +136,21 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
 
   return (
     <div
-      className={`relative border bg-paper/60 p-4 ${
-        agent.enabled ? 'border-ink' : 'border-amber-600'
+      className={`relative border bg-paper p-4 ${
+        agent.enabled ? 'border-ink' : 'border-accent-dark'
       }`}
     >
-      <CornerBrackets />
 
       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
         <div>
           <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-ink">
             {agent.display_name}
           </h2>
-          <p className="font-mono text-[10px] text-ink/40">{agent.agent_id}</p>
+          <p className="font-mono text-xs text-ink/70">{agent.agent_id}</p>
         </div>
         <span
-          className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.15em] ${
-            agent.enabled ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+          className={`px-2 py-0.5 text-xs font-bold uppercase tracking-[0.15em] ${
+            agent.enabled ? 'bg-ink text-white' : 'bg-accent-dark text-white'
           }`}
         >
           {agent.enabled ? 'running' : 'stopped'}
@@ -160,7 +158,7 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
       </div>
 
       {!agent.enabled && agent.disabled_reason && (
-        <p className="text-[11px] text-ink/70 mb-3 border-l-2 border-amber-600 pl-2">
+        <p className="text-xs text-ink/70 mb-3 border-l-2 border-accent-dark pl-2">
           Stopped: {agent.disabled_reason}
           {agent.disabled_at && ` · ${new Date(agent.disabled_at).toLocaleString()}`}
         </p>
@@ -168,7 +166,7 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
 
       <Spend agent={agent} />
 
-      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px] mt-3 mb-3">
+      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mt-3 mb-3">
         <Field
           label="Last run"
           value={agent.last_run_at ? new Date(agent.last_run_at).toLocaleString() : 'never'}
@@ -181,7 +179,7 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
       </dl>
 
       {failure && (
-        <p className="border-l-4 border-red-600 bg-red-50 px-3 py-2 mb-3 text-[11px] text-ink">
+        <p className="border-l-4 border-accent bg-paper px-3 py-2 mb-3 text-xs text-ink">
           <strong>Nothing changed.</strong> {failure}
         </p>
       )}
@@ -208,14 +206,14 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
           <button
             type="submit"
             disabled={busy || !reason.trim()}
-            className="bg-amber-500 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="bg-accent-dark px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-white disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {busy ? 'Stopping…' : 'Stop agent'}
           </button>
           <button
             type="button"
             onClick={() => setAskingReason(false)}
-            className="border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="inline-flex min-h-11 items-center border-2 border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.08em] text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Cancel
           </button>
@@ -225,9 +223,9 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
           type="button"
           disabled={busy}
           onClick={() => (agent.enabled ? setAskingReason(true) : void apply(true))}
-          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors ${
+          className={`px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors ${
             agent.enabled
-              ? 'border border-ink text-ink hover:bg-ink hover:text-white'
+              ? 'border border-ink text-ink hover:bg-ink hover:text-paper'
               : 'bg-ink text-white hover:bg-accent'
           }`}
         >
@@ -246,7 +244,7 @@ function AgentCard({ agent, onChanged }: { agent: AgentRow; onChanged: () => voi
 function Spend({ agent }: { agent: AgentRow }) {
   if (agent.spend_cap_calls == null) {
     return (
-      <p className="text-[11px] text-ink/60">
+      <p className="text-xs text-ink/60">
         {agent.calls_24h} model calls in the last 24h. <strong>No cap set</strong> — this agent can
         spend without limit.
       </p>
@@ -257,9 +255,9 @@ function Spend({ agent }: { agent: AgentRow }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1">
+      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.15em] text-ink/60 mb-1">
         <span>24h spend</span>
-        <span className={agent.over_cap ? 'text-red-700' : ''}>
+        <span className={agent.over_cap ? 'text-accent-dark' : ''}>
           {agent.calls_24h} / {agent.spend_cap_calls} calls
         </span>
       </div>
@@ -269,12 +267,12 @@ function Spend({ agent }: { agent: AgentRow }) {
         aria-label={`${agent.calls_24h} of ${agent.spend_cap_calls} model calls used in the last 24 hours`}
       >
         <div
-          className={`h-full ${agent.over_cap ? 'bg-red-600' : 'bg-accent'}`}
+          className={`h-full ${agent.over_cap ? 'bg-accent' : 'bg-accent'}`}
           style={{ width: `${pct}%` }}
         />
       </div>
       {agent.over_cap && (
-        <p className="mt-1 text-[11px] text-red-700">
+        <p className="mt-1 text-xs text-accent-dark">
           At cap. The agent refuses to start rather than running a shorter job — a partial run would
           be the silent degradation §09 rules out.
         </p>
@@ -293,10 +291,10 @@ function Field({
   tone?: string | null
 }) {
   const colour =
-    tone === 'failed' ? 'text-red-700' : tone === 'blocked' ? 'text-amber-700' : 'text-ink'
+    tone === 'failed' ? 'text-accent' : tone === 'blocked' ? 'text-accent-dark' : 'text-ink'
   return (
     <div>
-      <dt className="font-bold uppercase tracking-[0.1em] text-ink/50">{label}</dt>
+      <dt className="font-bold uppercase tracking-[0.1em] text-ink/70">{label}</dt>
       <dd className={`mt-0.5 break-words ${colour}`}>{value}</dd>
     </div>
   )
@@ -310,10 +308,10 @@ function Field({
 function RunLog({ runs }: { runs: AgentRun[] }) {
   return (
     <section>
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
+      <h2 className="swiss-label text-ink mb-2">
         Run log
       </h2>
-      <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
+      <p className="text-xs text-ink/70 leading-relaxed mb-3">
         Every run, including the ones a kill switch or a cap refused. A <em>blocked</em> entry is
         the control working.
       </p>
@@ -348,21 +346,21 @@ function RunLog({ runs }: { runs: AgentRun[] }) {
                   <td className="p-2 whitespace-nowrap">
                     {new Date(run.started_at).toLocaleString()}
                   </td>
-                  <td className="p-2 font-mono text-[10px] break-all">{run.agent_id}</td>
+                  <td className="p-2 font-mono text-xs break-all">{run.agent_id}</td>
                   <td className="p-2">
                     <span
-                      className={`px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] ${
+                      className={`px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.1em] ${
                         run.outcome === 'ok'
                           ? 'text-ink/60'
                           : run.outcome === 'blocked'
-                            ? 'bg-amber-100 text-amber-900'
-                            : 'bg-red-100 text-red-800'
+                            ? 'border border-ink text-ink'
+                            : 'bg-accent text-accent-ink'
                       }`}
                     >
                       {run.outcome}
                     </span>
                     {run.detail?.reason != null && (
-                      <span className="ml-1.5 text-[11px] text-ink/60">
+                      <span className="ml-1.5 text-xs text-ink/60">
                         {String(run.detail.reason)}
                       </span>
                     )}

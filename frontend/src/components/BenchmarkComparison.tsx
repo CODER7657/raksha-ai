@@ -33,10 +33,10 @@ import {
  * table and a bare `100%` for the same language in another is worse than
  * neither — the reader takes the number, and the caveat reads as a quibble. */
 export function Metric({ value, cases }: { value: number | null; cases: number }) {
-  if (cases === 0) return <span className="text-ink/40">—</span>
+  if (cases === 0) return <span className="text-ink/70">—</span>
   if (!hasEnoughCases(cases)) {
     return (
-      <span className="text-ink/50 italic" title={`${cases} case(s) — too few to score`}>
+      <span className="text-ink/70 italic" title={`${cases} case(s) — too few to score`}>
         too few
       </span>
     )
@@ -62,10 +62,10 @@ export function ComparisonTable({ pairs }: { pairs: Pair[] }) {
           <tr className="border-b border-line bg-paper text-ink/60">
             <th scope="col" />
             <th scope="col" />
-            <th scope="col" colSpan={2} className="text-center font-bold uppercase tracking-[0.1em] p-2 border-l border-line">
+            <th scope="col" colSpan={2} className="font-bold uppercase tracking-[0.1em] p-2 border-l border-line">
               Offline rules
             </th>
-            <th scope="col" colSpan={2} className="text-center font-bold uppercase tracking-[0.1em] p-2 border-l border-line">
+            <th scope="col" colSpan={2} className="font-bold uppercase tracking-[0.1em] p-2 border-l border-line">
               RAG + LLM
             </th>
             <th scope="col" className="border-l border-line" />
@@ -119,11 +119,11 @@ function ComparisonRow({ pair }: { pair: Pair }) {
   const rulesSaved = [...modelMisses].filter((id) => !ruleMisses.has(id)).length
 
   return (
-    <tr className={`border-b border-line last:border-0 ${unmeasured ? 'text-ink/40' : ''}`}>
+    <tr className={`border-b border-line last:border-0 ${unmeasured ? 'text-ink/70' : ''}`}>
       <th scope="row" className="text-left font-normal p-2">
-        {languageLabel(rules.language)} <span className="text-ink/40 uppercase">{rules.language}</span>
+        {languageLabel(rules.language)} <span className="text-ink/70 uppercase">{rules.language}</span>
         {!rules.has_rules && (
-          <span className="ml-1.5 bg-red-100 text-red-800 px-1 py-0.5 text-[10px] font-bold">
+          <span className="ml-1.5 border border-accent-dark text-accent-dark px-1 py-0.5 text-xs font-bold">
             no rules
           </span>
         )}
@@ -144,7 +144,7 @@ function ComparisonRow({ pair }: { pair: Pair }) {
         {model ? <Metric value={model.recall} cases={model.scored_cases} /> : <NotRun />}
       </td>
 
-      <td className="p-2 border-l border-line text-[11px] leading-tight">
+      <td className="p-2 border-l border-line text-xs leading-tight">
         {modelSaved > 0 && (
           <div className="text-ink">
             model caught <strong>{modelSaved}</strong> the rules missed
@@ -156,7 +156,7 @@ function ComparisonRow({ pair }: { pair: Pair }) {
           </div>
         )}
         {modelSaved === 0 && rulesSaved === 0 && !unmeasured && (
-          <span className="text-ink/40">none</span>
+          <span className="text-ink/70">none</span>
         )}
       </td>
     </tr>
@@ -165,7 +165,7 @@ function ComparisonRow({ pair }: { pair: Pair }) {
 
 function NotRun() {
   return (
-    <span className="text-ink/40" title="not in the last committed run">
+    <span className="text-ink/70" title="not in the last committed run">
       not run
     </span>
   )
@@ -188,10 +188,10 @@ export function FalsePositives({
 
   return (
     <section className="mb-8">
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
+      <h2 className="swiss-label text-ink mb-2">
         What we are shouting at
       </h2>
-      <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
+      <p className="text-xs text-ink/70 leading-relaxed mb-3">
         Benign messages that triggered a warning. Over-warning is the failure we accept, and that
         holds only while we can say what is being warned about — a precision figure alone cannot
         tell one odd edge case from every bank alert in the country.
@@ -212,9 +212,9 @@ export function FalsePositives({
               {group.cases.map((c) => (
                 <li key={c.id} className="p-3 bg-white">
                   <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
-                    <span className="font-mono text-[10px] text-ink/50 break-all">{c.id}</span>
+                    <span className="font-mono text-xs text-ink/70 break-all">{c.id}</span>
                     {c.verdict && (
-                      <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em]">
+                      <span className="border border-accent-dark text-accent-dark px-1.5 py-0.5 text-xs font-bold uppercase tracking-[0.1em]">
                         {c.verdict} {c.risk_score !== undefined && `(${c.risk_score})`}
                       </span>
                     )}
@@ -225,12 +225,12 @@ export function FalsePositives({
                     {c.text}
                   </p>
                   {c.fired_rule_ids && c.fired_rule_ids.length > 0 && (
-                    <p className="mt-1.5 text-[11px] text-ink/60 break-words">
+                    <p className="mt-1.5 text-xs text-ink/60 break-words">
                       Fired: {c.fired_rule_ids.join(', ')}
                     </p>
                   )}
                   {c.note && (
-                    <p className="mt-1 text-[11px] text-ink/50 leading-relaxed">{c.note}</p>
+                    <p className="mt-1 text-xs text-ink/70 leading-relaxed">{c.note}</p>
                   )}
                 </li>
               ))}
@@ -255,7 +255,7 @@ export function CaseGroup({
   const panelId = useId()
 
   return (
-    <div className={`border ${tone === 'warn' ? 'border-amber-600' : 'border-line'}`}>
+    <div className={`border ${tone === 'warn' ? 'border-accent-dark' : 'border-line'}`}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -264,7 +264,7 @@ export function CaseGroup({
         className="flex w-full items-center justify-between gap-3 p-3 text-left text-xs font-bold uppercase tracking-[0.1em] text-ink/70 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors"
       >
         <span>{title}</span>
-        <span aria-hidden="true" className="text-ink/40">
+        <span aria-hidden="true" className="text-ink/70">
           {open ? '—' : '+'}
         </span>
       </button>

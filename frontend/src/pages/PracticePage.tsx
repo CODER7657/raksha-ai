@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useLanguage } from '../context/LanguageContext'
-import { CornerBrackets } from '../components/CornerBrackets'
 import { TiltCard } from '../components/TiltCard'
 import { HighlightedText } from '../components/HighlightedText'
+import { CircleCheck, CircleX, Flag, Flame } from 'lucide-react'
 
 interface PracticeQuestion {
   id: string
@@ -145,41 +145,40 @@ export function PracticePage() {
 
   if (stage === 'start' || stage === 'loading') {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="max-w-2xl">
         <div className="flex items-center gap-2 mb-6">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('practice.eyebrow')}</span>
+          <span className="swiss-label text-ink">{t('practice.eyebrow')}</span>
         </div>
 
-        <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
-          <CornerBrackets />
-          <h1 className="text-xl font-extrabold uppercase tracking-tight text-ink mb-2">{t('practice.title')}</h1>
+        <div className="border-t-2 border-rule pt-6">
+          <h1 className="swiss-display text-[clamp(2rem,7vw,3.5rem)] text-ink mb-2">{t('practice.title')}</h1>
           <p className="text-sm text-ink/70 leading-relaxed mb-6">{t('practice.intro')}</p>
 
           {!isTranslated && (
-            <p className="mb-6 border border-line bg-white/60 px-3 py-2 text-[10px] leading-relaxed text-ink/50">
+            <p className="mb-6 border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink/70">
               {t('practice.untranslatedNote', { language: option.label })}
             </p>
           )}
 
           <label className="flex flex-col gap-1.5 mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('common.language')}</span>
+            <span className="swiss-label text-ink">{t('common.language')}</span>
             <LanguageSelect className="px-3 py-2 text-sm" />
           </label>
 
           {best !== null && (
-            <p className="mb-4 text-[11px] text-ink/50">
+            <p className="mb-4 text-xs text-ink/70">
               {t('practice.bestScore', { score: best })}
             </p>
           )}
 
-          {error && <p className="mb-4 border border-red-600 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</p>}
+          {error && <p className="mb-4 border-l-4 border-accent py-2 pl-4 text-sm text-accent-dark">{error}</p>}
 
           <button
             type="button"
             onClick={startRound}
             disabled={stage === 'loading'}
-            className="w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
+            className="w-full bg-accent min-h-12 px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
           >
             {stage === 'loading' ? t('practice.loading') : t('practice.startPractice')}
           </button>
@@ -192,15 +191,14 @@ export function PracticePage() {
     const pct = Math.round((score / questions.length) * 100)
     const tier = tierKeysFor(pct)
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="max-w-2xl">
         <div className="flex items-center gap-2 mb-6">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('practice.roundComplete')}</span>
+          <span className="swiss-label text-ink">{t('practice.roundComplete')}</span>
         </div>
 
-        <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8 text-center">
-          <CornerBrackets />
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-2">{t(tier.titleKey)}</p>
+        <div className="border-t-2 border-rule pt-6">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-accent mb-2">{t(tier.titleKey)}</p>
           <p className="text-4xl font-extrabold text-ink mb-1">
             {score}/{questions.length}
           </p>
@@ -208,21 +206,21 @@ export function PracticePage() {
           <p className="text-sm text-ink/70 leading-relaxed mt-4 mb-6">{t(tier.blurbKey)}</p>
 
           {best !== null && (
-            <p className="text-[11px] text-ink/50 mb-6">{t('practice.bestScore', { score: best })}</p>
+            <p className="text-xs text-ink/70 mb-6">{t('practice.bestScore', { score: best })}</p>
           )}
 
           <div className="flex flex-col sm:flex-row gap-2">
             <button
               type="button"
               onClick={startRound}
-              className="flex-1 bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
+              className="flex-1 bg-accent min-h-12 px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-accent-ink hover:bg-ink transition-colors"
             >
               {t('practice.playAgain')}
             </button>
             <button
               type="button"
               onClick={() => setStage('start')}
-              className="flex-1 border border-ink px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
+              className="flex-1 border-2 border-ink min-h-12 px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-ink hover:bg-ink hover:text-paper transition-colors"
             >
               {t('practice.changeLanguage')}
             </button>
@@ -234,27 +232,34 @@ export function PracticePage() {
 
   if (!current) return null
 
+  const motionOk =
+    typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: no-preference)').matches
   const rotate = dragX / 18
   const opacity = answered ? 1 : Math.max(0.4, 1 - Math.abs(dragX) / 600)
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
+          <span className="swiss-label text-ink">
             {t('practice.questionCounter', { current: index + 1, total: questions.length })}
           </span>
         </div>
-        <div className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-[0.1em]">
+        <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-[0.1em]">
           <span className="text-ink/70">{t('practice.score', { score })}</span>
-          {streak >= 2 && <span className="text-accent">🔥 {streak}</span>}
+          {streak >= 2 && (
+            <span className="inline-flex items-center gap-1 text-accent">
+              <Flame aria-hidden="true" size={16} />
+              {streak}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="h-1.5 w-full border border-ink bg-white mb-6">
         <div
-          className="h-full bg-accent transition-all"
+          className="h-full bg-accent motion-safe:transition-all"
           style={{ width: `${((index + (answered ? 1 : 0)) / questions.length) * 100}%` }}
         />
       </div>
@@ -269,13 +274,13 @@ export function PracticePage() {
             style={{
               transform: `translateX(${dragX}px) rotate(${rotate}deg)`,
               opacity,
-              transition: dragging ? 'none' : 'transform 300ms ease-out, opacity 300ms ease-out',
+              // The snap-back is motion, so it only animates when the system allows it.
+              transition: dragging || !motionOk ? 'none' : 'transform 300ms ease-out, opacity 300ms ease-out',
               cursor: answered ? 'default' : 'grab',
             }}
             className="relative border border-ink bg-white p-6 sm:p-8 min-h-[220px] flex flex-col justify-center"
           >
-            <CornerBrackets />
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/40 mb-3">{t('practice.isThisAScam')}</p>
+            <p className="swiss-label text-ink mb-3">{t('practice.isThisAScam')}</p>
             <p className="text-base sm:text-lg text-ink leading-relaxed">{current.text}</p>
           </div>
         </TiltCard>
@@ -285,30 +290,36 @@ export function PracticePage() {
             <button
               type="button"
               onClick={() => commitAnswer(false)}
-              className="flex-1 border-2 border-emerald-600 text-emerald-700 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-emerald-600 hover:text-white transition-colors"
+              className="flex-1 border-2 border-ink text-ink min-h-12 py-3 text-sm font-bold uppercase tracking-[0.08em] hover:bg-ink hover:text-paper transition-colors"
             >
-              ✅ {t('practice.safe')}
+              <CircleCheck aria-hidden="true" size={18} className="mr-2 inline align-[-3px]" />
+              {t('practice.safe')}
             </button>
             <button
               type="button"
               onClick={() => commitAnswer(true)}
-              className="flex-1 border-2 border-red-600 text-red-700 py-3 text-xs font-bold uppercase tracking-[0.15em] hover:bg-red-600 hover:text-white transition-colors"
+              className="flex-1 border-2 border-accent text-accent-dark min-h-12 py-3 text-sm font-bold uppercase tracking-[0.08em] hover:bg-accent hover:text-paper transition-colors"
             >
-              🚩 {t('practice.scamAnswer')}
+              <Flag aria-hidden="true" size={18} className="mr-2 inline align-[-3px]" />
+              {t('practice.scamAnswer')}
             </button>
           </div>
         )}
 
         {answered && (
-          <div className="mt-5 relative border border-ink bg-paper/60 backdrop-blur-sm p-5">
-            <CornerBrackets />
+          <div className="mt-5 border-t-2 border-rule pt-5">
             <p
               className={`text-sm font-bold uppercase tracking-[0.1em] mb-3 ${
-                lastCorrect ? 'text-emerald-700' : 'text-red-700'
+                lastCorrect ? 'text-ink' : 'text-accent-dark'
               }`}
             >
-              {lastCorrect ? `✅ ${t('practice.correct')}` : `❌ ${lastGuessScam ? t('practice.notQuiteScam') : t('practice.notQuiteSafe')}`}
-              <span className="ml-2 font-normal normal-case text-ink/50 tracking-normal">
+              {lastCorrect ? (
+                <CircleCheck aria-hidden="true" size={18} className="mr-2 inline align-[-3px]" />
+              ) : (
+                <CircleX aria-hidden="true" size={18} className="mr-2 inline align-[-3px]" />
+              )}
+              {lastCorrect ? t('practice.correct') : lastGuessScam ? t('practice.notQuiteScam') : t('practice.notQuiteSafe')}
+              <span className="ml-2 font-normal normal-case text-ink/70 tracking-normal">
                 · {current.is_scam ? t('practice.actuallyScam') : t('practice.actuallySafe')} ({current.category_label})
               </span>
             </p>
@@ -324,7 +335,7 @@ export function PracticePage() {
             <button
               type="button"
               onClick={nextQuestion}
-              className="w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
+              className="w-full bg-accent min-h-12 px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-accent-ink hover:bg-ink transition-colors"
             >
               {index + 1 >= questions.length ? t('practice.seeResults') : t('practice.next')}
             </button>

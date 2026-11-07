@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { LanguageSelect } from './LanguageSelect'
+import { SwissGrid, SWISS_CONTAINER } from './SwissGrid'
 
 const NAV_LINKS = [
   { to: '/app', labelKey: 'nav.scan' },
@@ -12,15 +14,8 @@ const NAV_LINKS = [
   { to: '/app/about', labelKey: 'nav.about' },
 ]
 
-function HamburgerIcon() {
-  return (
-    <span className="flex flex-col gap-1.5" aria-hidden="true">
-      <span className="h-0.5 w-5 bg-ink" />
-      <span className="h-0.5 w-5 bg-ink" />
-      <span className="h-0.5 w-5 bg-ink" />
-    </span>
-  )
-}
+const SIGN_OUT =
+  'inline-flex min-h-11 shrink-0 items-center border-2 border-ink px-4 text-xs font-bold uppercase tracking-[0.08em] text-ink transition-colors hover:bg-ink hover:text-paper'
 
 export function AppShell() {
   const { user, signOut } = useAuth()
@@ -33,35 +28,39 @@ export function AppShell() {
   }, [location.pathname])
 
   return (
-    <div className="grid-bg min-h-screen font-mono">
-      <header className="relative z-20 border-b border-ink bg-paper/80 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-8">
-          <Link to="/app" className="flex items-center gap-2 shrink-0">
-            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-            <span className="text-sm font-extrabold uppercase tracking-tight text-ink">Raksha AI</span>
+    <div className="relative min-h-screen overflow-x-clip bg-paper text-ink">
+      {/* The 12-column grid is drawn behind the verdict, where the layout is
+          built on it; form and tool pages stay plain. */}
+      {location.pathname === '/app/result' && <SwissGrid />}
+      <header className="relative z-20 border-b-2 border-rule bg-paper">
+        <div className={`${SWISS_CONTAINER} flex items-center justify-between gap-4 py-2`}>
+          <Link to="/app" className="flex min-h-11 shrink-0 items-center gap-2">
+            <span className="h-3 w-3 bg-accent" aria-hidden="true" />
+            <span className="font-display text-lg font-extrabold uppercase tracking-[-0.02em] text-ink">Raksha AI</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`text-[11px] font-bold uppercase tracking-[0.1em] transition-colors ${
-                  location.pathname === link.to ? 'text-accent' : 'text-ink/60 hover:text-ink'
-                }`}
-              >
-                {t(link.labelKey)}
-              </Link>
-            ))}
+          <nav className="hidden items-center gap-6 md:flex">
+            {NAV_LINKS.map((link) => {
+              const current = location.pathname === link.to
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  aria-current={current ? 'page' : undefined}
+                  className={`flex min-h-11 items-center border-b-2 text-sm font-medium transition-colors ${
+                    current ? 'border-accent text-ink' : 'border-transparent text-ink hover:text-accent'
+                  }`}
+                >
+                  {t(link.labelKey)}
+                </Link>
+              )
+            })}
           </nav>
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden items-center gap-4 md:flex">
             <LanguageSelect />
-            <span className="text-[11px] text-ink/50 truncate max-w-[180px]">{user?.email}</span>
-            <button
-              onClick={() => signOut()}
-              className="border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
-            >
+            <span className="max-w-[180px] truncate text-xs text-ink/70">{user?.email}</span>
+            <button type="button" onClick={() => signOut()} className={SIGN_OUT}>
               {t('nav.signOut')}
             </button>
           </div>
@@ -71,44 +70,47 @@ export function AppShell() {
             aria-label={menuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
-            className="md:hidden p-2 -mr-2"
+            className="-mr-2 flex h-11 w-11 items-center justify-center md:hidden"
           >
-            <HamburgerIcon />
+            {menuOpen ? <X aria-hidden="true" size={24} /> : <Menu aria-hidden="true" size={24} />}
           </button>
         </div>
 
         {menuOpen && (
-          <div className="md:hidden border-t border-ink bg-paper px-4 py-4 flex flex-col gap-4">
-            <nav className="flex flex-col gap-1">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className={`py-2 text-xs font-bold uppercase tracking-[0.1em] transition-colors ${
-                    location.pathname === link.to ? 'text-accent' : 'text-ink/70 hover:text-ink'
-                  }`}
-                >
-                  {t(link.labelKey)}
-                </Link>
-              ))}
-            </nav>
-            <div className="border-t border-line pt-4">
+          <div className="border-t border-rule bg-paper md:hidden">
+            <div className={`${SWISS_CONTAINER} flex flex-col gap-4 py-4`}>
+              <nav className="flex flex-col">
+                {NAV_LINKS.map((link) => {
+                  const current = location.pathname === link.to
+                  return (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      aria-current={current ? 'page' : undefined}
+                      className={`flex min-h-11 items-center border-b border-line text-base font-medium transition-colors ${
+                        current ? 'text-accent' : 'text-ink hover:text-accent'
+                      }`}
+                    >
+                      {t(link.labelKey)}
+                    </Link>
+                  )
+                })}
+              </nav>
               <LanguageSelect className="w-full" />
-            </div>
-            <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
-              <span className="text-[11px] text-ink/50 truncate">{user?.email}</span>
-              <button
-                onClick={() => signOut()}
-                className="shrink-0 border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
-              >
-                {t('nav.signOut')}
-              </button>
+              <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                <span className="truncate text-xs text-ink/70">{user?.email}</span>
+                <button type="button" onClick={() => signOut()} className={SIGN_OUT}>
+                  {t('nav.signOut')}
+                </button>
+              </div>
             </div>
           </div>
         )}
       </header>
-      <main className="px-4 py-8 sm:px-8">
-        <Outlet />
+      <main className={`${SWISS_CONTAINER} relative z-10 py-8 sm:py-12`}>
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )

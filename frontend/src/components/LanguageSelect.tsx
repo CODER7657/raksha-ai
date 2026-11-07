@@ -22,7 +22,7 @@ export function LanguageSelect({ className = '' }: LanguageSelectProps) {
       value={language}
       onChange={(e) => setLanguage(e.target.value as LanguageCode)}
       aria-label={t('common.selectLanguage')}
-      className={`border border-ink bg-white px-2 py-1 text-[11px] text-ink focus:outline-none focus:ring-2 focus:ring-accent ${className}`}
+      className={`min-h-11 border-2 border-ink bg-paper px-2 text-sm text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
     >
       {LANGUAGES.map((l) => (
         <option key={l.code} value={l.code}>

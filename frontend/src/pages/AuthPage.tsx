@@ -1,23 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { CornerBrackets } from '../components/CornerBrackets'
+import { SWISS_CONTAINER } from '../components/SwissGrid'
 
 type Mode = 'login' | 'signup' | 'forgot'
-
-function ShieldMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6 text-ink" fill="none" aria-hidden="true">
-      <path
-        d="M12 2 4 5v6c0 5 3.4 8.7 8 9 4.6-.3 8-4 8-9V5l-8-3Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="m8.5 12 2.5 2.5L15.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 function GoogleMark() {
   return (
@@ -86,39 +73,36 @@ export function AuthPage() {
   }
 
   return (
-    <div className="grid-bg min-h-screen flex items-center justify-center px-4 py-10 font-mono">
-      <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">Raksha AI · Secure Access</span>
+    <div className="min-h-screen bg-paper text-ink">
+      <div className={`${SWISS_CONTAINER} grid grid-cols-12 gap-x-4 gap-y-8 py-10 sm:gap-x-6 sm:py-16`}>
+        <div className="col-span-12 md:col-span-5">
+          <p className="swiss-label flex items-center gap-2 text-ink">
+            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+            Raksha AI · Secure Access
+          </p>
+          <ShieldCheck aria-hidden="true" size={32} strokeWidth={1.75} className="mt-8 text-accent" />
+          <h1 className="swiss-display mt-4 text-[clamp(2.5rem,9vw,4.5rem)]">Raksha AI</h1>
+          <p className="mt-4 max-w-sm text-base leading-relaxed text-ink">{COPY[mode]}</p>
         </div>
 
-        <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
-          <CornerBrackets />
-
-          <div className="flex flex-col items-start mb-6">
-            <ShieldMark />
-            <h1 className="mt-3 text-2xl font-extrabold uppercase tracking-tight text-ink">Raksha AI</h1>
-            <p className="mt-2 text-xs text-ink/60 leading-relaxed">{COPY[mode]}</p>
-          </div>
-
+        <div className="col-span-12 border-t-2 border-rule pt-6 md:col-span-6 md:col-start-7 lg:col-span-5 lg:col-start-8">
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <label className="flex flex-col gap-1.5 text-left">
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Email</span>
+            <label className="flex flex-col gap-2">
+              <span className="swiss-label text-ink">Email</span>
               <input
                 type="email"
                 required
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
+                className="min-h-11 border-2 border-ink bg-paper px-3 py-2 text-base text-ink placeholder:text-ink/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 placeholder="you@example.com"
               />
             </label>
 
             {mode !== 'forgot' && (
-              <label className="flex flex-col gap-1.5 text-left">
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">Password</span>
+              <label className="flex flex-col gap-2">
+                <span className="swiss-label text-ink">Password</span>
                 <input
                   type="password"
                   required
@@ -126,7 +110,7 @@ export function AuthPage() {
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="min-h-11 border-2 border-ink bg-paper px-3 py-2 text-base text-ink placeholder:text-ink/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   placeholder="••••••••"
                 />
               </label>
@@ -136,23 +120,23 @@ export function AuthPage() {
               <button
                 type="button"
                 onClick={() => switchMode('forgot')}
-                className="self-end text-[10px] uppercase tracking-wider text-ink/50 hover:text-accent"
+                className="min-h-11 self-start text-sm text-ink underline underline-offset-4 hover:text-accent"
               >
                 Forgot password?
               </button>
             )}
 
             {error && (
-              <p className="border border-red-600 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</p>
+              <p role="alert" className="border-l-4 border-accent py-2 pl-4 text-sm text-accent-dark">{error}</p>
             )}
             {info && (
-              <p className="border border-accent bg-orange-50 px-3 py-2 text-[11px] text-ink">{info}</p>
+              <p role="status" className="border-l-4 border-ink py-2 pl-4 text-sm text-ink">{info}</p>
             )}
 
             <button
               type="submit"
               disabled={submitting}
-              className="mt-1 bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
+              className="mt-1 min-h-12 bg-accent px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-accent-ink transition-colors hover:bg-ink disabled:opacity-60"
             >
               {submitting
                 ? 'Please wait…'
@@ -168,14 +152,14 @@ export function AuthPage() {
             <>
               <div className="flex items-center gap-3 my-5">
                 <div className="h-px flex-1 bg-line" />
-                <span className="text-[10px] uppercase tracking-widest text-ink/40">or</span>
+                <span className="text-xs uppercase tracking-[0.08em] text-ink/70">or</span>
                 <div className="h-px flex-1 bg-line" />
               </div>
 
               <button
                 type="button"
                 onClick={handleGoogle}
-                className="w-full flex items-center justify-center gap-2 border border-ink py-2.5 text-xs font-bold uppercase tracking-[0.1em] text-ink hover:bg-ink hover:text-white transition-colors"
+                className="flex min-h-12 w-full items-center gap-3 border-2 border-ink px-5 py-3 text-sm font-bold uppercase tracking-[0.06em] text-ink transition-colors hover:bg-ink hover:text-paper"
               >
                 <GoogleMark />
                 Continue with Google
@@ -183,11 +167,11 @@ export function AuthPage() {
             </>
           )}
 
-          <p className="mt-6 text-center text-[11px] text-ink/60">
+          <p className="mt-6 text-sm text-ink/70">
             {mode === 'login' && (
               <>
                 New here?{' '}
-                <button type="button" className="font-bold text-ink underline underline-offset-2" onClick={() => switchMode('signup')}>
+                <button type="button" className="min-h-11 font-bold text-ink underline underline-offset-4 hover:text-accent" onClick={() => switchMode('signup')}>
                   Sign up
                 </button>
               </>
@@ -195,7 +179,7 @@ export function AuthPage() {
             {(mode === 'signup' || mode === 'forgot') && (
               <>
                 Already have an account?{' '}
-                <button type="button" className="font-bold text-ink underline underline-offset-2" onClick={() => switchMode('login')}>
+                <button type="button" className="min-h-11 font-bold text-ink underline underline-offset-4 hover:text-accent" onClick={() => switchMode('login')}>
                   Log in
                 </button>
               </>
