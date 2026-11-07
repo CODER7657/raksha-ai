@@ -1,10 +1,15 @@
 # Test-only dependencies. Kept out of requirements.txt so Render's free tier
 # does not install them into the deployed image.
 -r requirements.txt
-pytest==8.3.3
+# 8.4 is the floor schemathesis 4 needs (was 8.3.3).
+pytest==8.4.2
 # Pinned so lint changes only when someone bumps this line. New rules from a
 # newer release are adopted in their own PR, not on whichever day CI resolves it.
 ruff==0.16.4
 # Parses .github/workflows in tests/test_workflows.py. Already present through
 # uvicorn[standard]; pinned here so the tests do not depend on that extra.
 PyYAML==6.0.2
+# Contract fuzzing (tests/test_contract_fuzz.py): generates requests from the
+# app's OpenAPI schema. Hypothesis pinned too, so a run is reproducible.
+schemathesis==4.33.1
+hypothesis==6.170.15
