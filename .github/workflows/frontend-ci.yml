@@ -28,6 +28,10 @@ on:
     paths:
       - 'frontend/**'
 
+# Least privilege: the jobs only read the repository. No secrets are used.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -65,6 +69,27 @@ jobs:
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
         run: npm run build
+
+      # Journey + accessibility gate (roadmap #3): Playwright drives the built
+      # bundle under `vite preview` at 375x812 and 1280x800, axe-core must find
+      # zero serious/critical violations. All network is mocked inside the
+      # tests (e2e/fixtures.ts), so this needs no secrets and no backend.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end and accessibility tests
+        env:
+          CI: 'true'
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: frontend/test-results/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # The guard is only worth having if it actually stops a build. This is
       # the exact value that shipped to production.
