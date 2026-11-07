@@ -21,18 +21,21 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **993 passing** (2026-11-07): 565 test functions in 44 files, about 7 s run |
+| Backend tests | **998 passing** (2026-11-07): 570 test functions in 44 files, about 7 s run |
 | Android unit tests | **83** in 12 files, run in CI |
-| Frontend build-env tests | **13** |
+| Frontend tests | **23**: 13 build-env + 10 Vitest render tests |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |
-| LLM benchmark (2026-08-16) | 79 held-out cases, 0 leaked into the prompt: **recall 1.000, precision 0.946** |
+| LLM benchmark (2026-11-07) | `openai/gpt-oss-120b`, prompt `scan-v2`: 88 held-out cases, 0 leaked into the prompt: **recall 1.000, precision 0.934** |
 | Rules | 56 across 11 language tables. Marathi borrows Hindi's through the shared script |
 | Threat feeds | 16,097 URLhaus + 300 OpenPhish URLs, stored only as SHA-256 digests |
 | API | 21 routes · 13 web pages · 13 SQL migrations · 10 CI workflows |
 | Cost | ₹0: every service runs on a free tier |
 
-The LLM benchmark ran on `llama-3.3-70b-versatile`. Production now uses `openai/gpt-oss-120b`,
-and it has not been re-benchmarked. Ground truth is
+The LLM benchmark runs the production model (`openai/gpt-oss-120b`, prompt `scan-v2`) on the
+batch keys; reproduce with `cd backend && python scripts/run_llm_benchmark.py --run --out
+../testdata/benchmark/llm-latest.json`. In 3 of the 88 cases the credential guard (#113) refused
+the model's answer and the offline fallback was scored, as production would show it; one of those,
+a benign Gujarati OTP notice, is a false alarm. Ground truth is
 [`testdata/rule_corpus.jsonl`](testdata/rule_corpus.jsonl): 88 labelled messages, 57 scams and 31 benign.
 
 ## How a scan works

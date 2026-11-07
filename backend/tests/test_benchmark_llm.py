@@ -162,3 +162,67 @@ def test_every_language_appears(monkeypatch, tmp_path, stubbed):
     monkeypatch.setattr(benchmark_llm, "load_corpus", lambda path=None: [case("a")])
     result = benchmark_llm.run(confirm_cost=True, cache_path=tmp_path / "c.json")
     assert len(result["languages"]) == len(benchmark_llm.LANGUAGES)
+
+
+# --- Guard rejections (#113) score as the production fallback, not a crash ---
+
+
+def _rejecting_classify(text, language, context, pool=None):
+    raise benchmark_llm.safe_actions.UnsafeOutput("explanation asks for a credential")
+
+
+def test_rejected_output_scores_as_fallback_instead_of_crashing(monkeypatch, tmp_path, stubbed):
+    monkeypatch.setattr(benchmark_llm.llm, "classify_message", _rejecting_classify)
+    monkeypatch.setattr(benchmark_llm, "load_corpus", lambda path=None: [case("ta-otp-001", "ta")])
+
+    result = benchmark_llm.run(confirm_cost=True, cache_path=tmp_path / "c.json")
+
+    assert result["run"]["rejected_unsafe"] == ["ta-otp-001"]
+    assert "offline-fallback" in result["run"]["models"]
+    ta = next(lang for lang in result["languages"] if lang["language"] == "ta")
+    # The fallback verdict is "suspicious", which counts as caught.
+    assert ta["false_negatives"] == 0
+
+
+def test_rejected_output_is_not_cached(monkeypatch, tmp_path, stubbed):
+    monkeypatch.setattr(benchmark_llm.llm, "classify_message", _rejecting_classify)
+    monkeypatch.setattr(benchmark_llm, "load_corpus", lambda path=None: [case("a")])
+    cache_path = tmp_path / "c.json"
+
+    benchmark_llm.run(confirm_cost=True, cache_path=cache_path)
+
+    assert benchmark_llm.load_cache(cache_path) == {}
+
+
+def test_one_rejection_does_not_discard_the_other_cases(monkeypatch, tmp_path, stubbed):
+    def classify(text, language, context, pool=None):
+        if text == "inject":
+            return _rejecting_classify(text, language, context, pool)
+        return FakeClassification("high_risk", 90)
+
+    monkeypatch.setattr(benchmark_llm.llm, "classify_message", classify)
+    monkeypatch.setattr(
+        benchmark_llm,
+        "load_corpus",
+        lambda path=None: [case("bad", text="inject"), case("good-1"), case("good-2", label="benign", text="hi")],
+    )
+
+    result = benchmark_llm.run(confirm_cost=True, cache_path=tmp_path / "c.json")
+
+    assert result["run"]["rejected_unsafe"] == ["bad"]
+    assert result["run"]["api_calls"] == 3
+    assert len(benchmark_llm.load_cache(tmp_path / "c.json")) == 2
+
+
+def test_no_rejections_reports_an_empty_list(monkeypatch, tmp_path, stubbed):
+    monkeypatch.setattr(benchmark_llm, "load_corpus", lambda path=None: [case("a")])
+    result = benchmark_llm.run(confirm_cost=True, cache_path=tmp_path / "c.json")
+    assert result["run"]["rejected_unsafe"] == []
+
+
+def test_rejected_record_matches_what_the_user_is_shown():
+    from app.routes.scan import _degraded_verdict
+
+    shown = _degraded_verdict([])
+    assert benchmark_llm.REJECTED_RECORD["verdict"] == shown["verdict"]
+    assert benchmark_llm.REJECTED_RECORD["risk_score"] == shown["risk_score"]

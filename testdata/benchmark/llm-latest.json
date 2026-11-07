@@ -8,14 +8,14 @@
         {
           "id": "en-benign-debit-alert-001",
           "note": "Real bank alert. Mentions an account and a phone number without triggering anything.",
-          "risk_score": 40,
+          "risk_score": 70,
           "text": "SBI: Rs 2,000 debited from a/c XX1234 on 12-Aug. Not you? Call 1800111109",
           "verdict": "suspicious"
         },
         {
           "id": "en-benign-disclose-address-001",
           "note": "Guards adding reveal/disclose to the share verbs. A share verb with no code word nearby must not fire otp_share on its own.",
-          "risk_score": 20,
+          "risk_score": 45,
           "text": "Please disclose your delivery address so we can dispatch the parcel.",
           "verdict": "suspicious"
         }
@@ -41,7 +41,7 @@
         {
           "id": "hi-benign-debit-romanized-001",
           "note": "The romanised twin of en-benign-debit-alert-001, and the nastier guard: it contains 'account' in a message that is entirely legitimate.",
-          "risk_score": 40,
+          "risk_score": 45,
           "text": "Aapke account se Rs 500 debit hue hain",
           "verdict": "suspicious"
         }
@@ -61,22 +61,30 @@
       "true_positives": 12
     },
     {
-      "benign_cases": 1,
+      "benign_cases": 6,
       "false_negatives": 0,
-      "false_positive_cases": [],
-      "false_positives": 0,
-      "grounded_cases": 5,
+      "false_positive_cases": [
+        {
+          "id": "gu-benign-otp-warn-001",
+          "note": "A real bank OTP: contains both OTP and શેર and is entirely legitimate. Stays clean only because the sentence boundary in _GAP stops the match — this row is what pins that.",
+          "risk_score": 70,
+          "text": "તમારો OTP 452189 છે. કોઈની સાથે શેર કરશો નહીં.",
+          "verdict": "suspicious"
+        }
+      ],
+      "false_positives": 1,
+      "grounded_cases": 14,
       "language": "gu",
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": 1.0,
+      "precision": 0.8889,
       "recall": 1.0,
-      "scam_cases": 4,
-      "scored_cases": 5,
-      "total_cases": 5,
-      "true_negatives": 1,
-      "true_positives": 4
+      "scam_cases": 8,
+      "scored_cases": 14,
+      "total_cases": 14,
+      "true_negatives": 5,
+      "true_positives": 8
     },
     {
       "benign_cases": 1,
@@ -247,14 +255,20 @@
     "threshold": 0.95
   },
   "run": {
-    "api_calls": 0,
-    "cache_hits": 79,
-    "corpus_digest": "785697966490",
-    "corpus_rows": 79,
+    "api_calls": 70,
+    "cache_hits": 18,
+    "corpus_digest": "2f71d43e92fb",
+    "corpus_rows": 88,
     "models": [
-      "llama-3.3-70b-versatile"
+      "offline-fallback",
+      "openai/gpt-oss-120b"
     ],
-    "prompt_version": "scan-v1",
-    "scored_rows": 79
+    "prompt_version": "scan-v2",
+    "rejected_unsafe": [
+      "gu-benign-otp-warn-001",
+      "ml-otp-share-001",
+      "ta-otp-001"
+    ],
+    "scored_rows": 88
   }
 }
