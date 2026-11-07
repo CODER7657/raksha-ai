@@ -16,8 +16,11 @@ This file is what stops that fixture being deleted by someone who cannot see
 what it was for.
 """
 
+import pathlib
+
 from app.core.config import Settings, get_settings
 
+BACKEND = pathlib.Path(__file__).resolve().parents[1]
 
 def test_settings_ignore_a_dotenv_file(tmp_path, monkeypatch):
     """The real assertion, and it has to build its own `.env` to be worth anything.
@@ -65,12 +68,33 @@ def test_the_application_still_declares_an_env_file():
 
     `monkeypatch.setitem` restores `model_config` after each test, so a
     developer running `uvicorn` still gets their `.env` read normally. If this
-    fails, the suite has permanently mutated shared class state and local
-    development is broken in a way no other test would notice.
+    fails, the app no longer declares its `.env` and local development is
+    broken in a way no other test would notice.
+
+    Checked in a fresh interpreter, not with `importlib.reload`: reloading
+    `app.core.config` here created a second `Settings` class that the
+    `settings_ignore_dotenv` fixture never patches, so every test that ran
+    after this one could read a developer's real `.env` (two `test_stt` tests
+    failed on any machine with keys configured, and passed in CI).
     """
-    import importlib
+    import subprocess
+    import sys
 
+    probe = "from app.core.config import Settings; print(Settings.model_config.get('env_file'))"
+    out = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=BACKEND,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=True,
+    )
+    assert out.stdout.strip() == ".env"
+
+
+def test_this_module_never_reloads_the_config():
+    """Guard the fix above: a reload anywhere in the suite reopens the leak."""
     import app.core.config as config_module
+    from app.core.config import Settings
 
-    reloaded = importlib.reload(config_module)
-    assert reloaded.Settings.model_config.get("env_file") == ".env"
+    assert config_module.Settings is Settings
