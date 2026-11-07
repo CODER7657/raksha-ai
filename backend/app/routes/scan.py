@@ -196,7 +196,7 @@ def _run_scan_pipeline(
             hits=hits,
         )
 
-    patterns = rag.retrieve_similar_patterns(text, language)
+    patterns = rag.retrieve_or_empty(text, language)
     context_block = rag.format_context_block(patterns)
 
     classification: llm.Classification | None = None

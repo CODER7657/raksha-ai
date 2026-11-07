@@ -4,10 +4,13 @@ of the model's own guess. This is what makes the "Technical Accuracy" and
 "Explainability" story real rather than just an LLM wrapper.
 """
 
+import logging
 from dataclasses import dataclass
 
 from app.core.supabase_client import get_supabase
 from app.services.embeddings import embed
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -50,6 +53,27 @@ def retrieve_similar_patterns(
         )
         for row in rows
     ]
+
+
+def retrieve_or_empty(query_text: str, language: str) -> list[RetrievedPattern]:
+    """Retrieval for the live routes, where a failure must not cost the answer.
+
+    Retrieval grounds the model; it is not the answer. When the embedding
+    provider or the vector store is down, `retrieve_similar_patterns` raises,
+    and before this every scan and chat turned that into a 500 even though the
+    offline rules had already fired and the classifier could still answer
+    ungrounded. Contract fuzzing found it (roadmap §2.3).
+
+    An empty list is the existing "nothing to ground on" state, which the trace
+    already reports honestly (`language_is_covered`). Batch callers, the
+    benchmark and the red team, keep the raising version: a measurement that
+    silently dropped its grounding would measure the wrong system.
+    """
+    try:
+        return retrieve_similar_patterns(query_text, language)
+    except Exception:
+        logger.warning("Pattern retrieval failed; answering without grounding", exc_info=True)
+        return []
 
 
 #: Below this cosine similarity a retrieved pattern is noise and is left out of

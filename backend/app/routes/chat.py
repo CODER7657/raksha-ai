@@ -37,7 +37,7 @@ def send_chat_message(
     payload: ChatRequest,
     user_id: str = Depends(get_current_user),
 ) -> ChatResponse:
-    patterns = rag.retrieve_similar_patterns(payload.message, payload.language)
+    patterns = rag.retrieve_or_empty(payload.message, payload.language)
     context_block = rag.format_context_block(patterns)
 
     history = [{"role": turn.role, "content": turn.content} for turn in payload.history]
