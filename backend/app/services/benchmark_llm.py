@@ -36,7 +36,7 @@ import pathlib
 from dataclasses import asdict, dataclass, field
 
 from app.core.paths import TESTDATA
-from app.services import llm, rag
+from app.services import llm, rag, safe_actions
 from app.services.benchmark import LANGUAGES, load_corpus
 
 #: Models that may legitimately have produced a cached verdict. The provider
@@ -65,6 +65,17 @@ REPORT_PATH = TESTDATA / "benchmark" / "llm-latest.json"
 
 #: Verdicts that count as "this is a scam" when scoring against `label`.
 SCAM_VERDICTS = {"suspicious", "high_risk"}
+
+#: What a case scores as when the guard rejects the model's output. Mirrors
+#: `routes.scan._degraded_verdict`, which is what the user is shown; a test
+#: pins the two together so they cannot drift apart.
+REJECTED_RECORD = {
+    "verdict": "suspicious",
+    "risk_score": 70,
+    "provider": "offline-fallback",
+    "model": "offline-fallback",
+    "rejected_unsafe": True,
+}
 
 
 @dataclass(frozen=True)
@@ -203,17 +214,27 @@ def classify_case(case: dict, cache: dict) -> dict:
     else:
         # Batch pool: a benchmark run must never be the reason a live scan
         # gets rate-limited. It measures the same code path either way.
-        classification = llm.classify_message(
-            case["text"], case["language"], context, llm.BATCH
-        )
-        record = {
-            "verdict": classification.result["verdict"],
-            "risk_score": classification.result["risk_score"],
-            "provider": classification.provider,
-            "model": classification.model,
-            "prompt_version": classification.prompt_version,
-        }
-        cache[key] = record
+        try:
+            classification = llm.classify_message(
+                case["text"], case["language"], context, llm.BATCH
+            )
+        except safe_actions.UnsafeOutput:
+            # The model answered, but its prose tripped the credential-request
+            # guard (#113). Production does not error here: scan.py falls back
+            # to the offline-rules verdict, so that is what a user saw and what
+            # gets scored. Crashing instead threw the whole run away on the
+            # first such case. Not cached, so a run after the guard changes
+            # measures the new behaviour rather than replaying this one.
+            record = {**REJECTED_RECORD, "prompt_version": llm.PROMPT_VERSION}
+        else:
+            record = {
+                "verdict": classification.result["verdict"],
+                "risk_score": classification.result["risk_score"],
+                "provider": classification.provider,
+                "model": classification.model,
+                "prompt_version": classification.prompt_version,
+            }
+            cache[key] = record
         record = dict(record)
         record["cached"] = False
 
@@ -375,6 +396,16 @@ def run(
                 {rec["model"] for records in by_language.values() for _, rec in records}
             ),
             "prompt_version": llm.PROMPT_VERSION,
+            # Cases where the model's answer was refused by the credential
+            # guard and the offline fallback was scored instead. Named, not just
+            # counted: each one is either an injection that worked or a guard
+            # false positive, and a reader needs the ids to tell which.
+            "rejected_unsafe": sorted(
+                case["id"]
+                for records in by_language.values()
+                for case, rec in records
+                if rec.get("rejected_unsafe")
+            ),
             # What this run was measured against. Without it a committed report
             # goes stale invisibly: cases get added, the numbers keep rendering,
             # and they quietly describe a corpus that no longer exists. A figure
