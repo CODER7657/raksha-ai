@@ -21,9 +21,9 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **1049 passing** (2026-11-07): 578 test functions in 46 files, about 15 s run, including contract fuzzing of every route (no 500s with providers up or down) |
+| Backend tests | **1060 passing** (2026-11-07): 590 test functions in 47 files, about 17 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
 | Android unit tests | **83** in 12 files, run in CI |
-| Frontend tests | **23**: 13 build-env + 10 Vitest render tests |
+| Frontend tests | **41** unit (13 build-env + 28 Vitest) and 28 Playwright journey and axe checks at 375 and 1280 px |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |
 | LLM benchmark (2026-11-07) | `openai/gpt-oss-120b`, prompt `scan-v2`: 88 held-out cases, 0 leaked into the prompt: **recall 1.000, precision 0.934** |
 | Rules | 56 across 11 language tables. Marathi borrows Hindi's through the shared script |
