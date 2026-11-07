@@ -384,8 +384,8 @@ function MissedForLanguage({ lang }: { lang: LanguageBenchmark }) {
                 <span
                   className={`text-xs font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 ${
                     c.status === 'known_gap'
-                      ? 'bg-paper text-accent-dark'
-                      : 'bg-paper text-accent-dark'
+                      ? 'border border-ink text-ink'
+                      : 'bg-accent text-accent-ink'
                   }`}
                 >
                   {c.status === 'known_gap' ? 'known gap' : 'regression'}

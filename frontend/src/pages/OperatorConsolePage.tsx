@@ -291,7 +291,7 @@ function Field({
   tone?: string | null
 }) {
   const colour =
-    tone === 'failed' ? 'text-accent-dark' : tone === 'blocked' ? 'text-accent-dark' : 'text-ink'
+    tone === 'failed' ? 'text-accent' : tone === 'blocked' ? 'text-accent-dark' : 'text-ink'
   return (
     <div>
       <dt className="font-bold uppercase tracking-[0.1em] text-ink/70">{label}</dt>
@@ -353,8 +353,8 @@ function RunLog({ runs }: { runs: AgentRun[] }) {
                         run.outcome === 'ok'
                           ? 'text-ink/60'
                           : run.outcome === 'blocked'
-                            ? 'bg-paper text-accent-dark'
-                            : 'bg-paper text-accent-dark'
+                            ? 'border border-ink text-ink'
+                            : 'bg-accent text-accent-ink'
                       }`}
                     >
                       {run.outcome}
