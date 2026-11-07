@@ -160,7 +160,7 @@
     "security5": "If both LLM providers are ever down, the offline rule-engine still returns a conservative result instead of a bare error.",
     "stackGroqGemini": "primary / fallback LLM, both free tier",
     "stackSupabase": "Postgres, pgvector, Auth, Row Level Security",
-    "stackWhisper": "local speech-to-text for voice/call scans",
+    "stackWhisper": "hosted speech-to-text for voice/call scans; clips are sent to the provider to transcribe",
     "stackFastapi": "backend API, deployed on Render",
     "stackFrontend": "frontend, deployed on Vercel",
     "stackGithub": "CI on every pull request"
