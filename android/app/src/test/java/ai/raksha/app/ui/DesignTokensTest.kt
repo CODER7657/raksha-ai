@@ -78,7 +78,9 @@ class DesignTokensTest {
             "ink" to DesignTokens.ink,
             "paper" to DesignTokens.paper,
             "line" to DesignTokens.line,
+            "rule" to DesignTokens.rule,
             "accent" to DesignTokens.accent,
+            "accentDark" to DesignTokens.accentDark,
             "accentInk" to DesignTokens.accentInk,
         )
 

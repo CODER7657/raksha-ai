@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CornerBrackets } from '../components/CornerBrackets'
 import { Shortcuts } from '../components/triage'
 import { useKeyboardTriage } from '../lib/useKeyboardTriage'
 import { LANGUAGES } from '../lib/languages'
@@ -56,12 +55,12 @@ export function ReviewQueuePage() {
 
   if (error) {
     return (
-      <p className="mx-auto max-w-3xl border border-red-600 bg-red-50 p-4 text-sm text-ink">
+      <p className="max-w-3xl border-l-4 border-accent py-2 pl-4 text-sm text-ink">
         Could not load the queue: {error}
       </p>
     )
   }
-  if (!drafts) return <p className="mx-auto max-w-3xl text-sm text-ink/60">Loading queue…</p>
+  if (!drafts) return <p className="max-w-3xl text-sm text-ink/60">Loading queue…</p>
 
   return (
     <ReviewQueue
@@ -206,16 +205,16 @@ export function ReviewQueue({
   })
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="max-w-3xl">
       <div className="flex items-center gap-2 mb-4">
         <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
+        <span className="swiss-label text-ink">
           Review · pattern drafts
         </span>
       </div>
 
       {!decisionsAvailable && (
-        <p className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3 mb-4 text-[11px] text-ink leading-relaxed">
+        <p className="border-l-4 border-accent-dark bg-paper px-4 py-3 mb-4 text-xs text-ink leading-relaxed">
           <strong>Cannot read what has already been decided.</strong> The decision store did not
           answer, so every draft below is shown as the file has it. Some may already be accepted or
           rejected. New decisions will still be written — this is about reading, not writing — but
@@ -224,7 +223,7 @@ export function ReviewQueue({
       )}
 
       {unknownReasons.length > 0 && (
-        <p className="border-l-4 border-amber-600 bg-amber-50 px-4 py-3 mb-4 text-[11px] text-ink leading-relaxed">
+        <p className="border-l-4 border-accent-dark bg-paper px-4 py-3 mb-4 text-xs text-ink leading-relaxed">
           <strong>This screen offers a reason the server does not accept:</strong>{' '}
           {unknownReasons.join(', ')}. Rejecting with it will fail. The two lists have drifted and
           one of them needs updating.
@@ -234,7 +233,7 @@ export function ReviewQueue({
       {failures.length > 0 && (
         <div
           role="alert"
-          className="border-l-4 border-red-600 bg-red-50 px-4 py-3 mb-4 text-[11px] text-ink leading-relaxed"
+          className="border-l-4 border-accent bg-paper px-4 py-3 mb-4 text-xs text-ink leading-relaxed"
         >
           <strong>
             {failures.length} decision{failures.length === 1 ? '' : 's'} did not save.
@@ -294,13 +293,12 @@ function DraftCard({
 }) {
   return (
     <div
-      className={`relative border bg-paper/60 backdrop-blur-sm p-5 sm:p-6 ${
-        choosingReason ? 'border-amber-600' : 'border-ink'
+      className={`relative border bg-paper p-5 sm:p-6 ${
+        choosingReason ? 'border-accent-dark' : 'border-ink'
       }`}
     >
-      <CornerBrackets />
 
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-4 text-[10px] uppercase tracking-[0.15em]">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-4 text-xs uppercase tracking-[0.15em]">
         <span className="text-ink/60">
           {position} of {total}
         </span>
@@ -316,7 +314,7 @@ function DraftCard({
           >
             {draft.drafted_by === 'machine' ? 'machine-drafted' : 'hand-written'}
           </span>
-          <span className="text-ink/50 font-mono normal-case tracking-normal">{draft.source}</span>
+          <span className="text-ink/70 font-mono normal-case tracking-normal">{draft.source}</span>
         </div>
       </div>
 
@@ -327,14 +325,14 @@ function DraftCard({
         {draft.pattern_text}
       </p>
 
-      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px] mb-4">
+      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mb-4">
         <Field label="Language" value={`${languageLabel(draft.language)} (${draft.language})`} />
         <Field label="Category" value={draft.category} />
         <Field label="Draft id" value={draft.id} mono />
       </dl>
 
       {draft.note && (
-        <p className="text-[11px] text-ink/50 leading-relaxed mb-4">{draft.note}</p>
+        <p className="text-xs text-ink/70 leading-relaxed mb-4">{draft.note}</p>
       )}
 
       <RuleResponse context={context} />
@@ -346,8 +344,8 @@ function DraftCard({
 function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <dt className="font-bold uppercase tracking-[0.1em] text-ink/50">{label}</dt>
-      <dd className={`mt-0.5 text-ink break-words ${mono ? 'font-mono text-[10px]' : ''}`}>
+      <dt className="font-bold uppercase tracking-[0.1em] text-ink/70">{label}</dt>
+      <dd className={`mt-0.5 text-ink break-words ${mono ? 'font-mono text-xs' : ''}`}>
         {value}
       </dd>
     </div>
@@ -365,7 +363,7 @@ function RuleResponse({ context }: { context: DraftContext | null }) {
 
   return (
     <div className="mb-4">
-      <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-1">
+      <h3 className="swiss-label text-ink mb-1">
         Offline rules already fire
       </h3>
       {fired.length > 0 ? (
@@ -384,13 +382,13 @@ function RuleResponse({ context }: { context: DraftContext | null }) {
 function Neighbours({ context }: { context: DraftContext | null }) {
   if (!context) {
     return (
-      <p className="text-[11px] text-ink/40">Checking for near-duplicates…</p>
+      <p className="text-xs text-ink/70">Checking for near-duplicates…</p>
     )
   }
 
   if (context.neighbours === null) {
     return (
-      <p className="text-[11px] text-amber-800 bg-amber-50 border-l-2 border-amber-600 px-2 py-1">
+      <p className="text-xs text-accent-dark bg-paper border-l-2 border-accent-dark px-2 py-1">
         Could not check for near-duplicates — retrieval is unavailable. This is not the same as
         finding none.
       </p>
@@ -398,12 +396,12 @@ function Neighbours({ context }: { context: DraftContext | null }) {
   }
 
   if (context.neighbours.length === 0) {
-    return <p className="text-[11px] text-ink/60">No similar pattern exists yet.</p>
+    return <p className="text-xs text-ink/60">No similar pattern exists yet.</p>
   }
 
   return (
     <div>
-      <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-1">
+      <h3 className="swiss-label text-ink mb-1">
         Nearest existing patterns
       </h3>
       <ul className="space-y-1.5">
@@ -411,17 +409,17 @@ function Neighbours({ context }: { context: DraftContext | null }) {
           <li
             key={i}
             className={`border p-2 bg-white ${
-              n.near_duplicate ? 'border-red-600' : 'border-line'
+              n.near_duplicate ? 'border-accent' : 'border-line'
             }`}
           >
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-accent">
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-accent">
                 {n.category}
               </span>
-              <span className="text-[11px] text-ink/60">
+              <span className="text-xs text-ink/60">
                 {Math.round(n.similarity * 100)}% similar
                 {n.near_duplicate && (
-                  <strong className="ml-1.5 text-red-700">near-duplicate</strong>
+                  <strong className="ml-1.5 text-accent-dark">near-duplicate</strong>
                 )}
               </span>
             </div>
@@ -454,8 +452,7 @@ function Summary({
   }
 
   return (
-    <div className="relative border border-ink bg-paper/60 p-6">
-      <CornerBrackets />
+    <div className="relative border border-ink bg-paper p-6">
       <h2 className="text-sm font-bold uppercase tracking-[0.15em] text-ink mb-3">
         Queue complete — {total} triaged
       </h2>
@@ -467,7 +464,7 @@ function Summary({
 
       {byReason.size > 0 && (
         <div className="mb-4">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-1">
+          <h3 className="swiss-label text-ink mb-1">
             Why they were rejected
           </h3>
           <ul className="text-xs text-ink space-y-0.5">
@@ -483,7 +480,7 @@ function Summary({
       <button
         type="button"
         onClick={onUndo}
-        className="border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors"
+        className="inline-flex min-h-11 items-center border-2 border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.08em] text-ink hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors"
       >
         Undo last
       </button>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CornerBrackets } from '../components/CornerBrackets'
+import { ArrowRight, Share2, Square, Volume2 } from 'lucide-react'
 import { HighlightedText } from '../components/HighlightedText'
+import { VerdictWord } from '../components/VerdictWord'
 import { TraceViewer } from '../components/TraceViewer'
 import { LANGUAGES, type LanguageOption } from '../lib/languages'
 import { VERDICT_META, type ScanResult } from '../lib/scanResult'
@@ -12,16 +13,6 @@ interface ResultLocationState {
   result?: ScanResult
   sourceText?: string | null
   language?: LanguageOption['code']
-}
-
-function SpeakerIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" />
-      <path d="M16.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M19 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
 }
 
 export function ResultPage() {
@@ -52,11 +43,12 @@ export function ResultPage() {
 
   if (!result) {
     return (
-      <div className="mx-auto max-w-2xl text-center">
-        <p className="text-sm text-ink/60 mb-4">{t('result.noResult')}</p>
+      <div className="max-w-2xl">
+        <h1 className="swiss-display text-[clamp(2rem,7vw,3.5rem)]">{t('result.noResult')}</h1>
         <button
+          type="button"
           onClick={() => navigate('/app')}
-          className="border border-ink px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
+          className="mt-6 inline-flex min-h-11 items-center border-2 border-ink px-5 py-2 text-sm font-bold uppercase tracking-[0.08em] text-ink transition-colors hover:bg-ink hover:text-paper"
         >
           {t('result.backToScan')}
         </button>
@@ -116,104 +108,106 @@ export function ResultPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="flex items-center gap-2 mb-6">
-        <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('result.eyebrow')}</span>
-      </div>
+    <>
+      <article className="relative grid grid-cols-12 gap-x-4 gap-y-8 sm:gap-x-6">
+        <header className="col-span-12">
+          <p className="swiss-label flex items-center gap-2 text-ink">
+            <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+            {t('result.eyebrow')}
+          </p>
+          <div className="mt-4">
+            <VerdictWord verdict={result.verdict} label={verdictLabel} />
+          </div>
+          <div className="mt-6 h-[3px] w-full bg-rule" aria-hidden="true" />
+        </header>
 
-      <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
-        <CornerBrackets />
+        <div className="col-span-12 flex flex-col gap-4 md:col-span-4">
+          <div>
+            <p className="swiss-label text-ink">{t('result.riskScore')}</p>
+            <p className={`mt-1 font-display text-6xl font-extrabold leading-none tracking-[-0.04em] ${meta.wordClass}`}>
+              {result.risk_score}
+              <span className="text-2xl text-ink/70">/100</span>
+            </p>
+            <div className="mt-3 h-2 w-full bg-line" aria-hidden="true">
+              <div className={`h-full bg-current ${meta.wordClass}`} style={{ width: `${result.risk_score}%` }} />
+            </div>
+          </div>
 
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-5">
-          <span className={`px-3 py-1 text-xs font-bold uppercase tracking-[0.15em] ${meta.badgeClass}`}>
-            {verdictLabel}
-          </span>
           <button
             type="button"
             onClick={speak}
-            className="flex items-center gap-1.5 border border-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-ink hover:bg-ink hover:text-white transition-colors"
+            className="flex min-h-11 items-center gap-2 self-start border-2 border-ink bg-paper px-4 py-2 text-sm font-bold uppercase tracking-[0.06em] text-ink transition-colors hover:bg-ink hover:text-paper"
           >
-            <SpeakerIcon />
+            {speaking || preparing ? <Square aria-hidden="true" size={18} /> : <Volume2 aria-hidden="true" size={18} />}
             {preparing ? t('result.preparing') : speaking ? t('result.stop') : t('result.readAloud')}
           </button>
+
+          {voiceNote && (
+            <p className="text-xs leading-relaxed text-ink/70">
+              {t('result.noVoiceInstalled', { language: languageOption?.label ?? t('result.thisLanguage') })}
+            </p>
+          )}
         </div>
 
-        {voiceNote && (
-          <p className="-mt-3 mb-5 text-[10px] text-ink/40 leading-relaxed">
-            {t('result.noVoiceInstalled', { language: languageOption?.label ?? t('result.thisLanguage') })}
-          </p>
-        )}
+        <div className="col-span-12 flex flex-col gap-8 bg-paper md:col-span-8">
+          <section className="border-l-4 border-accent pl-4">
+            <h2 className="swiss-label font-sans text-ink">{t('result.whatToDo')}</h2>
+            <p className="mt-2 font-display text-xl font-bold leading-snug tracking-[-0.01em] text-ink sm:text-2xl">
+              {result.recommended_action}
+            </p>
+          </section>
 
-        <div className="mb-6">
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1">
-            <span>{t('result.riskScore')}</span>
-            <span>{result.risk_score}/100</span>
+          <section>
+            <h2 className="swiss-label font-sans text-ink">{t('result.why')}</h2>
+            <p className="mt-2 text-base leading-relaxed text-ink">{result.explanation}</p>
+          </section>
+
+          {sourceText && (
+            <section>
+              <h2 className="swiss-label font-sans text-ink">{t('result.flaggedPhrasesInContext')}</h2>
+              <div className="mt-2 border-t border-rule pt-3">
+                <HighlightedText text={sourceText} phrases={result.flagged_phrases} />
+              </div>
+            </section>
+          )}
+
+          {!sourceText && result.flagged_phrases.length > 0 && (
+            <section>
+              <h2 className="swiss-label font-sans text-ink">{t('result.flaggedPhrases')}</h2>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {result.flagged_phrases.map((phrase, i) => (
+                  <li key={i} className="border-b-2 border-accent bg-accent/10 px-2 py-1 text-sm text-ink">
+                    {phrase}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <p className="text-sm text-ink/70">{t('result.reported', { count: result.community_report_count })}</p>
+
+          <TraceViewer result={result} />
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={forwardToFamily}
+              className="flex min-h-12 flex-1 items-center justify-between gap-2 bg-accent px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-accent-ink transition-colors hover:bg-ink"
+            >
+              {t('result.forwardToFamily')}
+              <Share2 aria-hidden="true" size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/app')}
+              className="flex min-h-12 flex-1 items-center justify-between gap-2 border-2 border-ink bg-paper px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-ink transition-colors hover:bg-ink hover:text-paper"
+            >
+              {t('result.scanAnother')}
+              <ArrowRight aria-hidden="true" size={18} />
+            </button>
           </div>
-          <div className="h-2 w-full border border-ink bg-white">
-            <div className={`h-full ${meta.barClass}`} style={{ width: `${result.risk_score}%` }} />
-          </div>
         </div>
-
-        {sourceText && (
-          <div className="mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-              {t('result.flaggedPhrasesInContext')}
-            </span>
-            <div className="mt-1.5 border border-line p-3 bg-white">
-              <HighlightedText text={sourceText} phrases={result.flagged_phrases} />
-            </div>
-          </div>
-        )}
-
-        {!sourceText && result.flagged_phrases.length > 0 && (
-          <div className="mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-              {t('result.flaggedPhrases')}
-            </span>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {result.flagged_phrases.map((phrase, i) => (
-                <span key={i} className="bg-accent/25 border border-accent px-2 py-0.5 text-xs text-ink">
-                  {phrase}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mb-6">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('result.why')}</span>
-          <p className="mt-1.5 text-sm text-ink leading-relaxed">{result.explanation}</p>
-        </div>
-
-        <div className="border-l-4 border-accent bg-orange-50 px-4 py-3 mb-6">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('result.whatToDo')}</span>
-          <p className="mt-1 text-sm text-ink leading-relaxed">{result.recommended_action}</p>
-        </div>
-
-        <p className="text-[11px] text-ink/50 mb-6">
-          {t('result.reported', { count: result.community_report_count })}
-        </p>
-
-        <TraceViewer result={result} />
-
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
-            type="button"
-            onClick={forwardToFamily}
-            className="flex-1 bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors"
-          >
-            {t('result.forwardToFamily')}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/app')}
-            className="flex-1 border border-ink px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink hover:bg-ink hover:text-white transition-colors"
-          >
-            {t('result.scanAnother')}
-          </button>
-        </div>
-      </div>
-    </div>
+      </article>
+    </>
   )
 }

@@ -1,5 +1,4 @@
 import { useEffect, useId, useState } from 'react'
-import { CornerBrackets } from '../components/CornerBrackets'
 import { ComparisonTable, FalsePositives, Metric } from '../components/BenchmarkComparison'
 import { languageLabel } from '../lib/languages'
 import {
@@ -39,8 +38,8 @@ export function BenchmarkPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <p className="border border-red-600 bg-red-50 p-4 text-sm text-ink">
+      <div className="max-w-4xl">
+        <p className="border-l-4 border-accent py-2 pl-4 text-sm text-ink">
           Could not load the benchmark: {error}
         </p>
       </div>
@@ -48,7 +47,7 @@ export function BenchmarkPage() {
   }
 
   if (!report) {
-    return <p className="mx-auto max-w-4xl text-sm text-ink/60">Loading benchmark…</p>
+    return <p className="max-w-4xl text-sm text-ink/60">Loading benchmark…</p>
   }
 
   return <BenchmarkReportView report={report} llm={llm} />
@@ -92,16 +91,15 @@ export function BenchmarkReportView({
   ]
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <div className="flex items-center gap-2 mb-6">
         <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">
+        <span className="swiss-label text-ink">
           Benchmark · both detection halves
         </span>
       </div>
 
-      <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8 mb-6">
-        <CornerBrackets />
+      <div className="border-t-2 border-rule pt-6 mb-6">
 
         <p className="text-sm text-ink leading-relaxed mb-4">
           Precision and recall for both halves of detection, against the same corpus. The{' '}
@@ -126,8 +124,8 @@ export function BenchmarkReportView({
       </div>
 
       {uncovered.length > 0 && (
-        <div className="border-l-4 border-red-600 bg-red-50 px-4 py-3 mb-6">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
+        <div className="border-l-4 border-accent bg-paper px-4 py-3 mb-6">
+          <p className="swiss-label text-ink">
             {uncovered.length} of {corpus.languages_supported} languages have no offline rules
           </p>
           <p className="mt-1 text-sm text-ink leading-relaxed">
@@ -138,10 +136,10 @@ export function BenchmarkReportView({
         </div>
       )}
 
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
+      <h2 className="swiss-label text-ink mb-2">
         Both halves, per language
       </h2>
-      <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
+      <p className="text-xs text-ink/70 leading-relaxed mb-3">
         Never aggregated — a single figure across twelve languages is dominated by whichever one
         has the most cases. A language with {LOW_CONFIDENCE_CASE_COUNT} cases or fewer reads{' '}
         <em>too few</em> rather than a percentage: 100% over two cases is arithmetic, not evidence,
@@ -149,7 +147,7 @@ export function BenchmarkReportView({
       </p>
 
       {llm && !llm.available && (
-        <p className="border-l-4 border-ink/30 bg-paper px-4 py-3 mb-3 text-[11px] text-ink/60 leading-relaxed">
+        <p className="border-l-4 border-ink/30 bg-paper px-4 py-3 mb-3 text-xs text-ink/60 leading-relaxed">
           No RAG&nbsp;+&nbsp;LLM run has been committed, so only the offline half has numbers.
           Scoring spends API quota per case, so it is a CLI rather than something this page can
           trigger: <code className="font-mono">python scripts/run_llm_benchmark.py --run --out
@@ -163,10 +161,10 @@ export function BenchmarkReportView({
 
       <FalsePositives groups={falsePositiveGroups} />
 
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
+      <h2 className="swiss-label text-ink mb-2">
         Offline rules in detail
       </h2>
-      <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
+      <p className="text-xs text-ink/70 leading-relaxed mb-3">
         The zero-network fallback on its own — the half that decides whether a user gets a warning
         or a 503 when both providers are down.
       </p>
@@ -224,7 +222,7 @@ function RunProvenance({ llm }: { llm: Extract<LlmBenchmarkReport, { available: 
   const { run, leakage, currency } = llm
 
   return (
-    <div className="border border-line bg-white p-3 mb-8 text-[11px] text-ink/60 leading-relaxed">
+    <div className="border border-line bg-white p-3 mb-8 text-xs text-ink/60 leading-relaxed">
       {currency?.stale && <StaleRun currency={currency} />}
       <p>
         RAG&nbsp;+&nbsp;LLM figures come from the last committed run — prompt{' '}
@@ -241,7 +239,7 @@ function RunProvenance({ llm }: { llm: Extract<LlmBenchmarkReport, { available: 
             nothing was graded against its own notes.
           </>
         ) : (
-          <span className="text-red-700">
+          <span className="text-accent-dark">
             {leakage.leaked_cases} case(s) are effectively present in the pattern database and were
             excluded. These figures cover only the remainder.
           </span>
@@ -270,7 +268,7 @@ function StaleRun({
   const added = at === null ? null : now - at
 
   return (
-    <p className="border-l-4 border-amber-600 bg-amber-50 -m-3 mb-3 px-3 py-2 text-ink">
+    <p className="border-l-4 border-accent-dark bg-paper -m-3 mb-3 px-3 py-2 text-ink">
       <strong>These figures are out of date.</strong>{' '}
       {at === null ? (
         <>
@@ -292,7 +290,7 @@ function StaleRun({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">{label}</dt>
+      <dt className="text-xs font-bold uppercase tracking-[0.15em] text-ink/60">{label}</dt>
       <dd className="mt-0.5 text-lg text-ink">{value}</dd>
     </div>
   )
@@ -302,16 +300,16 @@ function LanguageRow({ lang }: { lang: LanguageBenchmark }) {
   const unmeasured = lang.total_cases === 0
 
   return (
-    <tr className={`border-b border-line last:border-0 ${unmeasured ? 'text-ink/40' : ''}`}>
+    <tr className={`border-b border-line last:border-0 ${unmeasured ? 'text-ink/70' : ''}`}>
       <th scope="row" className="text-left font-normal p-2">
         {languageLabel(lang.language)}{' '}
-        <span className="text-ink/40 uppercase">{lang.language}</span>
+        <span className="text-ink/70 uppercase">{lang.language}</span>
       </th>
       <td className="p-2">
         {lang.has_rules ? (
           <span className="text-ink/60">yes</span>
         ) : (
-          <span className="bg-red-100 text-red-800 px-1.5 py-0.5 font-bold">none</span>
+          <span className="border border-accent-dark text-accent-dark px-1.5 py-0.5 font-bold">none</span>
         )}
       </td>
       <td className="p-2 text-right tabular-nums">{lang.total_cases}</td>
@@ -323,7 +321,7 @@ function LanguageRow({ lang }: { lang: LanguageBenchmark }) {
         <Metric value={lang.precision} cases={lang.total_cases} />
       </td>
       <td
-        className={`p-2 text-right ${lang.recall === 0 ? 'text-red-700 font-bold' : ''}`}
+        className={`p-2 text-right ${lang.recall === 0 ? 'text-accent-dark font-bold' : ''}`}
       >
         <Metric value={lang.recall} cases={lang.total_cases} />
       </td>
@@ -340,10 +338,10 @@ function MissedCases({ languages }: { languages: LanguageBenchmark[] }) {
 
   return (
     <section>
-      <h2 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-2">
+      <h2 className="swiss-label text-ink mb-2">
         What is being missed
       </h2>
-      <p className="text-[11px] text-ink/50 leading-relaxed mb-3">
+      <p className="text-xs text-ink/70 leading-relaxed mb-3">
         Scam cases where no rule fired at all. A recall figure says how bad it is; these say what
         to fix.
       </p>
@@ -372,7 +370,7 @@ function MissedForLanguage({ lang }: { lang: LanguageBenchmark }) {
         <span>
           {languageLabel(lang.language)} — {lang.missed_cases.length} missed
         </span>
-        <span aria-hidden="true" className="text-ink/40">
+        <span aria-hidden="true" className="text-ink/70">
           {open ? '—' : '+'}
         </span>
       </button>
@@ -382,12 +380,12 @@ function MissedForLanguage({ lang }: { lang: LanguageBenchmark }) {
           {lang.missed_cases.map((c) => (
             <li key={c.id} className="p-3 bg-white">
               <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
-                <span className="font-mono text-[10px] text-ink/50 break-all">{c.id}</span>
+                <span className="font-mono text-xs text-ink/70 break-all">{c.id}</span>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 ${
+                  className={`text-xs font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 ${
                     c.status === 'known_gap'
-                      ? 'bg-amber-100 text-amber-900'
-                      : 'bg-red-100 text-red-800'
+                      ? 'border border-ink text-ink'
+                      : 'bg-accent text-accent-ink'
                   }`}
                 >
                   {c.status === 'known_gap' ? 'known gap' : 'regression'}
@@ -399,11 +397,11 @@ function MissedForLanguage({ lang }: { lang: LanguageBenchmark }) {
                 {c.text}
               </p>
               {c.expected_rule_ids.length > 0 && (
-                <p className="mt-1.5 text-[11px] text-ink/60 break-words">
+                <p className="mt-1.5 text-xs text-ink/60 break-words">
                   Expected: {c.expected_rule_ids.join(', ')}
                 </p>
               )}
-              {c.note && <p className="mt-1 text-[11px] text-ink/50 leading-relaxed">{c.note}</p>}
+              {c.note && <p className="mt-1 text-xs text-ink/70 leading-relaxed">{c.note}</p>}
             </li>
           ))}
         </ul>

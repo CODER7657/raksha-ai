@@ -50,3 +50,29 @@ talking point, not a demo requirement.
 - Keep it warm/trustworthy (not "hacker/dark" aesthetic) — target audience is non-technical, first-time digital users
 - Use real Indian language sample text in mockups (Hindi/Gujarati), not lorem ipsum
 - Support right-sized text for Urdu (RTL) if time allows — not a blocker for MVP
+
+### Swiss system (current)
+- Tokens live in `design/tokens.json` (paper `#FFFFFF`, ink `#111111`, accent `#D8141B`,
+  accent-dark `#7A0B0F`, rule `#111111`, line `#E5E5E5`). `src/index.css` `@theme` is checked
+  against it by `scripts/check-design-tokens.mjs` on every build; Android generates its theme from it.
+- Type: Inter (UI/body), Archivo (headlines), JetBrains Mono (ids/hashes only), self-hosted via
+  `@fontsource/*`. Big type uses `clamp()`; headlines bold, tight leading, negative tracking.
+- Flush left, visible 12-column grid (`components/SwissGrid.tsx`) on landing, result and 404.
+  No centring, gradients, shadows or rounded corners. Icons from `lucide-react`, never emoji.
+- The result verdict is one giant word (`components/VerdictWord.tsx`): high risk in accent,
+  suspicious in accent-dark, safe in ink.
+- Motion only under `prefers-reduced-motion: no-preference`; touch targets ≥ 44px.
+
+## Tests
+```bash
+npm test                 # node --test + vitest unit tests
+npm run lint && npx tsc -b
+VITE_API_BASE_URL=https://raksha-ai-api.vercel.app \
+VITE_SUPABASE_URL=https://ci-placeholder.supabase.co \
+VITE_SUPABASE_ANON_KEY=ci-placeholder-anon-key npm run build
+npm run test:e2e         # Playwright + axe at 375x812 and 1280x800 against `vite preview`
+```
+`test:e2e` needs a fresh `dist/`. All network is mocked in `e2e/fixtures.ts` (Supabase session and
+the scan API); nothing reaches a real service. Locally it uses the installed Chrome
+(`channel: 'chrome'`); CI installs Playwright's Chromium. Review screenshots:
+`SHOTS_DIR=/abs/dir npm run test:e2e -- screenshots`.

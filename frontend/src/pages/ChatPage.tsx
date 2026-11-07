@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
-import { CornerBrackets } from '../components/CornerBrackets'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useLanguage, type LanguageCode } from '../context/LanguageContext'
 import { LANGUAGES } from '../lib/languages'
 import { cancelVoice, speak } from '../lib/voice'
+import { Volume2 } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -22,15 +22,6 @@ interface Message {
 const EXAMPLE_KEYS = ['upiPin', 'scammed', 'fakeKyc'] as const
 
 const MAX_HISTORY_SENT = 8
-
-function SpeakerIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" />
-      <path d="M16.5 8.5a5 5 0 0 1 0 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  )
-}
 
 export function ChatPage() {
   const { t } = useTranslation()
@@ -141,27 +132,25 @@ export function ChatPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl flex flex-col h-[calc(100vh-160px)] min-h-[420px]">
+    <div className="max-w-2xl flex flex-col h-[calc(100vh-160px)] min-h-[420px]">
       <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('chat.eyebrow')}</span>
+          <span className="swiss-label text-ink">{t('chat.eyebrow')}</span>
         </div>
         <LanguageSelect />
       </div>
 
       {!isTranslated && (
-        <p className="mb-3 border border-line bg-white/60 px-3 py-2 text-[10px] leading-relaxed text-ink/50">
+        <p className="mb-3 border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink/70">
           {t('common.untranslatedNote', { language: option.label })}
         </p>
       )}
 
-      <div className="relative flex-1 min-h-0 border border-ink bg-paper/60 backdrop-blur-sm flex flex-col">
-        <CornerBrackets />
-
+      <div className="relative flex-1 min-h-0 border-2 border-ink bg-paper flex flex-col">
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 flex flex-col gap-3">
           {messages.length === 0 && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 py-8">
+            <div className="flex-1 flex flex-col items-start justify-center gap-4 py-8">
               <p className="text-sm text-ink/60 max-w-xs">{t('chat.emptyState')}</p>
               <div className="flex flex-col gap-2 w-full max-w-sm">
                 {EXAMPLE_KEYS.map((key) => {
@@ -171,7 +160,7 @@ export function ChatPage() {
                       key={key}
                       type="button"
                       onClick={() => send(prompt)}
-                      className="border border-line bg-white px-3 py-2 text-left text-xs text-ink/80 hover:border-accent hover:text-ink transition-colors"
+                      className="min-h-11 border-2 border-ink bg-paper px-3 py-2 text-left text-sm text-ink hover:border-accent transition-colors"
                     >
                       {prompt}
                     </button>
@@ -192,7 +181,7 @@ export function ChatPage() {
                 {switched && (
                   <div className="flex items-center gap-2 my-3" aria-hidden="true">
                     <span className="h-px flex-1 bg-line" />
-                    <span className="text-[9px] uppercase tracking-[0.15em] text-ink/35">
+                    <span className="text-xs uppercase tracking-[0.15em] text-ink/70">
                       {t('chat.languageSwitched', { language: switchedTo })}
                     </span>
                     <span className="h-px flex-1 bg-line" />
@@ -210,9 +199,9 @@ export function ChatPage() {
                       <button
                         type="button"
                         onClick={() => readAloud(m, i)}
-                        className="mt-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40 hover:text-accent transition-colors"
+                        className="mt-1.5 flex min-h-11 items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-ink/70 hover:text-accent transition-colors"
                       >
-                        <SpeakerIcon />
+                        <Volume2 aria-hidden="true" size={16} />
                         {preparingIndex === i
                           ? t('chat.preparingVoice')
                           : speakingIndex === i
@@ -221,7 +210,7 @@ export function ChatPage() {
                       </button>
                     )}
                     {voiceNoteIndex === i && (
-                      <p className="mt-1 text-[10px] text-ink/40 leading-relaxed">
+                      <p className="mt-1 text-xs text-ink/70 leading-relaxed">
                         {t('chat.noVoiceNote', { language: switchedTo })}
                       </p>
                     )}
@@ -233,11 +222,11 @@ export function ChatPage() {
 
           {sending && (
             <div className="flex justify-start">
-              <div className="border border-ink bg-white px-3.5 py-2.5 text-sm text-ink/40">
+              <div className="border border-ink bg-white px-3.5 py-2.5 text-sm text-ink/70">
                 <span className="inline-flex gap-1">
-                  <span className="animate-bounce [animation-delay:0ms]">•</span>
-                  <span className="animate-bounce [animation-delay:150ms]">•</span>
-                  <span className="animate-bounce [animation-delay:300ms]">•</span>
+                  <span className="motion-safe:animate-bounce [animation-delay:0ms]">•</span>
+                  <span className="motion-safe:animate-bounce [animation-delay:150ms]">•</span>
+                  <span className="motion-safe:animate-bounce [animation-delay:300ms]">•</span>
                 </span>
               </div>
             </div>
@@ -246,7 +235,7 @@ export function ChatPage() {
           <div ref={bottomRef} />
         </div>
 
-        {error && <p className="mx-4 mb-2 border border-red-600 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</p>}
+        {error && <p className="mx-4 mb-2 border-l-4 border-accent py-2 pl-4 text-sm text-accent-dark">{error}</p>}
 
         <form onSubmit={handleSubmit} className="border-t border-line p-3 flex gap-2">
           <input
@@ -255,12 +244,12 @@ export function ChatPage() {
             onChange={(e) => setInput(e.target.value)}
             maxLength={1000}
             placeholder={t('chat.inputPlaceholder')}
-            className="flex-1 border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
+            className="min-h-11 min-w-0 flex-1 border-2 border-ink bg-paper px-3 py-2 text-base text-ink placeholder:text-ink/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
           <button
             type="submit"
             disabled={sending || !input.trim()}
-            className="bg-accent px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
+            className="min-h-11 bg-accent px-4 py-2 text-sm font-bold uppercase tracking-[0.08em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-60"
           >
             {t('chat.send')}
           </button>

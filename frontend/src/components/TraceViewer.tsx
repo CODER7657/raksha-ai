@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Minus, Plus } from 'lucide-react'
 import type { ScanResult } from '../lib/scanResult'
 
 /** The reasoning trace behind a verdict (ARCHITECTURE.md §03).
@@ -37,23 +38,21 @@ export function TraceViewer({ result }: { result: ScanResult }) {
   const complete = rules.length > 0 && patterns.length > 0 && !!trace?.model && !!trace?.audit
 
   return (
-    <div className="border-t border-line pt-5 mb-6">
+    <div className="border-t border-rule pt-3">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex w-full items-center justify-between gap-3 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent transition-colors"
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left swiss-label text-ink transition-colors hover:text-accent"
       >
         <span>{open ? t('trace.hide') : t('trace.show')}</span>
-        <span aria-hidden="true" className="text-ink/40">
-          {open ? '—' : '+'}
-        </span>
+        {open ? <Minus aria-hidden="true" size={18} /> : <Plus aria-hidden="true" size={18} />}
       </button>
 
       {open && (
         <div id={panelId} className="mt-4 space-y-5">
-          <p className="text-[11px] text-ink/50 leading-relaxed">{t('trace.intro')}</p>
+          <p className="text-xs text-ink/70 leading-relaxed">{t('trace.intro')}</p>
 
           {review && !review.native_reviewed && (
             /* Deliberately inside the collapsed panel, next to the rules it
@@ -62,7 +61,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
                dismiss the warning that is correct, which costs more than the
                uncertainty it discloses. It sits where someone asking "how much
                should I trust this?" will find it. */
-            <p className="border-l-2 border-amber-600 bg-amber-50 px-2 py-1.5 text-[11px] text-ink leading-relaxed">
+            <p className="border-l-2 border-accent-dark bg-paper px-2 py-1.5 text-xs text-ink leading-relaxed">
               {review.inherited_from
                 ? t('trace.rulesInherited')
                 : t('trace.rulesUnreviewed')}
@@ -89,9 +88,9 @@ export function TraceViewer({ result }: { result: ScanResult }) {
                           })}
                         </p>
                         {rule.matched_text && (
-                          <p className="mt-1 text-[11px] text-ink/60 break-words">
+                          <p className="mt-1 text-xs text-ink/60 break-words">
                             {t('trace.matchedText')}:{' '}
-                            <mark className="bg-accent/25 text-ink px-0.5">{rule.matched_text}</mark>
+                            <mark className="bg-accent/10 text-ink px-0.5">{rule.matched_text}</mark>
                           </p>
                         )}
                       </li>
@@ -114,7 +113,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
               established, so nothing is claimed either way. */}
           {retrieval?.language_covered === false && (
             <TraceSection label={t('trace.retrievedPatterns')}>
-              <p className="border-l-2 border-amber-600 bg-amber-50 px-2 py-1.5 text-[11px] text-ink leading-relaxed">
+              <p className="border-l-2 border-accent-dark bg-paper px-2 py-1.5 text-xs text-ink leading-relaxed">
                 {t('trace.noPatternsForLanguage')}
               </p>
             </TraceSection>
@@ -130,7 +129,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
                   involved" on every ordinary verdict is noise that trains
                   people to skip the section. */}
               {agentDrafted > 0 && (
-                <p className="mb-2 border-l-2 border-accent bg-accent/10 px-2 py-1 text-[11px] text-ink leading-relaxed">
+                <p className="mb-2 border-l-2 border-accent bg-accent/10 px-2 py-1 text-xs text-ink leading-relaxed">
                   {t('trace.agentInfluenced', { count: agentDrafted, total: patterns.length })}
                 </p>
               )}
@@ -138,13 +137,13 @@ export function TraceViewer({ result }: { result: ScanResult }) {
                 {patterns.map((pattern, i) => (
                   <li key={i} className="border border-line bg-white p-2.5">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-accent">
+                      <span className="text-xs font-bold uppercase tracking-[0.1em] text-accent">
                         {pattern.category}
                       </span>
-                      <span className="text-[11px] text-ink/60 shrink-0">
+                      <span className="text-xs text-ink/60 shrink-0">
                         {pattern.provenance === 'agent' && (
                           <span
-                            className="mr-1.5 bg-ink px-1 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-white"
+                            className="mr-1.5 bg-ink px-1 py-0.5 text-xs font-bold uppercase tracking-[0.1em] text-white"
                             title={
                               pattern.drafted_by
                                 ? `Drafted by ${pattern.drafted_by}, approved by a person`
@@ -192,7 +191,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
           )}
 
           {!complete && (
-            <p className="text-[11px] text-ink/40 leading-relaxed">{t('trace.pending')}</p>
+            <p className="text-xs text-ink/70 leading-relaxed">{t('trace.pending')}</p>
           )}
         </div>
       )}
@@ -203,7 +202,7 @@ export function TraceViewer({ result }: { result: ScanResult }) {
 function TraceSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section>
-      <h3 className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70 mb-1.5">
+      <h3 className="swiss-label text-ink mb-1.5">
         {label}
       </h3>
       {children}
