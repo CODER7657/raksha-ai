@@ -20,7 +20,7 @@ export function HighlightedText({ text, phrases }: { text: string; phrases: stri
     <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap break-words">
       {parts.map((part, i) =>
         part.flagged ? (
-          <mark key={i} className="bg-accent/25 text-ink px-0.5 underline decoration-accent decoration-2">
+          <mark key={i} className="bg-accent/10 text-ink px-0.5 underline decoration-accent decoration-2">
             {part.text}
           </mark>
         ) : (

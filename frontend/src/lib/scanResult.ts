@@ -8,10 +8,21 @@ export type Verdict = 'safe' | 'suspicious' | 'high_risk'
  * is generated from. They were `bg-emerald-600` / `bg-amber-500` / `bg-red-600`;
  * the hex is unchanged, but a verdict is now painted from one shared definition
  * rather than two independent ones (#116 §2). */
-export const VERDICT_META: Record<Verdict, { labelKey: string; badgeClass: string; barClass: string }> = {
-  safe: { labelKey: 'verdict.safe', badgeClass: 'bg-verdict-safe text-white', barClass: 'bg-verdict-safe' },
-  suspicious: { labelKey: 'verdict.suspicious', badgeClass: 'bg-verdict-suspicious text-white', barClass: 'bg-verdict-suspicious' },
-  high_risk: { labelKey: 'verdict.highRisk', badgeClass: 'bg-verdict-high-risk text-white', barClass: 'bg-verdict-high-risk' },
+/** `wordClass` is the Swiss verdict word on the result page: high risk in the
+ * accent red, suspicious in accent-dark, safe in plain ink. Deliberately not a
+ * green/amber/red traffic light there — one red, used only for danger. The
+ * badges keep the shared verdict colours, with the label in ink where white
+ * text would fall under 4.5:1 on emerald or amber. */
+export const VERDICT_META: Record<Verdict, { labelKey: string; badgeClass: string; barClass: string; wordClass: string }> = {
+  safe: { labelKey: 'verdict.safe', badgeClass: 'bg-verdict-safe text-ink', barClass: 'bg-verdict-safe', wordClass: 'text-ink' },
+  suspicious: { labelKey: 'verdict.suspicious', badgeClass: 'bg-verdict-suspicious text-ink', barClass: 'bg-verdict-suspicious', wordClass: 'text-accent-dark' },
+  high_risk: { labelKey: 'verdict.highRisk', badgeClass: 'bg-verdict-high-risk text-white', barClass: 'bg-verdict-high-risk', wordClass: 'text-accent' },
+}
+
+/** The class that colours a verdict's word, or plain ink for a verdict string
+ * this build does not know (a newer backend), rather than throwing. */
+export function verdictWordClass(verdict: string): string {
+  return Object.hasOwn(VERDICT_META, verdict) ? VERDICT_META[verdict as Verdict].wordClass : 'text-ink'
 }
 
 /** One known scam pattern pulled back by the RAG retrieval step, with how

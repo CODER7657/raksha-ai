@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { apiFetch } from '../lib/api'
 import { audioTooLarge } from '../lib/uploadLimits'
 import type { ScanResult } from '../lib/scanResult'
-import { CornerBrackets } from '../components/CornerBrackets'
+import { ArrowRight, CircleCheck, Link2, MessageSquareText, Mic, Square, TriangleAlert, Upload } from 'lucide-react'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useLanguage } from '../context/LanguageContext'
 
@@ -144,96 +144,92 @@ export function ScanInputPage() {
     }
   }
 
+  const tabClass = (active: boolean) =>
+    `flex min-h-11 flex-1 items-center justify-start gap-2 border-b-4 px-1 py-2 text-left text-sm font-bold uppercase tracking-[0.06em] transition-colors ${
+      active ? 'border-accent text-ink' : 'border-line text-ink/70 hover:border-ink hover:text-ink'
+    }`
+  const fieldLabel = 'swiss-label text-ink'
+  const fieldInput =
+    'border-2 border-ink bg-paper px-3 py-3 text-base text-ink placeholder:text-ink/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent'
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="flex items-center gap-2 mb-6">
-        <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-        <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{t('scan.eyebrow')}</span>
+    <div className="grid grid-cols-12 gap-x-4 gap-y-8 sm:gap-x-6">
+      <div className="col-span-12 lg:col-span-4">
+        <p className="swiss-label flex items-center gap-2 text-ink">
+          <span className="h-2 w-2 bg-accent" aria-hidden="true" />
+          Raksha AI
+        </p>
+        <h1 className="swiss-display mt-4 text-[clamp(2.25rem,8vw,4rem)]">{t('scan.eyebrow')}</h1>
       </div>
 
-      <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
-        <CornerBrackets />
-
-        <div className="flex gap-2 mb-5">
-          <button
-            type="button"
-            onClick={() => switchMode('text')}
-            className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
-              mode === 'text' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
-            }`}
-          >
+      <div className="col-span-12 border-t-2 border-rule pt-6 lg:col-span-8 lg:pt-8">
+        <div className="mb-6 flex gap-3" role="group" aria-label={t('scan.eyebrow')}>
+          <button type="button" aria-pressed={mode === 'text'} onClick={() => switchMode('text')} className={tabClass(mode === 'text')}>
+            <MessageSquareText aria-hidden="true" size={18} className="shrink-0" />
             {t('scan.tabs.text')}
           </button>
-          <button
-            type="button"
-            onClick={() => switchMode('voice')}
-            className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
-              mode === 'voice' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
-            }`}
-          >
+          <button type="button" aria-pressed={mode === 'voice'} onClick={() => switchMode('voice')} className={tabClass(mode === 'voice')}>
+            <Mic aria-hidden="true" size={18} className="shrink-0" />
             {t('scan.tabs.voice')}
           </button>
-          <button
-            type="button"
-            onClick={() => switchMode('upi')}
-            className={`flex-1 border border-ink py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition-colors ${
-              mode === 'upi' ? 'bg-ink text-white' : 'text-ink hover:bg-ink/5'
-            }`}
-          >
+          <button type="button" aria-pressed={mode === 'upi'} onClick={() => switchMode('upi')} className={tabClass(mode === 'upi')}>
+            <Link2 aria-hidden="true" size={18} className="shrink-0" />
             {t('scan.tabs.upi')}
           </button>
         </div>
 
         {mode !== 'upi' && (
-          <label className="flex flex-col gap-1.5 mb-4">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-              {t('common.language')}
-            </span>
-            <LanguageSelect className="px-3 py-2 text-sm" />
+          <label className="mb-5 flex flex-col gap-2">
+            <span className={fieldLabel}>{t('common.language')}</span>
+            <LanguageSelect className="px-3 text-base" />
           </label>
         )}
 
         {mode === 'text' && (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-              {t('scan.textLabel')}
-            </span>
+          <label className="flex flex-col gap-2">
+            <span className={fieldLabel}>{t('scan.textLabel')}</span>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={8}
               maxLength={4000}
               placeholder={t('scan.textPlaceholder')}
-              className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+              className={`${fieldInput} resize-none`}
             />
-            <span className="self-end text-[10px] text-ink/40">{text.length}/4000</span>
+            <span className="self-end text-xs text-ink/70">{text.length}/4000</span>
           </label>
         )}
 
         {mode === 'voice' && (
           <div className="flex flex-col gap-3">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">{t('scan.voiceLabel')}</span>
+            <span className={fieldLabel}>{t('scan.voiceLabel')}</span>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
                 onClick={recording ? stopRecording : startRecording}
-                className={`flex-1 border border-ink py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-colors ${
-                  recording ? 'bg-red-600 border-red-600 text-white' : 'text-ink hover:bg-ink hover:text-white'
+                className={`flex min-h-11 flex-1 items-center gap-2 border-2 px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] transition-colors ${
+                  recording ? 'border-accent bg-accent text-accent-ink' : 'border-ink text-ink hover:bg-ink hover:text-paper'
                 }`}
               >
+                {recording ? <Square aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
                 {recording ? t('scan.stopRecording') : t('scan.record')}
               </button>
-              <label className="flex-1 border border-ink py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-ink text-center hover:bg-ink hover:text-white transition-colors cursor-pointer">
+              <label className="flex min-h-11 flex-1 cursor-pointer items-center gap-2 border-2 border-ink px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] text-ink transition-colors focus-within:ring-2 focus-within:ring-accent hover:bg-ink hover:text-paper">
+                <Upload aria-hidden="true" size={18} />
                 {t('scan.uploadFile')}
-                <input type="file" accept="audio/*" onChange={handleFileChange} className="hidden" />
+                <input type="file" accept="audio/*" onChange={handleFileChange} className="sr-only" />
               </label>
             </div>
 
             {audioUrl && (
-              <div className="border border-line p-3 flex items-center gap-3">
-                <audio controls src={audioUrl} className="w-full h-8" />
-                <button type="button" onClick={resetAudio} className="text-[10px] uppercase text-ink/50 hover:text-accent shrink-0">
+              <div className="flex items-center gap-3 border-t border-rule pt-3">
+                <audio controls src={audioUrl} className="h-11 w-full" />
+                <button
+                  type="button"
+                  onClick={resetAudio}
+                  className="min-h-11 shrink-0 px-2 text-xs font-bold uppercase text-ink/70 hover:text-accent"
+                >
                   {t('scan.clear')}
                 </button>
               </div>
@@ -243,10 +239,8 @@ export function ScanInputPage() {
 
         {mode === 'upi' && (
           <div className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/70">
-                {t('scan.upiLabel')}
-              </span>
+            <label className="flex flex-col gap-2">
+              <span className={fieldLabel}>{t('scan.upiLabel')}</span>
               <input
                 type="text"
                 value={upiValue}
@@ -256,49 +250,52 @@ export function ScanInputPage() {
                 }}
                 maxLength={256}
                 placeholder={t('scan.upiPlaceholder')}
-                className="border border-ink bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/30 focus:outline-none focus:ring-2 focus:ring-accent"
+                className={fieldInput}
               />
             </label>
-            <p className="text-[11px] text-ink/50 leading-relaxed">{t('scan.upiDescription')}</p>
+            <p className="text-sm leading-relaxed text-ink/70">{t('scan.upiDescription')}</p>
 
             {upiResult && (
-              <div
-                className={`relative border p-4 ${
-                  upiResult.is_suspicious ? 'border-red-600 bg-red-50' : 'border-emerald-600 bg-emerald-50'
-                }`}
-              >
+              <div className={`border-l-4 py-2 pl-4 ${upiResult.is_suspicious ? 'border-accent' : 'border-ink'}`}>
                 <p
-                  className={`text-xs font-bold uppercase tracking-[0.1em] mb-1.5 ${
-                    upiResult.is_suspicious ? 'text-red-700' : 'text-emerald-700'
+                  className={`mb-1.5 flex flex-wrap items-center gap-2 text-sm font-bold uppercase tracking-[0.06em] ${
+                    upiResult.is_suspicious ? 'text-accent' : 'text-ink'
                   }`}
                 >
-                  {upiResult.is_suspicious ? `⚠ ${t('scan.upiSuspicious')}` : `✅ ${t('scan.upiSafe')}`}
+                  {upiResult.is_suspicious ? (
+                    <TriangleAlert aria-hidden="true" size={18} />
+                  ) : (
+                    <CircleCheck aria-hidden="true" size={18} />
+                  )}
+                  {upiResult.is_suspicious ? t('scan.upiSuspicious') : t('scan.upiSafe')}
                   {upiResult.is_upi && (
-                    <span className="ml-2 font-normal normal-case text-ink/50">· {t('scan.upiValidFormat')}</span>
+                    <span className="font-normal normal-case tracking-normal text-ink/70">· {t('scan.upiValidFormat')}</span>
                   )}
                 </p>
                 {upiResult.reasons.length > 0 && (
-                  <ul className="list-disc list-inside text-sm text-ink/80 leading-relaxed">
+                  <ul className="list-inside list-disc text-sm leading-relaxed text-ink">
                     {upiResult.reasons.map((reason, i) => (
                       <li key={i}>{reason}</li>
                     ))}
                   </ul>
                 )}
-                {!upiResult.is_suspicious && (
-                  <p className="text-sm text-ink/70 leading-relaxed">{t('scan.upiNoIssues')}</p>
-                )}
+                {!upiResult.is_suspicious && <p className="text-sm leading-relaxed text-ink">{t('scan.upiNoIssues')}</p>}
               </div>
             )}
           </div>
         )}
 
-        {error && <p className="mt-4 border border-red-600 bg-red-50 px-3 py-2 text-[11px] text-red-700">{error}</p>}
+        {error && (
+          <p role="alert" className="mt-5 border-l-4 border-accent py-2 pl-4 text-sm text-accent-dark">
+            {error}
+          </p>
+        )}
 
         <button
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="mt-6 w-full bg-accent px-4 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-accent-ink hover:bg-ink transition-colors disabled:opacity-50"
+          className="mt-6 flex min-h-12 w-full items-center justify-between gap-3 bg-accent px-5 py-3 text-left text-sm font-bold uppercase tracking-[0.08em] text-accent-ink transition-colors hover:bg-ink disabled:opacity-60"
         >
           {submitting
             ? mode === 'upi'
@@ -307,6 +304,7 @@ export function ScanInputPage() {
             : mode === 'upi'
               ? t('scan.checkUpiLink')
               : t('scan.scanForScams')}
+          <ArrowRight aria-hidden="true" size={20} />
         </button>
       </div>
     </div>

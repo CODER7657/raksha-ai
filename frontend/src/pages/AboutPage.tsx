@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next'
-import { CornerBrackets } from '../components/CornerBrackets'
 
 const PIPELINE_STEPS = [
   { n: '01', titleKey: 'about.pipeline1Title', bodyKey: 'about.pipeline1Body' },
@@ -24,7 +23,7 @@ function SectionHeading({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-2 mb-6">
       <span className="h-2 w-2 bg-accent" aria-hidden="true" />
-      <span className="text-[11px] tracking-[0.2em] uppercase text-ink/60">{children}</span>
+      <span className="swiss-label text-ink">{children}</span>
     </div>
   )
 }
@@ -33,11 +32,10 @@ export function AboutPage() {
   const { t } = useTranslation()
 
   return (
-    <div className="mx-auto max-w-3xl flex flex-col gap-10">
+    <div className="max-w-3xl flex flex-col gap-10">
       <div>
         <SectionHeading>{t('about.eyebrowAbout')}</SectionHeading>
-        <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
-          <CornerBrackets />
+        <div className="border-t-2 border-rule pt-6">
           <p className="text-sm text-ink leading-relaxed">{t('about.intro')}</p>
         </div>
       </div>
@@ -46,8 +44,7 @@ export function AboutPage() {
         <SectionHeading>{t('about.eyebrowHowItWorks')}</SectionHeading>
         <div className="flex flex-col gap-4">
           {PIPELINE_STEPS.map((step) => (
-            <div key={step.n} className="relative border border-ink bg-paper/60 backdrop-blur-sm p-5 flex gap-4">
-              <CornerBrackets />
+            <div key={step.n} className="border-t-2 border-rule pt-5 flex gap-4">
               <span className="shrink-0 text-2xl font-extrabold text-accent">{step.n}</span>
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-ink">{t(step.titleKey)}</h3>
@@ -60,12 +57,11 @@ export function AboutPage() {
 
       <div>
         <SectionHeading>{t('about.eyebrowSecurity')}</SectionHeading>
-        <div className="relative border border-ink bg-paper/60 backdrop-blur-sm p-6 sm:p-8">
-          <CornerBrackets />
+        <div className="border-t-2 border-rule pt-6">
           <ul className="flex flex-col gap-3">
             {SECURITY_KEYS.map((key) => (
               <li key={key} className="flex gap-3 text-sm text-ink/80 leading-relaxed">
-                <span className="shrink-0 text-accent">■</span>
+                <span className="mt-2 h-2 w-2 shrink-0 bg-accent" aria-hidden="true" />
                 {t(key)}
               </li>
             ))}
@@ -77,10 +73,9 @@ export function AboutPage() {
         <SectionHeading>{t('about.eyebrowStack')}</SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2">
           {STACK.map((s) => (
-            <div key={s.name} className="relative border border-ink bg-paper/60 p-4">
-              <CornerBrackets />
+            <div key={s.name} className="border-t border-rule pt-4">
               <p className="text-sm font-bold text-ink">{s.name}</p>
-              <p className="mt-1 text-[11px] text-ink/60">{t(s.roleKey)}</p>
+              <p className="mt-1 text-xs text-ink/60">{t(s.roleKey)}</p>
             </div>
           ))}
         </div>
