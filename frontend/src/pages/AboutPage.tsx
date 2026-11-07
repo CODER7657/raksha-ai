@@ -14,7 +14,7 @@ const SECURITY_KEYS = ['about.security1', 'about.security2', 'about.security3', 
 const STACK = [
   { name: 'Groq + Gemini', roleKey: 'about.stackGroqGemini' },
   { name: 'Supabase', roleKey: 'about.stackSupabase' },
-  { name: 'faster-whisper', roleKey: 'about.stackWhisper' },
+  { name: 'Sarvam · Groq Whisper', roleKey: 'about.stackWhisper' },
   { name: 'FastAPI', roleKey: 'about.stackFastapi' },
   { name: 'React + Vite + Tailwind', roleKey: 'about.stackFrontend' },
   { name: 'GitHub Actions', roleKey: 'about.stackGithub' },

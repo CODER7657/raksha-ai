@@ -66,11 +66,11 @@ retrieval step against a real vector store, not just prompt engineering.
 - [x] Rate limiting on the scan endpoint (protects free LLM quota + basic DoS resistance)
 - [x] Pydantic input validation (length limits, enum-restricted language codes)
 - [x] Offline fallback if both LLM providers fail, instead of a raw 500
-- [x] `/health` endpoint for Render + pre-demo warmup pings
+- [x] `/health` endpoint, checked by the deploy workflow
 - [ ] TODO before final submission: add `pip-audit`/`npm audit` to CI, add structured request logging
 
 ## Endpoints
 - `POST /api/scan/text` — auth required, rate-limited. `{ text, language }` → risk report
-- `POST /api/scan/audio` — auth required, rate-limited. Multipart: `file` (audio, ≤10MB, mp3/mp4/wav/webm/ogg) + `language` query param → transcribed via `faster-whisper` (local, free, CPU), then same risk report + `transcript` field
+- `POST /api/scan/audio` — auth required, rate-limited. Multipart: `file` (audio, ≤4MB, mp3/mp4/wav/webm/ogg) + `language` query param → transcribed by Sarvam, else Groq `whisper-large-v3` (the clip is sent to that provider; 503 if neither answers), then same risk report + `transcript` field
 - `GET /api/history` — auth required. Returns the caller's own scans only
 - `POST /api/check-upi` — auth required. `{ value }` → typosquatting check, independent of LLM

@@ -66,7 +66,7 @@ Some paths carry more risk than others. For these, say in the PR description
 
 - **Never commit `.env`.** Both `frontend/.env*` and `backend/.env` are gitignored.
 - Copy from `.env.example` and fill in your own.
-- Shared keys live in the Render/Vercel dashboards, never in code, issues or PR comments.
+- Shared keys live in the Vercel dashboards, never in code, issues or PR comments.
 - If you ever commit a key by accident: rotate it first, then clean history. Rotating
   is the fix; deleting the commit is not.
 
@@ -85,21 +85,11 @@ cd frontend && npm install && npm run dev    # http://localhost:5173
 Point `frontend/.env.local` at `http://localhost:8000` for local work, or at the
 deployed backend to test against production data.
 
-## 7. Keeping the deployed backend awake
+## 7. Deploying the backend
 
-Render's free tier sleeps after ~15 minutes idle and takes ~40-50s to wake.
-Because this repo is private, GitHub Actions cannot do the pinging — a
-5-minute schedule would cost ~8,640 minutes/month against a 2,000-minute quota.
-
-Use an **external uptime pinger** instead (UptimeRobot free tier, 5-minute
-interval, no cost) hitting:
-
-```
-https://raksha-ai-c5yu.onrender.com/health
-```
-
-There is also a manual `workflow_dispatch` in `.github/workflows/keep-alive.yml`
-to warm it on demand before a demo.
+Merging to `master` deploys it (`.github/workflows/backend-deploy.yml`) as a
+Vercel function at `https://raksha-ai-api.vercel.app`. There is nothing to keep
+awake. Apply any migration **before** merging; see `START-HERE.md`.
 
 ## 8. Definition of done
 

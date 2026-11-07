@@ -2,6 +2,7 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user
@@ -28,7 +29,7 @@ router = APIRouter(prefix="/api", tags=["scan"])
 
 LanguageCode = Literal["en", "hi", "gu", "mr", "bn", "ta", "te", "kn", "ml", "pa", "or", "ur"]
 
-MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB — plenty for a short call snippet, caps abuse
+MAX_AUDIO_BYTES = 4 * 1024 * 1024  # 4MB: under the host's 4.5MB request cap; minutes of compressed speech
 ALLOWED_AUDIO_CONTENT_TYPES = {
     "audio/mpeg", "audio/mp4", "audio/wav", "audio/x-wav", "audio/webm", "audio/ogg",
 }
@@ -427,16 +428,25 @@ async def scan_audio(
 
     audio_bytes = await file.read()
     if len(audio_bytes) > MAX_AUDIO_BYTES:
-        raise HTTPException(status_code=413, detail="Audio file too large (10MB limit)")
+        raise HTTPException(status_code=413, detail="Audio file too large (4MB limit)")
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Empty audio file")
 
-    transcript = stt.transcribe(
-        audio_bytes,
-        language,
-        filename=file.filename or "audio.webm",
-        content_type=base_content_type,
-    )
+    try:
+        # Up to two network calls: off the event loop, so other requests keep moving.
+        transcript = await run_in_threadpool(
+            stt.transcribe,
+            audio_bytes,
+            language,
+            filename=file.filename or "audio.webm",
+            content_type=base_content_type,
+        )
+    except stt.STTUnavailable as exc:
+        logger.warning("speech-to-text unavailable: %s", exc.reason)
+        raise HTTPException(
+            status_code=503,
+            detail="Voice scanning is unavailable right now. Please type or paste the message instead.",
+        ) from exc
     if not transcript:
         raise HTTPException(status_code=422, detail="Could not transcribe any speech from the audio")
 

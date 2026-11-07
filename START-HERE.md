@@ -44,33 +44,33 @@ you would have to already know. Recording it so nobody has to guess again.
 
 | Piece | Where | Deploys | Notes |
 |---|---|---|---|
-| Backend | Render, free tier — `https://raksha-ai-c5yu.onrender.com` | **Manually.** Auto-deploy is off | Sleeps after ~15 min idle; cold start is 40-50s |
+| Backend | Vercel Python function — `https://raksha-ai-api.vercel.app` | Automatically, per push to `master` that touches `backend/` or `testdata/` — via `backend-deploy.yml` | The workflow bundles `backend/` with `testdata/` and fails if `/health` does not answer 200 |
 | Frontend | Vercel | Automatically, per push to `master` — via GitHub Actions, **not** Vercel's Git integration | Deploys by token, because Vercel's Git integration refuses commits authored by anyone outside its team |
 | Database | Supabase (Postgres + pgvector) | **Manually.** By hand in the SQL editor | Migrations in `supabase/migrations/` |
 
-**A merge is not a deploy.** Two of the three above need a human, and the first
-version of this table did not say so — which is how #18 merged and production
-ran without `trace` for a while afterwards, with everyone assuming `master` was
-live. If you have merged something that touches the backend, it is not in front
-of a user until someone clicks deploy.
+**A backend merge is a deploy; a migration is not.** Merging to `master` ships the
+backend within minutes, but schema changes are still applied by hand. So a change
+that needs a migration must have it applied **before** the PR merges, or every
+request touching the new column fails from the moment the deploy lands. (The
+reverse problem, #18 merged and production ran without `trace` for a while, came
+from the old manual deploy and no longer applies.)
 
 **Config that exists only in a dashboard.** These are not in the repo and cannot
 be inferred from it:
 
 - `VITE_API_BASE_URL` — set in **Vercel**. The `.env` files in `frontend/` point
   at `http://localhost:8000`, so production depends entirely on this being right.
-- `AUDIT_HASH_PEPPER` — set in **Render**. Without it the audit log's message
+- `AUDIT_HASH_PEPPER` — set in **Vercel** (project `raksha-ai-api`). Without it the audit log's message
   digest is a bare SHA-256, which is reversible for anything low-entropy. Changing
   it makes existing digests uncorrelatable with new ones, so treat rotation as
   deliberate.
 - Provider keys (`GROQ_API_KEY`, `GEMINI_API_KEY`, `SARVAM_API_KEY`,
-  `SUPABASE_*`) — in **Render**, and in your local `backend/.env`, which is
-  gitignored.
+  `SUPABASE_*`, `AGENT_OPERATOR_IDS`, `ALLOWED_ORIGINS`) — in **Vercel**, project
+  `raksha-ai-api`, and in your local `backend/.env`, which is gitignored.
 
-**Keeping the backend awake** is delegated to an external uptime pinger hitting
-`/health` every 5 minutes — see the reasoning in `.github/workflows/keep-alive.yml`
-for why it is not a GitHub Actions schedule. If a request takes ~45s, that pinger
-has stopped working.
+**Nothing needs keeping awake** on the backend: a serverless function has no idle
+instance to sleep. (It used to run on Render, which slept after 15 minutes.)
+Supabase still pauses after 7 idle days; `supabase-keep-alive.yml` handles that.
 
 ### After merging a backend change
 
@@ -79,15 +79,16 @@ deploy that lands before its migration fails every request that touches the new
 column. #18 was explicit about this — it wrote `scans.trace`, and deploying it
 against an unmigrated database would have failed **every scan**.
 
-1. **Migration first, if there is one.** Open the SQL file under
+1. **Migration first, if there is one, before merging.** Open the SQL file under
    `supabase/migrations/`, run it in the Supabase SQL editor, and confirm it
    reports success. Migrations here are additive by convention, so this is safe
    to do before the code that uses them.
-2. **Deploy the backend.** Render dashboard → the service → **Manual Deploy** →
-   **Deploy latest commit**.
-3. **Check it came up.** `curl https://raksha-ai-c5yu.onrender.com/health`
-   should return `{"status":"ok"}`. A 40-50s response means it was asleep, not
-   broken — but see the pinger note above.
+2. **Merge.** `backend-deploy.yml` bundles and deploys it; run it from the
+   Actions tab to redeploy without a commit.
+3. **Check it came up.** The workflow's last step checks
+   `https://raksha-ai-api.vercel.app/health` for `{"status":"ok"}`. If it fails,
+   the function logs in Vercel show why; a missing env var appears there as a
+   `Settings` validation error at import.
 4. **Verify the change is actually live.** `/openapi.json` is a useful
    fingerprint when the change touches a response model: after #18, `ScanResult`
    gained a `trace` field, which is how we confirmed the deploy rather than

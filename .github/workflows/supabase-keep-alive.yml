@@ -15,8 +15,8 @@ name: Keep Supabase active
 # day-of-month restarts each month, which only ever shortens the gap.
 #
 # COST. ~10 runs a month at one billed minute each, against the 2,000 a
-# private repo gets. Compare keep-alive.yml, where Render's 15-minute sleep
-# makes the same trick unaffordable.
+# private repo gets. (keep-alive.yml once tried the same for Render's 15-minute
+# sleep, where it was unaffordable; the backend no longer sleeps.)
 #
 # SECRETS. SUPABASE_URL and SUPABASE_ANON_KEY. The anon key is public by design
 # (it ships in the frontend bundle), but it is kept as a secret so it is masked

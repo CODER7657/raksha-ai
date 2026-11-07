@@ -28,8 +28,8 @@ name: Refresh threat feeds
 # refreshes one list rather than failing outright.
 #
 # WHY THIS COMMITS. The lists are committed data, not build output: the scan
-# path reads them from disk on a Render instance that is deployed from the
-# repository. A refresh that did not commit would rebuild the lists inside a
+# path reads them from disk in the backend function, which is deployed from the
+# repository (backend-deploy.yml redeploys when the PR merges). A refresh that did not commit would rebuild the lists inside a
 # runner and throw them away.
 #
 # WHY IT OPENS A PR INSTEAD OF PUSHING TO MASTER. It used to `git push` to
