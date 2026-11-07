@@ -21,7 +21,7 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **1049 passing** (2026-11-07): 578 test functions in 46 files, about 15 s run, including contract fuzzing of every route (no 500s with providers up or down) |
+| Backend tests | **1059 passing** (2026-11-07): 589 test functions in 47 files, about 18 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
 | Android unit tests | **83** in 12 files, run in CI |
 | Frontend tests | **23**: 13 build-env + 10 Vitest render tests |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |
