@@ -71,8 +71,12 @@ def retrieve_or_empty(query_text: str, language: str) -> list[RetrievedPattern]:
     """
     try:
         return retrieve_similar_patterns(query_text, language)
-    except Exception:
-        logger.warning("Pattern retrieval failed; answering without grounding", exc_info=True)
+    except Exception as exc:
+        # Type only, never the message or traceback: a provider SDK error can
+        # echo the request, and the request is the user's message (§2.4).
+        logger.warning(
+            "Pattern retrieval failed (%s); answering without grounding", type(exc).__name__
+        )
         return []
 
 
