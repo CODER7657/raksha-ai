@@ -21,11 +21,11 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **1060 passing** (2026-11-07): 590 test functions in 47 files, about 17 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
+| Backend tests | **1069 passing** (2026-11-08): 591 test functions in 47 files, about 20 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
 | Android unit tests | **83** in 12 files, run in CI |
 | Frontend tests | **41** unit (13 build-env + 28 Vitest) and 28 Playwright journey and axe checks at 375 and 1280 px |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |
-| LLM benchmark (2026-11-07) | `openai/gpt-oss-120b`, prompt `scan-v2`: 88 held-out cases, 0 leaked into the prompt: **recall 1.000, precision 0.934** |
+| LLM benchmark (2026-11-08) | `openai/gpt-oss-120b`, prompt `scan-v2`: 88 held-out cases, 0 leaked into the prompt: **recall 1.000, precision 0.950** |
 | Rules | 56 across 11 language tables. Marathi borrows Hindi's through the shared script |
 | Threat feeds | 16,097 URLhaus + 300 OpenPhish URLs, stored only as SHA-256 digests |
 | API | 21 routes · 13 web pages · 13 SQL migrations · 10 CI workflows |
@@ -34,8 +34,9 @@ Measured on 2026-11-06 unless a different date is given.
 The LLM benchmark runs the production model (`openai/gpt-oss-120b`, prompt `scan-v2`) on the
 batch keys; reproduce with `cd backend && python scripts/run_llm_benchmark.py --run --out
 ../testdata/benchmark/llm-latest.json`. In 3 of the 88 cases the credential guard (#113) refused
-the model's answer and the offline fallback was scored, as production would show it; one of those,
-a benign Gujarati OTP notice, is a false alarm. Ground truth is
+the model's answer and the offline fallback was scored. After the script-aware fix for #158
+(2026-11-08) the committed run refuses none (precision 0.950, recall 1.000); the model's wording
+varies, and 2 of 11 Tamil samples after the fix were still refused, so #158 stays open. Ground truth is
 [`testdata/rule_corpus.jsonl`](testdata/rule_corpus.jsonl): 88 labelled messages, 57 scams and 31 benign.
 
 ## How a scan works

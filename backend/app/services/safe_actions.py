@@ -156,6 +156,12 @@ _REPORTING = (
     r"|ਪੁੱਛ|ਕੋਸ਼ਿਸ਼"
     r"|ପଚାର|ଚେଷ୍ଟା"
     r"|پوچھ|کوشش"
+    # "This message ..." as the subject, in each script (#158). English already
+    # counts `message`; without these, "இந்த செய்தி OTP-ஐ பகிர சொல்லுகிறது" (this
+    # message tells you to share the OTP) was read as us asking. Dravidian verbs
+    # come last, so the subject noun is what precedes the match.
+    r"|संदेश|मैसेज|સંદેશ|મેસેજ|বার্তা|মেসেজ|செய்தி|సందేశ|ಸಂದೇಶ|സന്ദേശ"
+    r"|ਸੁਨੇਹ|ਮੈਸੇਜ|ବାର୍ତ୍ତା|پیغام|میسج"
 )
 
 #: A negation immediately before the request — "do NOT share your OTP" — which is
@@ -182,6 +188,14 @@ _NEGATED_INDIC = (
     r"|ક્યારેય\s*નહીં|નહીં|কখনো\s*না|না|ஒருபோதும்|இல்லை|ఎప్పుడూ|కాదు"
     r"|ಎಂದಿಗೂ|ಇಲ್ಲ|ഒരിക്കലും|ഇല്ല|ਕਦੇ\s*ਨਹੀਂ|ਨਹੀਂ|କେବେ\s*ନୁହେଁ|ନାହିଁ"
     r"|کبھی\s*نہیں|نہیں"
+    # Prohibitive forms the list lacked (#158): Tamil "don't" / "must not",
+    # Malayalam's -രുത് ending (പങ്കിടരുത് = do not share), Telugu and Kannada
+    # "don't". Without them "OTP-ஐ எவருக்கும் பகிர வேண்டாம்" (share the OTP with
+    # no one), our own advice, was refused.
+    r"|வேண்டாம்|கூடாது|രുത്|വേണ്ട|వద్దు|ಬೇಡ"
+    # The one-letter Hindi/Gujarati/Punjabi "not" ("OTP किसी को न बताएं"), only as
+    # a whole word: as a bare letter it occurs inside countless words.
+    r"|(?<!\S)(?:न|ન|ਨਾ)(?!\S)"
 )
 
 _NEGATED = rf"(?:{_NEGATED_LATIN}|{_NEGATED_INDIC})"

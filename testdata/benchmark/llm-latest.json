@@ -63,27 +63,19 @@
     {
       "benign_cases": 6,
       "false_negatives": 0,
-      "false_positive_cases": [
-        {
-          "id": "gu-benign-otp-warn-001",
-          "note": "A real bank OTP: contains both OTP and શેર and is entirely legitimate. Stays clean only because the sentence boundary in _GAP stops the match — this row is what pins that.",
-          "risk_score": 70,
-          "text": "તમારો OTP 452189 છે. કોઈની સાથે શેર કરશો નહીં.",
-          "verdict": "suspicious"
-        }
-      ],
-      "false_positives": 1,
+      "false_positive_cases": [],
+      "false_positives": 0,
       "grounded_cases": 14,
       "language": "gu",
       "leaked_case_ids": [],
       "leaked_cases": 0,
       "missed_cases": [],
-      "precision": 0.8889,
+      "precision": 1.0,
       "recall": 1.0,
       "scam_cases": 8,
       "scored_cases": 14,
       "total_cases": 14,
-      "true_negatives": 5,
+      "true_negatives": 6,
       "true_positives": 8
     },
     {
@@ -255,20 +247,15 @@
     "threshold": 0.95
   },
   "run": {
-    "api_calls": 70,
-    "cache_hits": 18,
+    "api_calls": 0,
+    "cache_hits": 88,
     "corpus_digest": "2f71d43e92fb",
     "corpus_rows": 88,
     "models": [
-      "offline-fallback",
       "openai/gpt-oss-120b"
     ],
     "prompt_version": "scan-v2",
-    "rejected_unsafe": [
-      "gu-benign-otp-warn-001",
-      "ml-otp-share-001",
-      "ta-otp-001"
-    ],
+    "rejected_unsafe": [],
     "scored_rows": 88
   }
 }
