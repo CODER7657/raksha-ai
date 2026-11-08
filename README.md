@@ -21,7 +21,7 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **1069 passing** (2026-11-08): 591 test functions in 47 files, about 20 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
+| Backend tests | **1092 passing** (2026-11-08): 609 test functions in 48 files, about 20 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
 | Android unit tests | **83** in 12 files, run in CI |
 | Frontend tests | **41** unit (13 build-env + 28 Vitest) and 28 Playwright journey and axe checks at 375 and 1280 px |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |
@@ -129,7 +129,7 @@ docs/       architecture, rule parity, deploy checklist
 ## Authors
 
 Built by [Pavan Patel](https://github.com/CODER7657), [Hem60](https://github.com/Hem60) and
-[Ayush3422](https://github.com/Ayush3422). Maverick Effect AI Challenge 2026 finalist.
+[Ayush3422](https://github.com/Ayush3422).
 
 ## License
 
