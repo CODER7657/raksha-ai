@@ -65,8 +65,9 @@ class ScanResult(BaseModel):
 
 def _report_to_community_radar(text: str, language: str) -> int:
     """Anonymized aggregate counter — we hash the message, never store raw text here."""
-    # Same digest the audit payload uses, so a community count and an audit
-    # record can be correlated to the same message without either holding it.
+    # Folds digit scripts, so one SMS counts once whether its OTP arrived as 452189
+    # or ४५२१८९. The audit payload's digest keeps the older normalisation (no
+    # folding, and peppered when configured), so the two are not interchangeable.
     pattern_hash = trace_service.hash_text(text)
     supabase = get_supabase()
     response = supabase.rpc(
