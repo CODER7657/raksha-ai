@@ -19,6 +19,7 @@ Two rules govern what goes in the audit payload:
 
 import hashlib
 import hmac
+import unicodedata
 from typing import Any
 
 from app.services.llm import PROMPT_VERSION, Classification
@@ -308,14 +309,40 @@ def _normalise(text: str) -> str:
     return text.strip().lower()
 
 
+def fold_digits(text: str) -> str:
+    """Every decimal digit as its ASCII form: "OTP ४५२१८९" and "OTP 452189" are the
+    same forwarded SMS. Covers all Unicode decimal digits (Devanagari, Gujarati,
+    Bengali, Tamil, ...), not a hand-kept list."""
+    if text.isascii():
+        return text
+    return "".join(
+        str(unicodedata.decimal(c)) if not c.isascii() and c.isdecimal() else c for c in text
+    )
+
+
+def community_key(text: str) -> str:
+    """What the community counter and the verdict cache identify a message by."""
+    return _normalise(fold_digits(text))
+
+
+def legacy_hash_text(text: str) -> str:
+    """The digest before digit folding (2026-11-08), for the one-off migration that
+    re-keys existing `community_reports` rows (scripts/migrate_community_digits.py)."""
+    return hashlib.sha256(_normalise(text).encode()).hexdigest()
+
+
 def hash_text(text: str) -> str:
-    """Unkeyed digest, used by the community counter.
+    """Unkeyed digest, used by the community counter and the verdict cache.
 
     Deliberately not peppered: `community_reports` is keyed on this value and
     every row written so far used the unkeyed form, so changing it would orphan
     the existing counts. The aggregate table holds no user linkage, which is
-    what makes that acceptable here and not in the audit log."""
-    return hashlib.sha256(_normalise(text).encode()).hexdigest()
+    what makes that acceptable here and not in the audit log.
+
+    Folds digit scripts (#community-digest-indic-digits). Rows written before
+    that are re-keyed by scripts/migrate_community_digits.py; `audit_digest`
+    keeps the old normalisation so audit records keep their meaning."""
+    return hashlib.sha256(community_key(text).encode()).hexdigest()
 
 
 def audit_digest(text: str) -> str:

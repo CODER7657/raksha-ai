@@ -12,7 +12,6 @@ one. The module's contract (it only flags, never clears) is exactly this.
 
 import string
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -137,15 +136,6 @@ def test_forwarded_variants_share_a_digest(text):
     assert trace.hash_text(f"  {text.upper()}\n") == trace.hash_text(text)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Known gap: the community digest does not fold Indian digit scripts, so "
-        "'OTP 452189' and 'OTP ४५२१८९' count separately. Folding them would orphan "
-        "existing community_reports rows (see trace.hash_text), so it needs a "
-        "migration decision, not a silent change. strict=True: this flips to a "
-        "failure the day someone fixes it, so the marker gets removed."
-    ),
-)
 def test_digest_folds_devanagari_digits():
+    """Was a strict xfail (known gap); hash_text folds digit scripts since 2026-11-08."""
     assert trace.hash_text("OTP 452189") == trace.hash_text("OTP ४५२१८९")
