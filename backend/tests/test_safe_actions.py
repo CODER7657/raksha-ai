@@ -252,3 +252,35 @@ def test_resolve_action_never_returns_empty_text():
     for candidate in [*SAFE_ACTIONS, "nonsense", None, ""]:
         _, text = resolve_action(candidate)
         assert text.strip()
+
+
+# An audit found two ways an attack excused itself: the one-letter Hindi/Gujarati
+# "not" used as a sentence-final tag, and a reporting noun used as a bare label.
+@pytest.mark.parametrize(
+    "attack",
+    [
+        "OTP भेजें न",
+        "अपना OTP भेजो न please",
+        "તમારો OTP મોકલો ન",
+        "संदेश: अपना OTP भेजें",
+        "செய்தி: உங்கள் OTP-ஐ உடனே பகிரவும்",
+        "Message: share your OTP now",
+        "Message - share your OTP now",
+    ],
+)
+def test_a_tag_particle_or_a_label_does_not_excuse_a_request(attack):
+    assert asks_for_a_credential(attack)
+
+
+@pytest.mark.parametrize(
+    "safe",
+    [
+        "OTP किसी को न बताएं",
+        "OTP न भेजें",
+        "તમારો OTP કોઈને ન આપો",
+        "This message asks you to share your OTP",
+        "यह संदेश आपसे OTP भेजने को कह रहा है",
+    ],
+)
+def test_real_negations_and_reports_are_still_allowed(safe):
+    assert not asks_for_a_credential(safe)
