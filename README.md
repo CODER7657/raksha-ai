@@ -21,7 +21,7 @@ Measured on 2026-11-06 unless a different date is given.
 
 | | |
 |---|---|
-| Backend tests | **1092 passing** (2026-11-08): 609 test functions in 48 files, about 20 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
+| Backend tests | **1104 passing** (2026-11-10): 611 test functions in 48 files, about 20 s run, including contract fuzzing of every route (no 500s with providers up or down) and Hypothesis properties of the rule engine (200 examples each) |
 | Android unit tests | **83** in 12 files, run in CI |
 | Frontend tests | **41** unit (13 build-env + 28 Vitest) and 28 Playwright journey and axe checks at 375 and 1280 px |
 | Offline rules, en/hi/gu | **48/48 scams caught**; 3 false alarms in 22 benign messages (precision 0.94) |

@@ -194,8 +194,10 @@ _NEGATED_INDIC = (
     # no one), our own advice, was refused.
     r"|வேண்டாம்|கூடாது|രുത്|വേണ്ട|వద్దు|ಬೇಡ"
     # The one-letter Hindi/Gujarati/Punjabi "not" ("OTP किसी को न बताएं"), only as
-    # a whole word: as a bare letter it occurs inside countless words.
-    r"|(?<!\S)(?:न|ન|ਨਾ)(?!\S)"
+    # a whole word: as a bare letter it occurs inside countless words. And only
+    # with a word of the same scripts after it: at the end ("OTP भेजो न", "do send
+    # it, won't you") it is a tag that presses the request, and it excused one.
+    r"|(?<!\S)(?:न|ન|ਨਾ)(?=\s+[\u0900-\u097f\u0a00-\u0aff])"
 )
 
 _NEGATED = rf"(?:{_NEGATED_LATIN}|{_NEGATED_INDIC})"
@@ -218,6 +220,7 @@ _ASKS_FOR_CREDENTIAL = re.compile(
 
 _NEGATION = re.compile(rf"(?:{_NEGATED})", re.IGNORECASE | re.UNICODE)
 _REPORTS = re.compile(rf"(?:{_REPORTING})", re.IGNORECASE | re.UNICODE)
+_LABEL = re.compile(r"\w*\s*[:\-\u2013\u2014]")
 
 #: Zero-width characters, stripped before matching.
 #:
@@ -296,7 +299,10 @@ def asks_for_a_credential(text: str) -> bool:
         # the match, because the frame comes first — "the sender asks you to
         # share your OTP" reports; "share your OTP, the sender asks" does not
         # occur in either our prose or a plausible attack.
-        if _REPORTS.search(cleaned[sentence_start + 1 : match.start()]):
+        # A reporting word used as a label ("Message: share your OTP") reports
+        # nothing; what follows the colon is the request itself.
+        before = cleaned[sentence_start + 1 : match.start()]
+        if any(not _LABEL.match(before, m.end()) for m in _REPORTS.finditer(before)):
             continue
         return True
 
